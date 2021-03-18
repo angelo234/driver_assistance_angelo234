@@ -1,0 +1,9 @@
+{
+  "name" : "Driver's Assistance",
+  "author": "angelo234",
+  "version": "1.0",
+  "description": "Adds parking sensors and reverse camera.",
+  "directive": "driversAssistanceAngelo234",
+  "domElement": "<drivers-assistance-angelo234></drivers-assistance-angelo234>",
+  "css": { "width": "350px", "height": "210px", "top": "200px", "left": "200px"}
+}
