@@ -17,17 +17,23 @@ local aeb_params = system_params.aeb_params
 
 local M = {}
 
-local time_elapsed_since_ready = 0
-local world_ready = false
-local finished_init = false
+local count = 0
+local timeElapsedSinceReload = 0
 
-local function onWorldReadyState(state)
-
-  if state == 2 and not world_ready then
-    world_ready = true
+local function onVehicleSpawned(vid)
+  --Used to load in the revesre camera
+  if count == 0 then
+    extensions.reload('core_camera')
+    extensions.reload('core_sounds')
+    extensions.reload('editor_main')
+    be:getPlayerVehicle(0):reload()
+    count = 1
   end
 end
 
+local function onCameraToggled(data)
+  print(data.cameraType)
+end
 
 local function getAllVehiclesPropertiesFromVELua()
   local vehicles = getAllVehicles()
@@ -54,33 +60,9 @@ local function getAllVehiclesPropertiesFromVELua()
     and throttle_pos ~= nil
 end
 
-local system_active = false
-local stopped = false
-
-
 local yawSmooth = newExponentialSmoothing(10) --exponential smoothing for the yaw rate
 
-local last_angular_speed = 0
-local last_steering_input = 0
-
 local function onUpdate(dt)
-
-  if not finished_init then
-    if time_elapsed_since_ready > 5 then
-      extensions.reload('core_camera')
-      extensions.reload('core_sounds')
-      extensions.reload('editor_main')
-      
-      finished_init = true
-    else
-      if world_ready then
-        time_elapsed_since_ready = time_elapsed_since_ready + dt
-      end
-    end
-  end
-
-  
-
   local veh = be:getPlayerVehicle(0)
   if veh == nil then return end
 
@@ -122,11 +104,10 @@ local function onUpdate(dt)
     end
 
   end
-
-  last_steering_input = electrics_values["steering_input"]
 end
 
+M.onCameraToggled = onCameraToggled
 M.onUpdate = onUpdate
-M.onWorldReadyState = onWorldReadyState
+M.onVehicleSpawned = onVehicleSpawned
 
 return M

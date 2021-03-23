@@ -8,7 +8,6 @@ local params_per_veh = system_params.params_per_veh
 local aeb_params = system_params.aeb_params
 
 local system_active = false
-local stopped = false
 
 --Uses predicted future pos and places it relative to the future waypoint
 local function getFutureVehPosCorrectedWithWP(my_veh, veh, veh_pos_future, lat_dist_from_wp, my_veh_side)
@@ -17,16 +16,16 @@ local function getFutureVehPosCorrectedWithWP(my_veh, veh, veh_pos_future, lat_d
   if new_start_wp == nil or new_end_wp == nil then
     return veh_pos_future, nil
   end
-  
+
   --Convert waypoints to positions
   local start_pos = extra_utils.getWaypointPosition(new_start_wp)
   local end_pos = extra_utils.getWaypointPosition(new_end_wp)
-  
+
   --debugDrawer:drawSphere((start_pos):toPoint3F(), 5, ColorF(1,0,0,1))
   --debugDrawer:drawSphere((end_pos):toPoint3F(), 5, ColorF(0,1,0,1))
   local wp_start_end = end_pos - start_pos
   local wp_dir = wp_start_end:normalized()
-  
+
   local xnorm = veh_pos_future:xnormOnLine(start_pos, end_pos)
 
   local new_pos = xnorm * wp_start_end + start_pos
@@ -91,8 +90,38 @@ local function getOtherVehBoundingBox(other_veh_props, other_veh_wp_dir, distanc
   return other_x, other_y, other_z
 end
 
+local function getFreePathInLane(my_veh_side, lane_width, other_lat_dist_from_wp, my_veh_width, other_veh_width)
+  --If you can't fit our vehicles in same lane, then no free path available
+  if my_veh_width + other_veh_width > lane_width then
+    return "none"
+  end
+  
+  if my_veh_side == "left" then
+    if other_lat_dist_from_wp <= lane_width / 2.0 then
+      return "left" 
+    else
+      return "right"
+    end
+  elseif my_veh_side == "right" then
+    if other_lat_dist_from_wp <= lane_width / 2.0 then
+      return "right" 
+    else
+      return "left"
+    end
+  else
+    return "none"
+  end
+end
+
 --We know cars are in same lane, now check if we'll actually crash at TTC
-local function checkIfCarsIntersectAtTTC(dt, my_veh, other_veh, distance, my_lat_dist_from_wp, other_lat_dist_from_wp, my_veh_side)
+local function checkIfCarsIntersectAtTTC(dt, my_veh, data)
+  local other_veh = data[1]
+  local distance = data[2]
+  local my_lat_dist_from_wp = data[3]
+  local other_lat_dist_from_wp = data[4]
+  local my_veh_side = data[5]
+  local lane_width = data[6]
+  
   --My vehicle properties
   local my_veh_props = extra_utils.getVehicleProperties(my_veh)
 
@@ -112,23 +141,22 @@ local function checkIfCarsIntersectAtTTC(dt, my_veh, other_veh, distance, my_lat
   local ttc = math.min(distance / vel_rel, 5)
 
   local my_veh_pos_future = extra_utils.getFuturePositionXY(my_veh, ttc, "front")
-  local other_veh_pos_future = extra_utils.getFuturePositionXY(other_veh, ttc, "rear")
-  
+  local other_veh_pos_future = extra_utils.getFuturePositionXY(other_veh, ttc, "center")
+
   local my_veh_wp_dir = nil
   local other_veh_wp_dir = nil
-  
+
   --If lane lines exist near our vehicles then predict using them
   --for the best accuracy
   if my_veh_side ~= nil and my_veh_side ~= "both" then
     my_veh_pos_future.z = my_veh_props.center_pos.z
     my_veh_pos_future, my_veh_wp_dir = getFutureVehPosCorrectedWithWP(my_veh, my_veh, my_veh_pos_future, my_lat_dist_from_wp, my_veh_side)
     my_veh_pos_future.z = 0
-    
+
     other_veh_pos_future.z = other_veh_props.center_pos.z
     other_veh_pos_future, other_veh_wp_dir = getFutureVehPosCorrectedWithWP(my_veh, other_veh, other_veh_pos_future, other_lat_dist_from_wp, my_veh_side)
     other_veh_pos_future.z = 0
   end
- 
 
   --Calculate the bounding boxes of both vehicles
 
@@ -140,113 +168,68 @@ local function checkIfCarsIntersectAtTTC(dt, my_veh, other_veh, distance, my_lat
   -- width, length, height
   local other_x, other_y, other_z = getOtherVehBoundingBox(my_veh_props, other_veh_wp_dir, distance)
 
-  
-  --Check for overlap between both bounding boxes
+  --Check for overlap between both bounding boxess
   local overlap = overlapsOBB_OBB(my_veh_pos_future, my_x, my_y, my_z, other_veh_pos_future, other_x, other_y, other_z)
 
   if overlap then
     --At low speeds, predict if moderate steering input (0.3 g's laterally) can avoid collision
     --then deactivate system
-    if my_veh_props.speed < 15 then
-      if math.abs(my_veh_props.acceleration.x) > 0.1 * 9.81 then
-      
-        local turning_acc_vec = vec3(my_veh_props.acceleration)
-        
-        --Going left
-        if my_veh_props.acceleration.x > 0 then
-          turning_acc_vec.x = turning_acc_vec.x + aeb_params.lateral_acc_to_avoid_collision * 9.81    
-        else
-          turning_acc_vec.x = turning_acc_vec.x - aeb_params.lateral_acc_to_avoid_collision * 9.81   
-        end
-      
-        local my_veh_pos_future = extra_utils.getFuturePositionXYWithAcc(my_veh, ttc, turning_acc_vec, "front")
-      
-        local my_x, my_y, my_z = getMyVehBoundingBox(my_veh_props, nil, distance)
-      
-        local overlap2 = overlapsOBB_OBB(my_veh_pos_future, my_x, my_y, my_z, other_veh_pos_future, other_x, other_y, other_z)
-      
-        my_veh_pos_future.z = my_veh_props.center_pos.z
-        
-        debugDrawer:drawSphere((my_veh_pos_future):toPoint3F(), 0.5, ColorF(1,0,1,1))
-
-        return overlap2
-      
-        --[[
-        local turning_acc_vec_left = vec3(my_veh_props.acceleration)
-        turning_acc_vec_left.x = turning_acc_vec_left.x + aeb_params.lateral_acc_to_avoid_collision * 9.81
+    if my_veh_props.speed < 20 or true then
+      local free_path = getFreePathInLane(my_veh_side, lane_width, other_lat_dist_from_wp, 
+      my_veh_props.bb:getHalfExtents().x * 2, other_veh_props.bb:getHalfExtents().x * 2)
             
-        local turning_acc_vec_right = vec3(my_veh_props.acceleration)
-        turning_acc_vec_right.x = turning_acc_vec_right.x - aeb_params.lateral_acc_to_avoid_collision * 9.81
-            
-        local my_veh_pos_future_left = extra_utils.getFuturePositionXYWithAcc(my_veh, ttc, turning_acc_vec_left, "front")
-        local my_veh_pos_future_right = extra_utils.getFuturePositionXYWithAcc(my_veh, ttc, turning_acc_vec_right, "front")
-      
-        local my_x, my_y, my_z = getMyVehBoundingBox(my_veh_props, nil, distance)
-      
-        local overlap_left = overlapsOBB_OBB(my_veh_pos_future_left, my_x, my_y, my_z, other_veh_pos_future, other_x, other_y, other_z)
-        local overlap_right = overlapsOBB_OBB(my_veh_pos_future_right, my_x, my_y, my_z, other_veh_pos_future, other_x, other_y, other_z)
-      
-        my_veh_pos_future_left.z = my_veh_props.center_pos.z
-        my_veh_pos_future_right.z = my_veh_props.center_pos.z
-      
-        debugDrawer:drawSphere((my_veh_pos_future_left):toPoint3F(), 0.5, ColorF(1,0,1,1))
-        debugDrawer:drawSphere((my_veh_pos_future_right):toPoint3F(), 0.5, ColorF(1,0,1,1))
-      
-        return overlap_left or overlap_right
-        
-        ]]--
+      print(free_path)
+           
+      local turning_acc_vec = nil
+    
+      if free_path == "left" then
+        turning_acc_vec = vec3(0.3 * aeb_params.gravity, 0, 0)
+      elseif free_path == "right" then
+        turning_acc_vec = vec3(-0.3 * aeb_params.gravity, 0, 0)
       else
-        local turning_acc_vec_left = vec3(0.15 * 9.81, 0, 0)
-        local turning_acc_vec_right = vec3(-0.15 * 9.81, 0, 0)
-
-        local my_veh_pos_future_left = extra_utils.getFuturePositionXYWithAcc(my_veh, ttc, turning_acc_vec_left, "front")
-        local my_veh_pos_future_right = extra_utils.getFuturePositionXYWithAcc(my_veh, ttc, turning_acc_vec_right, "front")
-      
-        local my_x, my_y, my_z = getMyVehBoundingBox(my_veh_props, nil, distance)
-      
-        local overlap_left = overlapsOBB_OBB(my_veh_pos_future_left, my_x, my_y, my_z, other_veh_pos_future, other_x, other_y, other_z)
-        local overlap_right = overlapsOBB_OBB(my_veh_pos_future_right, my_x, my_y, my_z, other_veh_pos_future, other_x, other_y, other_z)
-      
-        my_veh_pos_future_left.z = my_veh_props.center_pos.z
-        my_veh_pos_future_right.z = my_veh_props.center_pos.z
-      
-        debugDrawer:drawSphere((my_veh_pos_future_left):toPoint3F(), 0.5, ColorF(1,0,1,1))
-        debugDrawer:drawSphere((my_veh_pos_future_right):toPoint3F(), 0.5, ColorF(1,0,1,1))
-      
-        return overlap_left and overlap_right  
+        return overlap
       end
+
+      local my_veh_pos_future_turning = extra_utils.getFuturePositionXYWithAcc(my_veh, ttc, turning_acc_vec, "front")
+  
+      local my_x, my_y, my_z = getMyVehBoundingBox(my_veh_props, nil, distance)
+  
+      local overlap2 = overlapsOBB_OBB(my_veh_pos_future_turning, my_x, my_y, my_z, other_veh_pos_future, other_x, other_y, other_z)
+
+      my_veh_pos_future_turning.z = my_veh_props.center_pos.z
+
+      debugDrawer:drawSphere((my_veh_pos_future_turning):toPoint3F(), 0.5, ColorF(1,0,1,1))
+
+      return overlap2
     end
   end
-  
+
   return overlap
 end
 
-local function getNearestVehicleInPath(dt, my_veh, other_vehs_data, in_reverse)
+local function getNearestVehicleInPath(dt, my_veh, data_table, in_reverse)
   local distance = 9999
   local rel_vel = 0
   local curr_veh_in_path = nil
 
   --If table is empty then return
-  if next(other_vehs_data) == nil then
-    return {distance, rel_vel}
+  if next(data_table) == nil then
+    return distance, rel_vel
   end
 
   local my_veh_velocity = vec3(my_veh:getVelocity())
 
   --Analyze the trajectory of other vehicles with my trajectory
   --to see if collision imminent
-  for _, other_veh_data in pairs(other_vehs_data) do
-    local other_veh = other_veh_data[1]
-    local this_distance = other_veh_data[2]
-    local my_lat_dist_from_wp = other_veh_data[3]
-    local other_lat_dist_from_wp = other_veh_data[4]
-    local my_veh_side = other_veh_data[5]
+  for _, data in pairs(data_table) do
+    local other_veh = data[1]
+    local this_distance = data[2]
 
     local other_veh_velocity = vec3(other_veh:getVelocity())
 
     local this_rel_vel = (my_veh_velocity - other_veh_velocity):length()
 
-    local overlap_at_ttc = checkIfCarsIntersectAtTTC(dt, my_veh, other_veh, this_distance, my_lat_dist_from_wp, other_lat_dist_from_wp, my_veh_side)
+    local overlap_at_ttc = checkIfCarsIntersectAtTTC(dt, my_veh, data)
 
     --Collision may be possible
     if overlap_at_ttc then
@@ -261,14 +244,14 @@ local function getNearestVehicleInPath(dt, my_veh, other_vehs_data, in_reverse)
     end
   end
 
-  return {distance, rel_vel}
+  return distance, rel_vel
 end
 
 
 local timeElapsed3 = 0
 local i3 = 0
 
-local function performEmergencyBraking(dt, my_veh, distance, vel_rel, in_reverse)
+local function performEmergencyBraking(dt, my_veh, distance, vel_rel)
   local my_veh_props = extra_utils.getVehicleProperties(my_veh)
 
   if system_active and my_veh_props.speed < aeb_params.brake_till_stop_speed then
@@ -276,27 +259,15 @@ local function performEmergencyBraking(dt, my_veh, distance, vel_rel, in_reverse
     return
   end
 
-  --debugDrawer:drawLine(vec3(veh:getPosition()):toPoint3F(), (vec3(veh:getPosition()) + other_veh_velocity * 10):toPoint3F() , ColorF(1,0,0,1))
-
-  --local acceleration = veh_accs[my_veh:getID()]
-  --if acceleration == nil then return end
-
-  local acc = 9.81-- -acceleration[3]
-
-  --You can stop faster forward than in reverse
-  if in_reverse == 0 then
-    acc = acc * aeb_params.fwd_friction_coeff
-    --acc = math.sqrt(acc * acc - acceleration[1] * acceleration[1])
-  else
-    acc = acc * aeb_params.rev_friction_coeff
-  end
+  --Max braking acceleration = gravity * coefficient of static friction
+  local acc = aeb_params.gravity * aeb_params.fwd_friction_coeff
 
   --Calculate TTC
   local ttc = distance / vel_rel
   local time_to_brake = vel_rel / (2 * acc)
 
   --leeway time depending on speed
-  local time_before_braking = ttc - time_to_brake - aeb_params.braking_time_leeway --* math.min(math.max(0.75, vel_rel / 15.0), 2)
+  local time_before_braking = ttc - time_to_brake - aeb_params.braking_time_leeway
 
   debugDrawer:drawTextAdvanced((my_veh_props.front_pos + my_veh_props.dir * 2):toPoint3F(), String("Time till braking: " .. tostring(time_before_braking)),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
   --print(time_before_braking)
@@ -304,15 +275,16 @@ local function performEmergencyBraking(dt, my_veh, distance, vel_rel, in_reverse
   timeElapsed3 = timeElapsed3 + dt
 
   --Sound warning tone if 1.0 seconds away from braking
-  if time_before_braking <= 1.0 then -- * math.min(math.max(1, vel_rel / 15.0), 2)  then
-    if timeElapsed3 >= 1.0 / aeb_params.parking_fwd_warning_tone_hertz then
+  if time_before_braking <= 1.0 then
+    --
+    if timeElapsed3 >= 1.0 / aeb_params.fwd_warning_tone_hertz then
       Engine.Audio.playOnce('AudioGui','core/art/sound/proximity_tone_50ms.wav')
       timeElapsed3 = 0
-  end
+    end
   end
 
   --Maximum Braking
-  if time_before_braking <= 0  then
+  if time_before_braking <= 0 then
     my_veh:queueLuaCommand("input.event('brake', 1, -1)")
     system_active = true
 
@@ -329,17 +301,6 @@ local function performEmergencyBraking(dt, my_veh, distance, vel_rel, in_reverse
   end
 end
 
-local function releaseBrakeOnThrottleAfterEmergencyBraking(veh)
-  --Release brake if user presses throttle
-  if throttle_pos ~= nil then
-    if system_active and stopped and throttle_pos > 0 then
-      veh:queueLuaCommand("input.event('brake', 0, -1)")
-      system_active = false
-    end
-  end
-end
-
-
 local function update(dt, veh)
   local the_veh_name = veh:getJBeamFilename()
   local veh_speed = vec3(veh:getVelocity()):length()
@@ -347,32 +308,27 @@ local function update(dt, veh)
   local gear_selected = electrics_values["gear"]
   local esc_color = electrics_values["dseColor"]
 
-  stopped = veh_speed <= 0.1
-
-  --Release brakes if system was activated before and user presses throttle
-  releaseBrakeOnThrottleAfterEmergencyBraking(veh)
-
   --ESC must be in comfort mode, otherwise it is deactivated
   --only sunburst uses different color for comfort mode
   if (the_veh_name == "sunburst" and esc_color == "98FB00")
     or (the_veh_name ~= "sunburst" and esc_color == "238BE6")
   then
-    --Poll front sensors if not in reverse or poll rear sensors when in reverse
-    if in_reverse == nil or gear_selected == nil
-      or gear_selected == 'P' or gear_selected == 0 then return end
+     --If vehicle is traveling >= 144km/h (40 m/s) or stopped deactivate system
+    if in_reverse == nil or in_reverse == 1 or gear_selected == nil
+      or gear_selected == 'P' or gear_selected == 0
+      or veh_speed > aeb_params.max_speed or veh_speed <= aeb_params.min_speed then 
+      if system_active then
+        system_active = false
+      end
+      return 
+    end
 
-    --If vehicle is traveling >= 144km/h (40 m/s) or stopped deactivate system
-    if veh_speed > aeb_params.max_speed or veh_speed <= aeb_params.min_speed then return end
-
-    local other_vehs_data = extra_utils.getNearbyVehiclesInSameLane(veh, aeb_params.vehicle_search_radius, angular_speed, aeb_params.min_distance_from_car, true)
+    local data = extra_utils.getNearbyVehiclesInSameLane(veh, aeb_params.vehicle_search_radius, angular_speed, aeb_params.min_distance_from_car, true)
 
     --returns distance, relative velocity
-    local data = getNearestVehicleInPath(dt, veh, other_vehs_data, in_reverse)
+    local distance, vel_rel = getNearestVehicleInPath(dt, veh, data, in_reverse)
 
-    local distance = data[1]
-    local vel_rel = data[2]
-
-    performEmergencyBraking(dt, veh, distance, vel_rel, in_reverse)
+    performEmergencyBraking(dt, veh, distance, vel_rel)
   end
 end
 

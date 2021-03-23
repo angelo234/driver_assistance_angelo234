@@ -187,6 +187,9 @@ local function getWaypointStartEnd(my_veh, position)
 
   local wp1, wp2, lat_dist_from_wp = map.findClosestRoad(position)
 
+  --For some reason lateral distance from waypoint is offset by 0.5
+  lat_dist_from_wp = lat_dist_from_wp - 0.5
+
   if wp1 == nil or wp2 == nil then
     return start_pos, end_pos
   end
@@ -392,7 +395,7 @@ local function checkIfCarsAreInSameLane(my_veh, other_veh)
   local my_end_wp_pos = getWaypointPosition(my_veh_end_wp)
 
   if my_start_wp_pos == vec3(-1,-1,-1) or my_end_wp_pos == vec3(-1,-1,-1) then
-    return false, 0, 0
+    return false, 0, 0, "both", 2
   end
   
   local other_veh_side, other_veh_start_wp, other_veh_end_wp, other_lat_dist_from_wp
@@ -418,7 +421,7 @@ local function checkIfCarsAreInSameLane(my_veh, other_veh)
       my_veh, half_road_width, other_veh_props, my_veh_start_wp, my_start_wp_pos, my_end_wp_pos)
 
     if in_same_lane then
-      return true, my_lat_dist_from_wp, other_lat_dist_from_wp
+      return true, my_lat_dist_from_wp, other_lat_dist_from_wp, my_veh_side, half_road_width * 2
     end
 
     --For two lane roads
@@ -431,12 +434,12 @@ local function checkIfCarsAreInSameLane(my_veh, other_veh)
         my_veh, half_road_width, other_veh_props, my_veh_start_wp, my_start_wp_pos, my_end_wp_pos)
 
       if in_same_lane then
-        return true, my_lat_dist_from_wp, other_lat_dist_from_wp, my_veh_side
+        return true, my_lat_dist_from_wp, other_lat_dist_from_wp, my_veh_side, half_road_width
       end
     end
   end
   
-  return false, my_lat_dist_from_wp, other_lat_dist_from_wp, my_veh_side
+  return false, my_lat_dist_from_wp, other_lat_dist_from_wp, my_veh_side, half_road_width
 end
 
 local function getCircularDistance(my_veh_props, other_veh_props, min_distance_from_car)
@@ -549,13 +552,14 @@ local function getNearbyVehiclesInSameLane(my_veh, max_dist, angular_speed, min_
 
     local other_veh_props = getVehicleProperties(other_veh)
     local speed_rel = my_veh_props.speed - other_veh_props.speed
-    local same_lane, my_lat_dist_from_wp, other_lat_dist_from_wp, my_veh_side = checkIfCarsAreInSameLane(my_veh, other_veh)
+    local same_lane, my_lat_dist_from_wp, other_lat_dist_from_wp, my_veh_side, half_road_width = checkIfCarsAreInSameLane(my_veh, other_veh)
 
     --print(same_lane)
 
     other_veh_data[3] = my_lat_dist_from_wp
     other_veh_data[4] = other_lat_dist_from_wp
     other_veh_data[5] = my_veh_side
+    other_veh_data[6] = half_road_width
 
     --In same lane and my vehicle speed is >= to other
     if same_lane and speed_rel >= 0 then

@@ -117,7 +117,7 @@ M.params_per_veh = {
 M.aeb_params = {
   gravity = 9.81,
 
-  min_speed = 0.5, -- 3
+  min_speed = 1, -- 3
   max_speed = 40,
   brake_till_stop_speed = 5,
   braking_time_leeway = 0.075,
@@ -125,7 +125,7 @@ M.aeb_params = {
   vehicle_search_radius = 100,
   min_distance_from_car = 0.5,
 
-  parking_fwd_warning_tone_hertz = 7,
+  fwd_warning_tone_hertz = 7,
   parking_warning_tone_hertz = 20,
   parking_warning_tone_dist_per_hertz = 2.75,
 

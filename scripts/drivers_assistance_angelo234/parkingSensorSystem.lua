@@ -8,6 +8,10 @@ local params_per_veh = system_params.params_per_veh
 local aeb_params = system_params.aeb_params
 
 local static_sensor_id = -1
+local prev_min_dist = 9999
+local min_dist = 9999
+
+local system_active = false
 
 local function castRay(sensorPos, dir, max_distance, rightDir, veh_name, same_ray, speed)
   local hit = nil
@@ -15,15 +19,15 @@ local function castRay(sensorPos, dir, max_distance, rightDir, veh_name, same_ra
   local car_half_width = params_per_veh[veh_name].safety_offset_width_sensor + params_per_veh[veh_name].veh_half_width
 
   if not same_ray then
-    if static_sensor_id >= 2 then static_sensor_id = -1 end
+    if static_sensor_id >= 4 then static_sensor_id = -1 end
     static_sensor_id = static_sensor_id + 1
   end
 
-  sensorPos = sensorPos + rightDir * (car_half_width - car_half_width * static_sensor_id)
+  local pos = sensorPos + rightDir * (car_half_width - car_half_width / 2.0 * static_sensor_id)
 
-  local dest = dir * max_distance + sensorPos
+  local dest = dir * max_distance + pos
 
-  hit = castRayDebug(sensorPos, dest, true, true)
+  hit = castRayDebug(pos, dest, true, true)
 
   if hit == nil then return nil end
 
@@ -64,7 +68,7 @@ local function processRayCasts(static_hit, vehicle_hit)
 
   --end
 
-  return {other_veh, min_dist, vehicle_hit[3]}
+  return other_veh, min_dist
 end
 
 
@@ -89,61 +93,79 @@ end
 
 local timeElapsed2 = 0
 
+local function soundBeepers(dt, dist)
+  timeElapsed2 = timeElapsed2 + dt
+
+  if dist <= parking_lines_params.parking_line_total_len + parking_lines_params.parking_line_offset_long then
+    
+    --If object is within red line distance, play constant tone
+    if dist <= parking_lines_params.parking_line_red_len + parking_lines_params.parking_line_offset_long then
+      if timeElapsed2 >= 1.0 / aeb_params.parking_warning_tone_hertz then
+        Engine.Audio.playOnce('AudioGui','core/art/sound/proximity_tone_50ms.wav')
+        timeElapsed2 = 0
+      end
+      
+    --Else tone depends on distance
+    else
+      if timeElapsed2 >= dist / aeb_params.parking_warning_tone_dist_per_hertz then
+        Engine.Audio.playOnce('AudioGui','core/art/sound/proximity_tone_50ms.wav')
+        timeElapsed2 = 0
+      end
+    end
+  end
+end
+
 local function pollReverseSensors(dt, veh)
   local veh_name = veh:getJBeamFilename()
 
-  local veh_vel = vec3(veh.obj:getVelocity())
-  local veh_speed = veh_vel:length()
+  local my_veh_props = extra_utils.getVehicleProperties(veh)
 
   --How far to place sensor towards car
   local sensor_offset_forward = 0.2
-
-  local sensorPos = vec3(veh:getSpawnWorldOOBBRearPoint())
-  local carDir = vec3(veh.obj:getDirectionVector()):normalized()
-  local carDirUp = vec3(veh.obj:getDirectionVectorUp()):normalized()
-  local carDirRight = carDir:cross(carDirUp):normalized()
-
-  --Fixes lag of sensorPos
-  sensorPos = sensorPos + veh_vel * dt
-
-  timeElapsed2 = timeElapsed2 + dt
-
-  local max_raycast_distance = 0.5 + parking_lines_params.parking_line_offset_long + parking_lines_params.parking_line_total_len
-
   local parking_sensor_height = params_per_veh[veh_name].parking_sensor_rel_height
 
-  sensorPos = sensorPos + carDirUp * parking_sensor_height + carDir * sensor_offset_forward
+  --Fixes lag of sensorPos
+  local sensorPos = my_veh_props.rear_pos + 5 * my_veh_props.velocity * dt
+    + my_veh_props.dir_up * parking_sensor_height + my_veh_props.dir * sensor_offset_forward
+  
+  local max_raycast_distance = 0.5 + parking_lines_params.parking_line_offset_long + parking_lines_params.parking_line_total_len
 
-  local static_hit = castRay(sensorPos, -carDir, max_raycast_distance, carDirRight, veh_name, false, veh_speed)
+  local static_hit = castRay(sensorPos, -my_veh_props.dir, max_raycast_distance, my_veh_props.dir_right, veh_name, false, my_veh_props.speed)
   --local vehicle_hit = vehicleCastRay(veh:getID(), max_raycast_distance, sensorPos, -carDir, carDirRight, veh_name, false, veh_speed)
 
   --Get vehicles in a 10m radius behind my vehicle
   local other_vehs_data = extra_utils.getNearbyVehicles(veh, 10, angular_speed, 0, false)
   local vehicle_hit = getClosestVehicle(other_vehs_data)
 
-  local processedRayCast = processRayCasts(static_hit, vehicle_hit)
+  local other_veh, min_dist = processRayCasts(static_hit, vehicle_hit)
 
-  local other_veh = processedRayCast[1]
-  local min_dist = processedRayCast[2]
-  local sensor_id = processedRayCast[3]
+  min_dist = min_dist - sensor_offset_forward - 0.1
 
-  min_dist = min_dist - sensor_offset_forward
+  return other_veh, min_dist
+end
 
-  if min_dist <= parking_lines_params.parking_line_total_len + parking_lines_params.parking_line_offset_long then
-    if min_dist <= parking_lines_params.parking_line_red_len + parking_lines_params.parking_line_offset_long then
-      if timeElapsed2 >= 1.0 / aeb_params.parking_warning_tone_hertz then
-        Engine.Audio.playOnce('AudioGui','core/art/sound/proximity_tone_50ms.wav')
-        timeElapsed2 = 0
-      end
-    else
-      if timeElapsed2 >= min_dist / aeb_params.parking_warning_tone_dist_per_hertz then
-        Engine.Audio.playOnce('AudioGui','core/art/sound/proximity_tone_50ms.wav')
-        timeElapsed2 = 0
-      end
-    end
+local function performEmergencyBraking(dt, my_veh, distance)
+  local my_veh_props = extra_utils.getVehicleProperties(my_veh)
+
+  --Maximum Braking
+  if system_active then
+    my_veh:queueLuaCommand("input.event('brake', 1, -1)")
+    return
   end
+  
+  --Max braking acceleration = gravity * coefficient of static friction
+  local acc = aeb_params.gravity * 0.8
 
-  return {other_veh, min_dist, nil, sensor_id}
+  --Calculate TTC
+  local ttc = distance / my_veh_props.speed
+  local time_to_brake = my_veh_props.speed / (2 * acc)
+
+  --leeway time depending on speed
+  local time_before_braking = ttc - time_to_brake
+
+  if time_before_braking <= 0 then
+    system_active = true
+  end
 end
 
 local function update(dt, veh)
@@ -152,13 +174,28 @@ local function update(dt, veh)
   local in_reverse = electrics_values["reverse"]
   local gear_selected = electrics_values["gear"]
 
-  --Poll front sensors if not in reverse or poll rear sensors when in reverse
   if in_reverse == nil or gear_selected == nil or in_reverse == 0 then return end
-
-  --If vehicle is traveling >= 144km/h (40 m/s) or stopped deactivate system
-  --if veh_speed > aeb_params.max_speed or veh_speed <= aeb_params.min_speed then return end
-
-  pollReverseSensors(dt, veh)
+  
+  --Get distance and other data of nearest obstacle 
+ local other_veh, dist = pollReverseSensors(dt, veh)
+   
+  min_dist = math.min(dist, min_dist)
+  
+  --Play beeping sound depending on min distance of prev five sensor detections to obstacle
+  soundBeepers(dt, prev_min_dist)
+  
+  if static_sensor_id == 4 then
+    prev_min_dist = min_dist
+    min_dist = 9999
+  end
+  
+  --If vehicle is stopped then deactivate system
+  if veh_speed <= aeb_params.min_speed then 
+    system_active = false
+    return 
+  end  
+  
+  performEmergencyBraking(dt, veh, dist)
 end
 
 M.update = update
