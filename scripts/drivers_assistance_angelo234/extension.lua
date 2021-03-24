@@ -17,46 +17,6 @@ local aeb_params = system_params.aeb_params
 
 local M = {}
 
-local queue_load_cam = false
-local queue_load_cam_veh_id = -1
-local queue_load_cam_timer = 0
-
-local function onVehicleSpawned(vid)
-  --Used to load in the reverse camera
-  
-  local camNodeID, rightHandDrive = core_camera.getDriverData(be:getObjectByID(vid))
-  
-  --If driver data not ready then wait
-  if camNodeID == 0 then
-    queue_load_cam = true
-    queue_load_cam_veh_id = vid
-    
-    return
-  end
-  
-  queue_load_cam = false
-  
-  local cam_datas = core_camera.getCameraDataById(vid)
-  
-  local reverse_cam_exists = false
-  
-  for cam, data in pairs(cam_datas) do
-    if cam == "reverse_cam_angelo234" then
-      reverse_cam_exists = true
-    end
-  end
-  
-  if not reverse_cam_exists then
-    print("resetting lua")
-  
-    --Resets Lua (same thing as Ctrl + L)
-    Lua:requestReload() 
-  end
-end
-
-local function onCameraToggled(data)
-  print(data.cameraType)
-end
 
 local function getAllVehiclesPropertiesFromVELua()
   local vehicles = getAllVehicles()
@@ -83,17 +43,34 @@ local function getAllVehiclesPropertiesFromVELua()
     and throttle_pos ~= nil
 end
 
+local function doLuaReload()
+  local log_file_header_file = "prev_log_file_header_angelo234.txt"
+  local curr_log_file_header = readFile("beamng.log"):match("^.-\r")
+  
+  if not FS:fileExists(log_file_header_file) then
+    writeFile(log_file_header_file, curr_log_file_header)
+    Lua:requestReload()
+  else
+    local prev_log_file_header = readFile(log_file_header_file)
+    
+    --Means different game instance so reload lua again
+    if prev_log_file_header ~= curr_log_file_header then
+      writeFile(log_file_header_file, curr_log_file_header)
+      Lua:requestReload()    
+    end 
+  end
+end
+
 local yawSmooth = newExponentialSmoothing(10) --exponential smoothing for the yaw rate
+local first_update = true
 
 local function onUpdate(dt)
-  if queue_load_cam then
-    if queue_load_cam_timer > 0.25 then
-      onVehicleSpawned(queue_load_cam_veh_id)
-    
-      queue_load_cam_timer = 0
-    end
-  
-    queue_load_cam_timer = queue_load_cam_timer + dt
+  --Determine if Lua loaded for first time or was loaded another time
+  --if loaded for first time, then reload Lua to load in the reverse camera properly
+  --if not, then don't need to do anything
+  if first_update then
+    doLuaReload()   
+    first_update = false
   end
 
   local veh = be:getPlayerVehicle(0)
@@ -139,8 +116,6 @@ local function onUpdate(dt)
   end
 end
 
-M.onCameraToggled = onCameraToggled
 M.onUpdate = onUpdate
-M.onVehicleSpawned = onVehicleSpawned
 
 return M

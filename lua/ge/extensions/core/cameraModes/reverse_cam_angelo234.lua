@@ -10,6 +10,7 @@ local parking_lines_params = system_params.parking_lines_params
 local params_per_veh = system_params.params_per_veh
 local aeb_params = system_params.aeb_params
 
+local first_update = true
 local veh_name = nil
 local is_supported = false
 local cam_traj_lines_on = false
@@ -25,8 +26,6 @@ function C:init()
 end
 
 function C:onVehicleCameraConfigChanged()
-	
-	--self.hidden = self.hidden or self.name == "driver" -- 'driver' camera data is kept, for driver.lua and other cams to use it. but the cam is hidden from the end-user, also accept jbeam config
 end
 
 function C:onCameraChanged(focused)
@@ -374,6 +373,12 @@ function C:onVehicleSpawned(vid)
 end
 
 function C:update(data)
+  --Check if vehicle supported on first update
+  if first_update then
+    checkVehicleSupported(data.veh:getID())
+    first_update = false
+  end
+
 	--If vehicle doesn't have a backup camera, set camera to "orbit"
 	if is_supported == false then
 		core_camera.setByName(0, "orbit")

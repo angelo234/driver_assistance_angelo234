@@ -174,7 +174,11 @@ local function update(dt, veh)
   local in_reverse = electrics_values["reverse"]
   local gear_selected = electrics_values["gear"]
 
-  if in_reverse == nil or gear_selected == nil or in_reverse == 0 then return end
+  if in_reverse == nil or gear_selected == nil or in_reverse == 0 then 
+    prev_min_dist = 9999
+    min_dist = 9999
+    return 
+  end
   
   --Get distance and other data of nearest obstacle 
  local other_veh, dist = pollReverseSensors(dt, veh)
