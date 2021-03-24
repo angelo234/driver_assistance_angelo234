@@ -17,17 +17,40 @@ local aeb_params = system_params.aeb_params
 
 local M = {}
 
-local count = 0
-local timeElapsedSinceReload = 0
+local queue_load_cam = false
+local queue_load_cam_veh_id = -1
+local queue_load_cam_timer = 0
 
 local function onVehicleSpawned(vid)
-  --Used to load in the revesre camera
-  if count == 0 then
-    extensions.reload('core_camera')
-    extensions.reload('core_sounds')
-    extensions.reload('editor_main')
-    be:getPlayerVehicle(0):reload()
-    count = 1
+  --Used to load in the reverse camera
+  
+  local camNodeID, rightHandDrive = core_camera.getDriverData(be:getObjectByID(vid))
+  
+  --If driver data not ready then wait
+  if camNodeID == 0 then
+    queue_load_cam = true
+    queue_load_cam_veh_id = vid
+    
+    return
+  end
+  
+  queue_load_cam = false
+  
+  local cam_datas = core_camera.getCameraDataById(vid)
+  
+  local reverse_cam_exists = false
+  
+  for cam, data in pairs(cam_datas) do
+    if cam == "reverse_cam_angelo234" then
+      reverse_cam_exists = true
+    end
+  end
+  
+  if not reverse_cam_exists then
+    print("resetting lua")
+  
+    --Resets Lua (same thing as Ctrl + L)
+    Lua:requestReload() 
   end
 end
 
@@ -63,6 +86,16 @@ end
 local yawSmooth = newExponentialSmoothing(10) --exponential smoothing for the yaw rate
 
 local function onUpdate(dt)
+  if queue_load_cam then
+    if queue_load_cam_timer > 0.25 then
+      onVehicleSpawned(queue_load_cam_veh_id)
+    
+      queue_load_cam_timer = 0
+    end
+  
+    queue_load_cam_timer = queue_load_cam_timer + dt
+  end
+
   local veh = be:getPlayerVehicle(0)
   if veh == nil then return end
 
