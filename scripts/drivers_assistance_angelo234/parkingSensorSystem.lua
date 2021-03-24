@@ -134,7 +134,7 @@ local function pollReverseSensors(dt, veh)
   --local vehicle_hit = vehicleCastRay(veh:getID(), max_raycast_distance, sensorPos, -carDir, carDirRight, veh_name, false, veh_speed)
 
   --Get vehicles in a 10m radius behind my vehicle
-  local other_vehs_data = extra_utils.getNearbyVehicles(veh, 10, angular_speed, 0, false)
+  local other_vehs_data = extra_utils.getNearbyVehicles(veh, 10, angular_speed_angelo234, 0, false)
   local vehicle_hit = getClosestVehicle(other_vehs_data)
 
   local other_veh, min_dist = processRayCasts(static_hit, vehicle_hit)
@@ -171,8 +171,8 @@ end
 local function update(dt, veh)
   local the_veh_name = veh:getJBeamFilename()
   local veh_speed = vec3(veh:getVelocity()):length()
-  local in_reverse = electrics_values["reverse"]
-  local gear_selected = electrics_values["gear"]
+  local in_reverse = electrics_values_angelo234["reverse"]
+  local gear_selected = electrics_values_angelo234["gear"]
 
   if in_reverse == nil or gear_selected == nil or in_reverse == 0 then 
     prev_min_dist = 9999

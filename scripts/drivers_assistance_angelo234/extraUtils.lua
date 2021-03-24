@@ -62,7 +62,7 @@ local function getVehicleProperties(veh)
   props.velocity = vec3(veh:getVelocity())
   props.speed = props.velocity:length()
 
-  local acceleration = veh_accs[veh:getID()]
+  local acceleration = veh_accs_angelo234[veh:getID()]
 
   if acceleration == nil then
     acceleration = vec3(0,0,0)
@@ -462,7 +462,7 @@ local function getCircularDistance(my_veh_props, other_veh_props, min_distance_f
   end
 
   --Convert to circular distance
-  local turning_radius = math.abs(my_veh_props.speed / angular_speed)
+  local turning_radius = math.abs(my_veh_props.speed / angular_speed_angelo234)
 
   local angle = math.acos(
     (min_distance * min_distance) / (-2 * turning_radius * turning_radius) + 1)
@@ -504,7 +504,7 @@ end
 
 --Returns a table of vehicles and distance to them within a max_dist radius
 --only in front of our vehicle, so it discards vehicles behind
-local function getNearbyVehicles(my_veh, max_dist, angular_speed, min_distance_from_car, in_front)
+local function getNearbyVehicles(my_veh, max_dist, angular_speed_angelo234, min_distance_from_car, in_front)
   local other_vehs = {}
 
   local my_veh_props = getVehicleProperties(my_veh)
@@ -540,8 +540,8 @@ local function getNearbyVehicles(my_veh, max_dist, angular_speed, min_distance_f
 end
 
 --Returns a table of vehicles and distance to them within a max_dist radius and in the same lane
-local function getNearbyVehiclesInSameLane(my_veh, max_dist, angular_speed, min_distance_from_car, in_front)
-  local other_vehs_data = getNearbyVehicles(my_veh, max_dist, angular_speed, min_distance_from_car, in_front)
+local function getNearbyVehiclesInSameLane(my_veh, max_dist, angular_speed_angelo234, min_distance_from_car, in_front)
+  local other_vehs_data = getNearbyVehicles(my_veh, max_dist, angular_speed_angelo234, min_distance_from_car, in_front)
   local other_vehs_in_my_lane = {}
 
   local my_veh_props = getVehicleProperties(my_veh)

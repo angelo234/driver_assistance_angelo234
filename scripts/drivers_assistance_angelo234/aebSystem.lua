@@ -91,7 +91,7 @@ local function getOtherVehBoundingBox(other_veh_props, other_veh_wp_dir, distanc
 end
 
 local function getFreePathInLane(my_veh_side, lane_width, other_lat_dist_from_wp, my_veh_width, other_veh_width)
-  --If you can't fit our vehicles in same lane, then no free path available
+  --If we can't fit our vehicles in same lane, then no free path available
   if my_veh_width + other_veh_width > lane_width then
     return "none"
   end
@@ -137,7 +137,7 @@ local function checkIfCarsIntersectAtTTC(dt, my_veh, data)
     return false
   end
 
-  --Capping to 5 to prevent too much error
+  --Capping to 5 seconds to prevent too much error in predicting position
   local ttc = math.min(distance / vel_rel, 5)
 
   local my_veh_pos_future = extra_utils.getFuturePositionXY(my_veh, ttc, "front")
@@ -207,7 +207,7 @@ local function checkIfCarsIntersectAtTTC(dt, my_veh, data)
   return overlap
 end
 
-local function getNearestVehicleInPath(dt, my_veh, data_table, in_reverse)
+local function getNearestVehicleInPath(dt, my_veh, data_table)
   local distance = 9999
   local rel_vel = 0
   local curr_veh_in_path = nil
@@ -249,7 +249,7 @@ end
 
 
 local timeElapsed3 = 0
-local i3 = 0
+local release_brake_confidence_level = 0
 
 local function performEmergencyBraking(dt, my_veh, distance, vel_rel)
   local my_veh_props = extra_utils.getVehicleProperties(my_veh)
@@ -269,8 +269,7 @@ local function performEmergencyBraking(dt, my_veh, distance, vel_rel)
   --leeway time depending on speed
   local time_before_braking = ttc - time_to_brake - aeb_params.braking_time_leeway
 
-  debugDrawer:drawTextAdvanced((my_veh_props.front_pos + my_veh_props.dir * 2):toPoint3F(), String("Time till braking: " .. tostring(time_before_braking)),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
-  --print(time_before_braking)
+  --debugDrawer:drawTextAdvanced((my_veh_props.front_pos + my_veh_props.dir * 2):toPoint3F(), String("Time till braking: " .. tostring(time_before_braking)),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
 
   timeElapsed3 = timeElapsed3 + dt
 
@@ -288,11 +287,12 @@ local function performEmergencyBraking(dt, my_veh, distance, vel_rel)
     my_veh:queueLuaCommand("input.event('brake', 1, -1)")
     system_active = true
 
-    i3 = 0
-  else
-    i3 = i3 + 1
+    release_brake_confidence_level = 0
+  else    
+    release_brake_confidence_level = release_brake_confidence_level + 1
 
-    if i3 >= 15 then
+    --Only release brakes if confident
+    if release_brake_confidence_level >= 15 then
       if system_active then
         my_veh:queueLuaCommand("input.event('brake', 0, -1)")
         system_active = false
@@ -304,16 +304,16 @@ end
 local function update(dt, veh)
   local the_veh_name = veh:getJBeamFilename()
   local veh_speed = vec3(veh:getVelocity()):length()
-  local in_reverse = electrics_values["reverse"]
-  local gear_selected = electrics_values["gear"]
-  local esc_color = electrics_values["dseColor"]
+  local in_reverse = electrics_values_angelo234["reverse"]
+  local gear_selected = electrics_values_angelo234["gear"]
+  local esc_color = electrics_values_angelo234["dseColor"]
 
   --ESC must be in comfort mode, otherwise it is deactivated
-  --only sunburst uses different color for comfort mode
+  --sunburst uses different color for comfort mode
   if (the_veh_name == "sunburst" and esc_color == "98FB00")
     or (the_veh_name ~= "sunburst" and esc_color == "238BE6")
   then
-     --If vehicle is traveling >= 144km/h (40 m/s) or stopped deactivate system
+     --Deactivate system based on any of these variables
     if in_reverse == nil or in_reverse == 1 or gear_selected == nil
       or gear_selected == 'P' or gear_selected == 0
       or veh_speed > aeb_params.max_speed or veh_speed <= aeb_params.min_speed then 
@@ -323,11 +323,14 @@ local function update(dt, veh)
       return 
     end
 
-    local data = extra_utils.getNearbyVehiclesInSameLane(veh, aeb_params.vehicle_search_radius, angular_speed, aeb_params.min_distance_from_car, true)
+    --Get vehicles in the same lane as me
+    local data = extra_utils.getNearbyVehiclesInSameLane(veh, aeb_params.vehicle_search_radius, angular_speed_angelo234, aeb_params.min_distance_from_car, true)
+    
+    --Determine if a collision will actually occur and return the distance and relative velocity 
+    --to the vehicle that I'm planning to collide with
+    local distance, vel_rel = getNearestVehicleInPath(dt, veh, data)
 
-    --returns distance, relative velocity
-    local distance, vel_rel = getNearestVehicleInPath(dt, veh, data, in_reverse)
-
+    --Use distance/relative velocity/max acceleration to determine when to apply emergency braking
     performEmergencyBraking(dt, veh, distance, vel_rel)
   end
 end
