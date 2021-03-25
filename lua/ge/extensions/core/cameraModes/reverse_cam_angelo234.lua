@@ -379,9 +379,12 @@ function C:update(data)
     first_update = false
   end
 
-	--If vehicle doesn't have a backup camera, set camera to "orbit"
-	if is_supported == false then
-		core_camera.setByName(0, "orbit")
+  local in_reverse = electrics_values_angelo234["reverse"]
+
+	--If vehicle doesn't have a backup camera or not in reverse, set camera to previous camera mode
+	if is_supported == false or in_reverse == 0 then
+	  local prev_cam = scripts_drivers__assistance__angelo234_extension.prev_camera_mode
+		core_camera.setByName(0, prev_cam)
 		return
 	end
 	
@@ -406,6 +409,7 @@ function C:update(data)
 	local right_turning_radius = radii[2]
 
 	--debugDrawer:drawSphere((vec3(data.veh:getSpawnWorldOOBBRearPoint()) + camUp * params_per_veh[veh_name].rel_cam_height):toPoint3F(), 0.05, ColorF(1,0,0,1))
+  debugDrawer:setSolidTriCulling(true)
 
 	--Draw parking lines
 	if cam_park_lines_on then

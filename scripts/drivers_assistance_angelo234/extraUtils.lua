@@ -120,9 +120,9 @@ local function getFuturePositionXY(veh, time, rel_car_pos)
   acc_vec = quatFromDir(dir_xy, vec3(0,0,1)) * acc_vec
 
   veh_props.front_pos.z = 0
+  veh_props.center_pos.z = 0
   veh_props.rear_pos.z = 0
 
-  veh_props.velocity.z = 0
   veh_props.velocity.z = 0
 
   local veh_pos_future = vec3(0,0,0)
@@ -149,9 +149,9 @@ local function getFuturePositionXYWithAcc(veh, time, acc_vec, rel_car_pos)
   acc_vec = quatFromDir(dir_xy, vec3(0,0,1)) * -acc_vec
 
   veh_props.front_pos.z = 0
+  veh_props.center_pos.z = 0
   veh_props.rear_pos.z = 0
 
-  veh_props.velocity.z = 0
   veh_props.velocity.z = 0
 
   local veh_pos_future = vec3(0,0,0)
@@ -191,7 +191,7 @@ local function getWaypointStartEnd(my_veh, position)
   lat_dist_from_wp = lat_dist_from_wp - 0.5
 
   if wp1 == nil or wp2 == nil then
-    return start_pos, end_pos
+    return start_wp, end_wp
   end
 
   local wp1_pos = getWaypointPosition(wp1)
@@ -281,7 +281,7 @@ local function getWaypointStartEndBasedOnDir(my_veh, veh, position)
         min_wp_angle[3] = wp2
       end
     end
-    debugDrawer:drawSphere((wp2_pos + vec3(0,0,2)):toPoint3F(), 0.5, ColorF(1,1,0,1))
+    --debugDrawer:drawSphere((wp2_pos + vec3(0,0,2)):toPoint3F(), 0.5, ColorF(1,1,0,1))
   end
 
   return min_wp_angle[2], min_wp_angle[3], lat_dist_from_wp
@@ -313,15 +313,15 @@ local function getWhichSideCarIsOnAndWaypoints(my_veh, veh)
   local road_line_dir = toNormXYVec(end_pos - start_pos)
   local car_dir_xy = toNormXYVec(veh_props.dir)
 
-  debugDrawer:drawSphere(start_pos:toPoint3F(), 0.5, ColorF(1,0,0,1))
-  debugDrawer:drawSphere(wp_mid_pos:toPoint3F(), 0.5, ColorF(0,1,0,1))
-  debugDrawer:drawSphere(end_pos:toPoint3F(), 0.5, ColorF(0,0,1,1))
+  --debugDrawer:drawSphere(start_pos:toPoint3F(), 0.5, ColorF(1,0,0,1))
+  --debugDrawer:drawSphere(wp_mid_pos:toPoint3F(), 0.5, ColorF(0,1,0,1))
+  --debugDrawer:drawSphere(end_pos:toPoint3F(), 0.5, ColorF(0,0,1,1))
 
   local color = toColorI(ColorF(1,0,0,0.25))
 
-  debugDrawer:setSolidTriCulling(false)
-  debugDrawer:drawQuadSolid((start_pos):toPoint3F(), (start_pos + vec3(0,0,1)):toPoint3F(),
-    (end_pos + vec3(0,0,1)):toPoint3F(), (end_pos):toPoint3F(), color)
+  --debugDrawer:setSolidTriCulling(false)
+  --debugDrawer:drawQuadSolid((start_pos):toPoint3F(), (start_pos + vec3(0,0,1)):toPoint3F(),
+  --(end_pos + vec3(0,0,1)):toPoint3F(), (end_pos):toPoint3F(), color)
 
   --Get angle between car dir and road dir that is between 0 and 360 degrees
   local line_to_left_side_dir = (veh_props.center_pos - veh_props.dir_right * veh_props.bb:getHalfExtents().x * 0.5 - wp_mid_pos):normalized()
@@ -370,6 +370,10 @@ local function checkIfOtherCarWithinMyRoadHalfWidth(my_veh, half_road_width, oth
   
   --Get waypoint on my road closest to other vehicle
   local new_start_wp, new_end_wp, new_lat_dist_from_wp = getWaypointStartEnd(my_veh, other_veh_pos_on_wp_line)
+  
+  if new_start_wp == nil then
+    return true
+  end
   
   local new_start_wp_pos = getWaypointPosition(new_start_wp)
   local new_end_wp_pos = getWaypointPosition(new_end_wp)
@@ -564,7 +568,6 @@ local function getNearbyVehiclesInSameLane(my_veh, max_dist, angular_speed_angel
     --In same lane and my vehicle speed is >= to other
     if same_lane and speed_rel >= 0 then
       table.insert(other_vehs_in_my_lane, other_veh_data)
-      debugDrawer:drawSphere((other_veh_props.center_pos + vec3(0,0,1)):toPoint3F(), 0.5, ColorF(0,1,1,1))
     end
   end
 

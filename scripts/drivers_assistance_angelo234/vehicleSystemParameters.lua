@@ -26,7 +26,7 @@ M.params_per_veh = {
     veh_half_width_line_width = 0.6 + 0.05,
     parking_sensor_rel_height = -0.5,
     safety_offset_width_sensor = 0.25,
-    systems = {"aeb", "parking_sensors", "reverse_cam", "cam_traj_lines", "cam_park_lines"}
+    systems = {"fwd_aeb", "parking_sensors_with_aeb", "reverse_cam", "cam_traj_lines", "cam_park_lines"}
   },
   ["etkc"] = {
     cam_fov = 120,
@@ -40,7 +40,7 @@ M.params_per_veh = {
     veh_half_width_line_width = 0.6 + 0.05,
     parking_sensor_rel_height = -0.55,
     safety_offset_width_sensor = 0.35,
-    systems = {"aeb", "parking_sensors", "reverse_cam", "cam_traj_lines", "cam_park_lines"}
+    systems = {"fwd_aeb", "parking_sensors_with_aeb", "reverse_cam", "cam_traj_lines", "cam_park_lines"}
   },
   ["sunburst"] = {
     cam_fov = 120,
@@ -52,9 +52,9 @@ M.params_per_veh = {
     veh_half_width = 0.6,
     line_height_rel_cam = -0.3,
     veh_half_width_line_width = 0.6 + 0.05,
-    parking_sensor_rel_height = -0.55,
+    parking_sensor_rel_height = -0.5,
     safety_offset_width_sensor = 0.35,
-    systems = {"aeb", "parking_sensors", "reverse_cam", "cam_traj_lines", "cam_park_lines"}
+    systems = {"fwd_aeb", "parking_sensors_with_aeb", "reverse_cam", "cam_traj_lines", "cam_park_lines"}
   },
   ["sbr"] = {
     cam_fov = 120,
@@ -68,7 +68,7 @@ M.params_per_veh = {
     veh_half_width_line_width = 0.6 + 0.05,
     parking_sensor_rel_height = -0.55,
     safety_offset_width_sensor = 0.2,
-    systems = {"aeb", "parking_sensors", "reverse_cam", "cam_traj_lines", "cam_park_lines"}
+    systems = {"fwd_aeb", "parking_sensors_with_aeb", "reverse_cam", "cam_traj_lines", "cam_park_lines"}
   },
   ["vivace"] = {
     cam_fov = 120,
@@ -82,7 +82,7 @@ M.params_per_veh = {
     veh_half_width_line_width = 0.6 + 0.05,
     parking_sensor_rel_height = -0.55,
     safety_offset_width_sensor = 0.35,
-    systems = {"aeb", "parking_sensors", "reverse_cam", "cam_traj_lines", "cam_park_lines"}
+    systems = {"fwd_aeb", "parking_sensors_with_aeb", "reverse_cam", "cam_traj_lines", "cam_park_lines"}
   },
   ["van"] = {
     cam_fov = 100,
@@ -117,10 +117,10 @@ M.params_per_veh = {
 M.aeb_params = {
   gravity = 9.81,
 
-  min_speed = 1, -- 3
+  min_speed = 1,
   max_speed = 40,
-  brake_till_stop_speed = 5,
-  braking_time_leeway = 0.075,
+  brake_till_stop_speed = 3,
+  braking_time_leeway = 0.1,
 
   vehicle_search_radius = 100,
   min_distance_from_car = 0.5,
@@ -130,9 +130,9 @@ M.aeb_params = {
   parking_warning_tone_dist_per_hertz = 2.75,
 
   fwd_friction_coeff = 0.95,
-  rev_friction_coeff = 0.65,
+  rev_friction_coeff = 0.8,
 
-  lateral_acc_to_avoid_collision = 0.3,
+  lateral_acc_to_avoid_collision = 0.1,
 
   num_of_sensors = 3
 }

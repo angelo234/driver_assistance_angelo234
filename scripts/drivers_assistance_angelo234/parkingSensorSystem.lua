@@ -7,6 +7,7 @@ local parking_lines_params = system_params.parking_lines_params
 local params_per_veh = system_params.params_per_veh
 local aeb_params = system_params.aeb_params
 
+local num_of_sensors = 9
 local static_sensor_id = -1
 local prev_min_dist = 9999
 local min_dist = 9999
@@ -19,11 +20,11 @@ local function castRay(sensorPos, dir, max_distance, rightDir, veh_name, same_ra
   local car_half_width = params_per_veh[veh_name].safety_offset_width_sensor + params_per_veh[veh_name].veh_half_width
 
   if not same_ray then
-    if static_sensor_id >= 4 then static_sensor_id = -1 end
+    if static_sensor_id >= num_of_sensors - 1 then static_sensor_id = -1 end
     static_sensor_id = static_sensor_id + 1
   end
 
-  local pos = sensorPos + rightDir * (car_half_width - car_half_width / 2.0 * static_sensor_id)
+  local pos = sensorPos + rightDir * (car_half_width - car_half_width / ((num_of_sensors - 1) / 2.0) * static_sensor_id)
 
   local dest = dir * max_distance + pos
 
@@ -125,7 +126,7 @@ local function pollReverseSensors(dt, veh)
   local parking_sensor_height = params_per_veh[veh_name].parking_sensor_rel_height
 
   --Fixes lag of sensorPos
-  local sensorPos = my_veh_props.rear_pos + 5 * my_veh_props.velocity * dt
+  local sensorPos = my_veh_props.rear_pos + num_of_sensors * my_veh_props.velocity * dt
     + my_veh_props.dir_up * parking_sensor_height + my_veh_props.dir * sensor_offset_forward
   
   local max_raycast_distance = 0.5 + parking_lines_params.parking_line_offset_long + parking_lines_params.parking_line_total_len
@@ -154,9 +155,9 @@ local function performEmergencyBraking(dt, my_veh, distance)
   end
   
   --Max braking acceleration = gravity * coefficient of static friction
-  local acc = aeb_params.gravity * 0.8
+  local acc = aeb_params.gravity * aeb_params.rev_friction_coeff
 
-  --Calculate TTC
+  --Calculate time to collision (TTC)
   local ttc = distance / my_veh_props.speed
   local time_to_brake = my_veh_props.speed / (2 * acc)
 
@@ -168,7 +169,7 @@ local function performEmergencyBraking(dt, my_veh, distance)
   end
 end
 
-local function update(dt, veh)
+local function update(dt, veh, aeb_enabled)
   local the_veh_name = veh:getJBeamFilename()
   local veh_speed = vec3(veh:getVelocity()):length()
   local in_reverse = electrics_values_angelo234["reverse"]
@@ -188,10 +189,12 @@ local function update(dt, veh)
   --Play beeping sound depending on min distance of prev five sensor detections to obstacle
   soundBeepers(dt, prev_min_dist)
   
-  if static_sensor_id == 4 then
+  if static_sensor_id == num_of_sensors - 1 then
     prev_min_dist = min_dist
     min_dist = 9999
   end
+  
+  if not aeb_enabled then return end 
   
   --If vehicle is stopped then deactivate system
   if veh_speed <= aeb_params.min_speed then 

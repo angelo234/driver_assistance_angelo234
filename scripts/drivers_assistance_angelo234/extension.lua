@@ -18,6 +18,16 @@ local parking_lines_params = system_params.parking_lines_params
 local params_per_veh = system_params.params_per_veh
 local aeb_params = system_params.aeb_params
 
+M.curr_camera_mode = "orbit"
+M.prev_camera_mode = "orbit"
+
+local function onCameraModeChanged(new_camera_mode)
+  if new_camera_mode ~= M.curr_camera_mode then
+    M.prev_camera_mode = M.curr_camera_mode
+    M.curr_camera_mode = new_camera_mode
+  end
+end
+
 local function getAllVehiclesPropertiesFromVELua()
   local vehicles = getAllVehicles()
   local my_veh = be:getPlayerVehicle(0)
@@ -49,7 +59,7 @@ local function doLuaReload()
   --if not, then don't need to do anything
   
   local log_file_header_file = "prev_log_file_header_angelo234.txt"
-  local curr_log_file_header = readFile("beamng.log"):match("^.-\r")
+  local curr_log_file_header = readFile("beamng.log"):match("- v.-\r")
   
   if not FS:fileExists(log_file_header_file) then
     writeFile(log_file_header_file, curr_log_file_header)
@@ -65,7 +75,7 @@ local function doLuaReload()
   end
 end
 
-local function isVehicleSupported()
+local function isVehicleSupported(veh)
   local the_veh_name = veh:getJBeamFilename()
   
   for curr_veh_name, _ in pairs(params_per_veh) do
@@ -90,7 +100,7 @@ local function onUpdate(dt)
   local veh = be:getPlayerVehicle(0)
   if veh == nil then return end
 
-  if not isVehicleSupported() then return end
+  if not isVehicleSupported(veh) then return end
 
   local ready = getAllVehiclesPropertiesFromVELua()
 
@@ -107,15 +117,19 @@ local function onUpdate(dt)
   --Update systems based on what is supported on a vehicle basis
   for _, val in pairs(params_per_veh[the_veh_name].systems) do
     if val == "parking_sensors" then
-      parking_sensor_system.update(dt, veh)
+      parking_sensor_system.update(dt, veh, false)
+  
+    elseif val == "parking_sensors_with_aeb" then
+      parking_sensor_system.update(dt, veh, true)
 
-    elseif val == "aeb" then
+    elseif val == "fwd_aeb" then
       aeb_system.update(dt, veh)
     end
 
   end
 end
 
+M.onCameraModeChanged = onCameraModeChanged
 M.onUpdate = onUpdate
 
 return M
