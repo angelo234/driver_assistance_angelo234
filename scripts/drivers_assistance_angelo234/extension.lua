@@ -57,9 +57,17 @@ local function doLuaReload()
   --Determine if Lua loaded for first time or was loaded another time
   --if loaded for first time, then reload Lua to load in the reverse camera properly
   --if not, then don't need to do anything
+  --And if log header changes from "Log started" to "Log rotated" then don't bother reloading
+  --since by that time, the camera probably was already loaded in
   
   local log_file_header_file = "prev_log_file_header_angelo234.txt"
-  local curr_log_file_header = readFile("beamng.log"):match("- v.-\r")
+  local curr_log_file_header = readFile("beamng.log"):match("^.-\r")
+  local curr_log_status = curr_log_file_header:match("Log.-ed")
+  
+  --If log header doesn't state "Log started" then don't do anything
+  if curr_log_status ~= "Log started" then
+    return
+  end
   
   if not FS:fileExists(log_file_header_file) then
     writeFile(log_file_header_file, curr_log_file_header)
@@ -91,7 +99,7 @@ local yawSmooth = newExponentialSmoothing(10) --exponential smoothing for the ya
 local first_update = true
 
 local function onUpdate(dt)
-  --Check if Lua reload required
+  --Do Lua reload after first Lua initialization to load in the reverse camera
   if first_update then
     doLuaReload()   
     first_update = false

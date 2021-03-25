@@ -134,7 +134,7 @@ M.aeb_params = {
 
   lateral_acc_to_avoid_collision = 0.1,
 
-  num_of_sensors = 3
+  num_of_sensors = 9
 }
 
 return M

@@ -7,28 +7,27 @@ local parking_lines_params = system_params.parking_lines_params
 local params_per_veh = system_params.params_per_veh
 local aeb_params = system_params.aeb_params
 
-local num_of_sensors = 9
 local static_sensor_id = -1
 local prev_min_dist = 9999
 local min_dist = 9999
 
 local system_active = false
 
-local function castRay(sensorPos, dir, max_distance, rightDir, veh_name, same_ray, speed)
+local function staticCastRay(sensorPos, dir, max_distance, rightDir, veh_name, same_ray, speed)
   local hit = nil
 
   local car_half_width = params_per_veh[veh_name].safety_offset_width_sensor + params_per_veh[veh_name].veh_half_width
 
   if not same_ray then
-    if static_sensor_id >= num_of_sensors - 1 then static_sensor_id = -1 end
+    if static_sensor_id >= aeb_params.num_of_sensors - 1 then static_sensor_id = -1 end
     static_sensor_id = static_sensor_id + 1
   end
 
-  local pos = sensorPos + rightDir * (car_half_width - car_half_width / ((num_of_sensors - 1) / 2.0) * static_sensor_id)
+  local pos = sensorPos + rightDir * (car_half_width - car_half_width / ((aeb_params.num_of_sensors - 1) / 2.0) * static_sensor_id)
 
   local dest = dir * max_distance + pos
 
-  hit = castRayDebug(pos, dest, true, true)
+  hit = castRay(pos, dest, true, true)
 
   if hit == nil then return nil end
 
@@ -126,12 +125,12 @@ local function pollReverseSensors(dt, veh)
   local parking_sensor_height = params_per_veh[veh_name].parking_sensor_rel_height
 
   --Fixes lag of sensorPos
-  local sensorPos = my_veh_props.rear_pos + num_of_sensors * my_veh_props.velocity * dt
+  local sensorPos = my_veh_props.rear_pos + aeb_params.num_of_sensors * my_veh_props.velocity * dt
     + my_veh_props.dir_up * parking_sensor_height + my_veh_props.dir * sensor_offset_forward
   
   local max_raycast_distance = 0.5 + parking_lines_params.parking_line_offset_long + parking_lines_params.parking_line_total_len
 
-  local static_hit = castRay(sensorPos, -my_veh_props.dir, max_raycast_distance, my_veh_props.dir_right, veh_name, false, my_veh_props.speed)
+  local static_hit = staticCastRay(sensorPos, -my_veh_props.dir, max_raycast_distance, my_veh_props.dir_right, veh_name, false, my_veh_props.speed)
   --local vehicle_hit = vehicleCastRay(veh:getID(), max_raycast_distance, sensorPos, -carDir, carDirRight, veh_name, false, veh_speed)
 
   --Get vehicles in a 10m radius behind my vehicle
@@ -189,7 +188,7 @@ local function update(dt, veh, aeb_enabled)
   --Play beeping sound depending on min distance of prev five sensor detections to obstacle
   soundBeepers(dt, prev_min_dist)
   
-  if static_sensor_id == num_of_sensors - 1 then
+  if static_sensor_id == aeb_params.num_of_sensors - 1 then
     prev_min_dist = min_dist
     min_dist = 9999
   end
