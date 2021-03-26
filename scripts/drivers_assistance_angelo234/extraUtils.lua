@@ -48,6 +48,8 @@ end
 local function getVehicleProperties(veh)
   local props = {}
 
+  props.name = veh:getJBeamFilename()
+
   --Direction vectors of vehicle
   props.dir = vec3(veh.obj:getDirectionVector()):normalized()
   props.dir_up = vec3(veh.obj:getDirectionVectorUp()):normalized()

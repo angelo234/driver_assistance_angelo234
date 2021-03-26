@@ -15,6 +15,7 @@ M.parking_lines_params = {
 
 M.params_per_veh = {
   ["etk800"] = {
+    dse_part_name = "etk800_DSE",
     cam_fov = 120,
     cam_down_angle = 35,
     max_steer_radius = 4.3,
@@ -26,9 +27,12 @@ M.params_per_veh = {
     veh_half_width_line_width = 0.6 + 0.05,
     parking_sensor_rel_height = -0.5,
     safety_offset_width_sensor = 0.25,
+    fwd_friction_coeff = 0.95,
+    rev_friction_coeff = 0.8,
     systems = {"fwd_aeb", "parking_sensors_with_aeb", "reverse_cam", "cam_traj_lines", "cam_park_lines"}
   },
   ["etkc"] = {
+    dse_part_name = "etkc_DSE",
     cam_fov = 120,
     cam_down_angle = 35,
     max_steer_radius = 4.5,
@@ -40,23 +44,12 @@ M.params_per_veh = {
     veh_half_width_line_width = 0.6 + 0.05,
     parking_sensor_rel_height = -0.55,
     safety_offset_width_sensor = 0.35,
-    systems = {"fwd_aeb", "parking_sensors_with_aeb", "reverse_cam", "cam_traj_lines", "cam_park_lines"}
-  },
-  ["sunburst"] = {
-    cam_fov = 120,
-    cam_down_angle = 35,
-    max_steer_radius = 4.5,
-    min_steer_radius = 3.3,
-    rel_cam_height = 0.25,
-    cam_to_wheel_len = -1,
-    veh_half_width = 0.6,
-    line_height_rel_cam = -0.3,
-    veh_half_width_line_width = 0.6 + 0.05,
-    parking_sensor_rel_height = -0.5,
-    safety_offset_width_sensor = 0.35,
+    fwd_friction_coeff = 0.95,
+    rev_friction_coeff = 0.8,
     systems = {"fwd_aeb", "parking_sensors_with_aeb", "reverse_cam", "cam_traj_lines", "cam_park_lines"}
   },
   ["sbr"] = {
+    dse_part_name = "sbr_DSE",
     cam_fov = 120,
     cam_down_angle = 35,
     max_steer_radius = 4.5,
@@ -68,9 +61,12 @@ M.params_per_veh = {
     veh_half_width_line_width = 0.6 + 0.05,
     parking_sensor_rel_height = -0.55,
     safety_offset_width_sensor = 0.2,
+    fwd_friction_coeff = 0.95,
+    rev_friction_coeff = 0.8,
     systems = {"fwd_aeb", "parking_sensors_with_aeb", "reverse_cam", "cam_traj_lines", "cam_park_lines"}
   },
   ["vivace"] = {
+    dse_part_name = "vivace_DSE",
     cam_fov = 120,
     cam_down_angle = 35,
     max_steer_radius = 4.5,
@@ -82,6 +78,8 @@ M.params_per_veh = {
     veh_half_width_line_width = 0.6 + 0.05,
     parking_sensor_rel_height = -0.55,
     safety_offset_width_sensor = 0.35,
+    fwd_friction_coeff = 0.95,
+    rev_friction_coeff = 0.8,
     systems = {"fwd_aeb", "parking_sensors_with_aeb", "reverse_cam", "cam_traj_lines", "cam_park_lines"}
   },
   ["van"] = {
@@ -96,6 +94,8 @@ M.params_per_veh = {
     veh_half_width_line_width = 0.8 + 0.05,
     parking_sensor_rel_height = -1.4,
     safety_offset_width_sensor = 0.35,
+    fwd_friction_coeff = 0.95,
+    rev_friction_coeff = 0.8,
     systems = {"reverse_cam"}
   },
   ["citybus"] = {
@@ -110,6 +110,8 @@ M.params_per_veh = {
     veh_half_width_line_width = 0.9 + 0.05,
     parking_sensor_rel_height = -0.55,
     safety_offset_width_sensor = 0.35,
+    fwd_friction_coeff = 0.95,
+    rev_friction_coeff = 0.8,
     systems = {"reverse_cam"}
   }
 }
@@ -126,15 +128,18 @@ M.aeb_params = {
   min_distance_from_car = 0.5,
 
   fwd_warning_tone_hertz = 7,
+
+  lateral_acc_to_avoid_collision = 0.1
+}
+
+M.parking_sensor_params = {
   parking_warning_tone_hertz = 20,
   parking_warning_tone_dist_per_hertz = 2.75,
-
-  fwd_friction_coeff = 0.95,
-  rev_friction_coeff = 0.8,
-
-  lateral_acc_to_avoid_collision = 0.1,
-
-  num_of_sensors = 9
+  
+  num_of_sensors = 9,
+  sensors_polled_per_iteration = 2,
+  sensor_offset_forward = 0.2,
+  sensor_max_distance = 7.5
 }
 
 return M

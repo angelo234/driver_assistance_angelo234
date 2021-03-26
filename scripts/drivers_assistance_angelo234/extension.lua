@@ -21,6 +21,7 @@ local aeb_params = system_params.aeb_params
 M.curr_camera_mode = "orbit"
 M.prev_camera_mode = "orbit"
 
+--Used for what camera to switch the player to when the player gets out of reverse gear using reverse camera
 local function onCameraModeChanged(new_camera_mode)
   if new_camera_mode ~= M.curr_camera_mode then
     M.prev_camera_mode = M.curr_camera_mode
@@ -53,12 +54,23 @@ local function getAllVehiclesPropertiesFromVELua()
     and throttle_pos_angelo234 ~= nil
 end
 
+local yawSmooth = newExponentialSmoothing(10) --exponential smoothing for yaw rate
+
+local function processVELuaData()
+  --Decode electrics.values json result
+  electrics_values_angelo234 = jsonDecode(electrics_values_angelo234)
+
+  --Smoothes angular velocity
+  angular_speed_angelo234 = yawSmooth:get(angular_speed_angelo234)
+end
+
+--Complicated way to load in camera (but it works quite seamlessly)
 local function doLuaReload()
   --Determine if Lua loaded for first time or was loaded another time
   --if loaded for first time, then reload Lua to load in the reverse camera properly
   --if not, then don't need to do anything
   --And if log header changes from "Log started" to "Log rotated" then don't bother reloading
-  --since by that time, the camera probably was already loaded in
+  --since by that time, the reverse camera probably was already loaded in
   
   local log_file_header_file = "prev_log_file_header_angelo234.txt"
   local curr_log_file_header = readFile("beamng.log"):match("^.-\r")
@@ -86,16 +98,20 @@ end
 local function isVehicleSupported(veh)
   local the_veh_name = veh:getJBeamFilename()
   
-  for curr_veh_name, _ in pairs(params_per_veh) do
+  for curr_veh_name, _ in pairs(params_per_veh) do 
     if the_veh_name == curr_veh_name then
-      return true
+      --If current vehicle is part of supported vehicle list then
+      --check if Driving and Safety Electronics (DSE) part is the regular one (not race one)
+      local dse_part_selected = extensions.core_vehicle_manager.getVehicleData(be:getPlayerVehicle(0):getID())
+      .chosenParts[params_per_veh[the_veh_name].dse_part_name]
+
+      return dse_part_selected == params_per_veh[the_veh_name].dse_part_name
     end
   end
-  
+    
   return false
 end
 
-local yawSmooth = newExponentialSmoothing(10) --exponential smoothing for the yaw rate
 local first_update = true
 
 local function onUpdate(dt)
@@ -111,19 +127,14 @@ local function onUpdate(dt)
   if not isVehicleSupported(veh) then return end
 
   local ready = getAllVehiclesPropertiesFromVELua()
-
+  --If Vehicle Lua data is nil then return
   if not ready then return end
 
-  --Decode electrics.values json result
-  electrics_values_angelo234 = jsonDecode(electrics_values_angelo234)
+  --Process data gathered from Vehicle Lua to be usable in our context
+  processVELuaData()
 
-  --Smoothes angular velocity
-  angular_speed_angelo234 = yawSmooth:get(angular_speed_angelo234)
-
-  local the_veh_name = veh:getJBeamFilename()
-
-  --Update systems based on what is supported on a vehicle basis
-  for _, val in pairs(params_per_veh[the_veh_name].systems) do
+  --Update systems based on what is supported by vehicle
+  for _, val in pairs(params_per_veh[veh:getJBeamFilename()].systems) do
     if val == "parking_sensors" then
       parking_sensor_system.update(dt, veh, false)
   

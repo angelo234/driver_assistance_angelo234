@@ -163,9 +163,7 @@ end
 
 local function drawParkingLines(camPos, camDir, camLeft, camRight, camUp)
 	local offset_height_vec = camUp * params_per_veh[veh_name].line_height_rel_cam
-	--debugDrawer:drawSphere((camPos + left_vec):toPoint3F(), 0.1, ColorF(1,0,0,1))
-	--debugDrawer:drawSphere((camPos + right_vec):toPoint3F(), 0.1, ColorF(0,1,0,1))
-
+  
 	local vec_offset_center_left = camLeft * params_per_veh[veh_name].veh_half_width
 		+ offset_height_vec + camDir * parking_lines_params.parking_line_offset_long
 
@@ -178,6 +176,7 @@ local function drawParkingLines(camPos, camDir, camLeft, camRight, camUp)
 	local vec_offset_center_width_right = camRight * params_per_veh[veh_name].veh_half_width_line_width
 		+ offset_height_vec + camDir * parking_lines_params.parking_line_offset_long
 
+  --Vectors to draw perpendicular/interval lines
 	local vec_offset_center_left_perp = vec_offset_center_left + camDir * (parking_lines_params.parking_line_red_len - parking_lines_params.line_width)
 	local vec_offset_center_left_width_perp = vec_offset_center_left + camDir * (parking_lines_params.parking_line_red_len)
 	local vec_offset_center_left_inward_perp = vec_offset_center_left_perp + camRight * parking_lines_params.perp_line_length
@@ -188,28 +187,8 @@ local function drawParkingLines(camPos, camDir, camLeft, camRight, camUp)
 	local vec_offset_center_right_inward_perp = vec_offset_center_right_perp + camLeft * parking_lines_params.perp_line_length
 	local vec_offset_center_right_width_inward_perp = vec_offset_center_right_width_perp + camLeft * parking_lines_params.perp_line_length
 
-	local offset_height_vec2 = camUp * -0.3
-	local vec_offset_center_left2 = camLeft * params_per_veh[veh_name].veh_half_width
-		+ offset_height_vec2 + camDir * parking_lines_params.parking_line_offset_long
-
-	local vec_offset_center_width_left2 = camLeft * params_per_veh[veh_name].veh_half_width_line_width
-		+ offset_height_vec2 + camDir * parking_lines_params.parking_line_offset_long
-
-	local vec_offset_center_right2 = camRight * params_per_veh[veh_name].veh_half_width
-		+ offset_height_vec2 + camDir * parking_lines_params.parking_line_offset_long
-	
-	local vec_offset_center_width_right2 = camRight * params_per_veh[veh_name].veh_half_width_line_width
-		+ offset_height_vec2 + camDir * parking_lines_params.parking_line_offset_long
-
 	--This prevents a bug where the red line intersects the trajectory lines
 	debugDrawer:drawLine(vec3():toPoint3F(), vec3():toPoint3F(), ColorF(0,0,0,0))
-
-	--debugDrawer:drawQuadSolid(
-	--(camPos + vec_offset_center_left2):toPoint3F(),	
-	--(camPos + vec_offset_center_width_left2):toPoint3F(),
-	--(camPos + vec_offset_center_width_left2 + camDir * parking_lines_params.parking_line_red_len):toPoint3F(),
-	--(camPos + vec_offset_center_left2 + camDir * parking_lines_params.parking_line_red_len):toPoint3F(),
-	--extra_utils.toColorI(ColorF(1,0,0,1)))
 
 	--Left red lines
 	debugDrawer:drawQuadSolid(
@@ -359,7 +338,13 @@ local function checkVehicleSupported(id)
 				end
 			end
 		
-			if is_supported then break end
+			if is_supported then 
+			  --check if Driving and Safety Electronics (DSE) part is the regular one (not race one)
+        local dse_part_selected = extensions.core_vehicle_manager.getVehicleData(id)
+        .chosenParts[params_per_veh[the_veh_name].dse_part_name]
+  
+        is_supported = dse_part_selected == params_per_veh[the_veh_name].dse_part_name			
+			end
 		end
 	end
 end
@@ -378,11 +363,13 @@ function C:update(data)
     checkVehicleSupported(data.veh:getID())
     first_update = false
   end
+  
+  if electrics_values_angelo234 == nil then return end
 
   local in_reverse = electrics_values_angelo234["reverse"]
 
 	--If vehicle doesn't have a backup camera or not in reverse, set camera to previous camera mode
-	if is_supported == false or in_reverse == 0 then
+	if in_reverse == nil or is_supported == false or in_reverse == 0 then
 	  local prev_cam = scripts_drivers__assistance__angelo234_extension.prev_camera_mode
 		core_camera.setByName(0, prev_cam)
 		return

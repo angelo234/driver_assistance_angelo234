@@ -169,7 +169,7 @@ local function checkIfCarsIntersectAtTTC(dt, my_veh, data)
   local overlap = overlapsOBB_OBB(my_veh_pos_future, my_x, my_y, my_z, other_veh_pos_future, other_x, other_y, other_z)
 
   if overlap then
-    --At low speeds, predict if moderate steering input (0.3 g's laterally) can avoid collision
+    --At low speeds, predict if light steering input (0.1 g's laterally) can avoid collision
     --then deactivate system
     if my_veh_props.speed < 20 or true then
       local free_path = getFreePathInLane(my_veh_side, lane_width, other_lat_dist_from_wp, 
@@ -259,7 +259,7 @@ local function performEmergencyBraking(dt, my_veh, distance, vel_rel)
   end
 
   --Max braking acceleration = gravity * coefficient of static friction
-  local acc = math.min(-veh_accs_angelo234[my_veh:getID()][3], aeb_params.gravity) * aeb_params.fwd_friction_coeff
+  local acc = math.min(-veh_accs_angelo234[my_veh:getID()][3], aeb_params.gravity) * params_per_veh[my_veh_props.name].fwd_friction_coeff
 
   --Calculate TTC
   local ttc = distance / vel_rel
@@ -272,7 +272,7 @@ local function performEmergencyBraking(dt, my_veh, distance, vel_rel)
 
   timeElapsed3 = timeElapsed3 + dt
 
-  --Sound warning tone if 1.0 seconds away from braking
+  --Sound warning tone if 1.0 * (0.5 + vel_rel / 40.0) seconds away from braking
   if time_before_braking <= 1.0 * (0.5 + vel_rel / 40.0) then
     --
     if timeElapsed3 >= 1.0 / aeb_params.fwd_warning_tone_hertz then
@@ -329,7 +329,7 @@ local function update(dt, veh)
     --to the vehicle that I'm planning to collide with
     local distance, vel_rel = getNearestVehicleInPath(dt, veh, data)
 
-    --Use distance/relative velocity/max acceleration to determine when to apply emergency braking
+    --Use distance, relative velocity, and max acceleration to determine when to apply emergency braking
     performEmergencyBraking(dt, veh, distance, vel_rel)
   end
 end
