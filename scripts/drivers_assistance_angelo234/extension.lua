@@ -12,6 +12,7 @@ local extra_utils = require('scripts/drivers_assistance_angelo234/extraUtils')
 local system_params = require('scripts/drivers_assistance_angelo234/vehicleSystemParameters')
 local aeb_system = require('scripts/drivers_assistance_angelo234/aebSystem')
 local parking_sensor_system = require('scripts/drivers_assistance_angelo234/parkingSensorSystem')
+local lane_assist_system = require('scripts/drivers_assistance_angelo234/laneAssistSystem')
 
 --Bunch of parameters
 local parking_lines_params = system_params.parking_lines_params
@@ -146,6 +147,9 @@ local function onUpdate(dt)
     end
 
   end
+  
+  lane_assist_system.update(dt, veh)
+  
 end
 
 M.onCameraModeChanged = onCameraModeChanged

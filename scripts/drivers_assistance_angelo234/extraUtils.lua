@@ -189,6 +189,25 @@ local function getWaypointStartEnd(my_veh, position)
 
   local wp1, wp2, lat_dist_from_wp = map.findClosestRoad(position)
 
+  --Get lane width
+  local half_road_width = map.getMap().nodes[wp1].radius
+  local my_start_links = map.getMap().nodes[wp1].links
+  
+  local one_way = false
+
+  for wp, data in pairs(my_start_links) do
+    one_way = data.oneWay
+    break
+  end
+
+  local lane_width = half_road_width
+
+  --For one lane road
+  if half_road_width < 3 and one_way then
+    lane_width = lane_width * 2
+  end
+
+
   --For some reason lateral distance from waypoint is offset by 0.5
   lat_dist_from_wp = lat_dist_from_wp - 0.5
 
@@ -208,25 +227,26 @@ local function getWaypointStartEnd(my_veh, position)
     end_wp = wp1
   end
 
-  return start_wp, end_wp, lat_dist_from_wp
+  return start_wp, end_wp, lat_dist_from_wp, lane_width
 end
 
-local function getWaypointStartEndBasedOnDir(my_veh, veh, position)
+--Also predicts your future position to find more suitable waypoints
+local function getWaypointStartEndAdvanced(my_veh, veh, position)
   local my_veh_props = getVehicleProperties(my_veh)
   local veh_props = getVehicleProperties(veh)
 
-  local start_wp, end_wp, lat_dist_from_wp = getWaypointStartEnd(my_veh, position)
+  local start_wp, end_wp, lat_dist_from_wp, lane_width = getWaypointStartEnd(my_veh, position)
 
   --Check using future positions
 
   local veh_pos_future = getFuturePosition(veh, 1, "center")
-  local future_start_wp, future_end_wp, future_lat_dist_from_wp = getWaypointStartEnd(my_veh, veh_pos_future)
+  local future_start_wp, future_end_wp, future_lat_dist_from_wp, future_lane_width = getWaypointStartEnd(my_veh, veh_pos_future)
 
   local veh_pos_future2 = getFuturePosition(veh, 2, "center")
-  local future_start_wp2, future_end_wp2, future_lat_dist_from_wp2 = getWaypointStartEnd(my_veh, veh_pos_future2)
+  local future_start_wp2, future_end_wp2, future_lat_dist_from_wp2, future_lane_width2 = getWaypointStartEnd(my_veh, veh_pos_future2)
 
   if start_wp == nil then
-    return start_wp, end_wp, lat_dist_from_wp
+    return start_wp, end_wp, lat_dist_from_wp, lane_width
   end
 
   local wps = {}
@@ -286,7 +306,7 @@ local function getWaypointStartEndBasedOnDir(my_veh, veh, position)
     --debugDrawer:drawSphere((wp2_pos + vec3(0,0,2)):toPoint3F(), 0.5, ColorF(1,1,0,1))
   end
 
-  return min_wp_angle[2], min_wp_angle[3], lat_dist_from_wp
+  return min_wp_angle[2], min_wp_angle[3], lat_dist_from_wp, lane_width
 end
 
 --returns true for right, false for left
@@ -294,7 +314,7 @@ local function getWhichSideCarIsOnAndWaypoints(my_veh, veh)
   local veh_props = getVehicleProperties(veh)
 
   --Gets waypoints with start and end relative to my vehicle (not other vehicles)
-  local start_wp, end_wp, lat_dist_from_wp = getWaypointStartEndBasedOnDir(my_veh, veh, veh_props.front_pos)
+  local start_wp, end_wp, lat_dist_from_wp = getWaypointStartEndAdvanced(my_veh, veh, veh_props.front_pos)
 
   --If no waypoints exist, don't stop system as failsafe
   if start_wp == nil or end_wp == nil then
@@ -371,7 +391,7 @@ local function checkIfOtherCarWithinMyRoadHalfWidth(my_veh, half_road_width, oth
   local other_veh_pos_on_wp_line = xnorm * my_wp_start_end + my_start_wp_pos
   
   --Get waypoint on my road closest to other vehicle
-  local new_start_wp, new_end_wp, new_lat_dist_from_wp = getWaypointStartEnd(my_veh, other_veh_pos_on_wp_line)
+  local new_start_wp, new_end_wp, new_lat_dist_from_wp, new_lane_width = getWaypointStartEnd(my_veh, other_veh_pos_on_wp_line)
   
   if new_start_wp == nil then
     return true
@@ -587,7 +607,7 @@ M.getFuturePositionXY = getFuturePositionXY
 M.getFuturePositionXYWithAcc = getFuturePositionXYWithAcc
 M.getWaypointPosition = getWaypointPosition
 M.getWaypointStartEnd = getWaypointStartEnd
-M.getWaypointStartEndBasedOnDir = getWaypointStartEndBasedOnDir
+M.getWaypointStartEndAdvanced = getWaypointStartEndAdvanced
 M.getWhichSideCarIsOnAndWaypoints = getWhichSideCarIsOnAndWaypoints
 M.checkIfCarsAreInSameLane = checkIfCarsAreInSameLane
 M.getNearbyVehicles = getNearbyVehicles

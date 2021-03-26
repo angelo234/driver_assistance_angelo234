@@ -349,20 +349,9 @@ local function checkVehicleSupported(id)
 	end
 end
 
-function C:onVehicleSwitched(oldID, newID, player)
-	checkVehicleSupported(newID)
-end
-
-function C:onVehicleSpawned(vid)
-  checkVehicleSupported(vid)
-end
-
 function C:update(data)
-  --Check if vehicle supported on first update
-  if first_update then
-    checkVehicleSupported(data.veh:getID())
-    first_update = false
-  end
+  --Check if vehicle supported
+  checkVehicleSupported(data.veh:getID())
   
   if electrics_values_angelo234 == nil then return end
 

@@ -12,7 +12,7 @@ local system_active = false
 --Uses predicted future pos and places it relative to the future waypoint
 --based on relative position to the current waypoint
 local function getFutureVehPosCorrectedWithWP(my_veh, veh, veh_pos_future, lat_dist_from_wp, my_veh_side)
-  local new_start_wp, new_end_wp, new_lat_dist = extra_utils.getWaypointStartEndBasedOnDir(my_veh, veh, veh_pos_future)
+  local new_start_wp, new_end_wp, new_lat_dist = extra_utils.getWaypointStartEndAdvanced(my_veh, veh, veh_pos_future)
 
   if new_start_wp == nil or new_end_wp == nil then
     return veh_pos_future, nil
@@ -291,7 +291,7 @@ local function performEmergencyBraking(dt, my_veh, distance, vel_rel)
     release_brake_confidence_level = release_brake_confidence_level + 1
 
     --Only release brakes if confident
-    if release_brake_confidence_level >= 15 then
+    if release_brake_confidence_level >= 5 then
       if system_active then
         my_veh:queueLuaCommand("input.event('brake', 0, -1)")
         system_active = false
