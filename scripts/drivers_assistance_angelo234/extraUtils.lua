@@ -203,7 +203,7 @@ local function getWaypointStartEnd(my_veh, position)
   local lane_width = half_road_width
 
   --For one lane road
-  if half_road_width < 3 and one_way then
+  if one_way then -- and half_road_width < 3 then
     lane_width = lane_width * 2
   end
 
@@ -227,7 +227,7 @@ local function getWaypointStartEnd(my_veh, position)
     end_wp = wp1
   end
 
-  return start_wp, end_wp, lat_dist_from_wp, lane_width
+  return start_wp, end_wp, lat_dist_from_wp, lane_width, one_way
 end
 
 --Also predicts your future position to find more suitable waypoints
@@ -235,18 +235,18 @@ local function getWaypointStartEndAdvanced(my_veh, veh, position)
   local my_veh_props = getVehicleProperties(my_veh)
   local veh_props = getVehicleProperties(veh)
 
-  local start_wp, end_wp, lat_dist_from_wp, lane_width = getWaypointStartEnd(my_veh, position)
+  local start_wp, end_wp, lat_dist_from_wp, lane_width, one_way = getWaypointStartEnd(my_veh, position)
 
   --Check using future positions
 
   local veh_pos_future = getFuturePosition(veh, 1, "center")
-  local future_start_wp, future_end_wp, future_lat_dist_from_wp, future_lane_width = getWaypointStartEnd(my_veh, veh_pos_future)
+  local future_start_wp, future_end_wp, future_lat_dist_from_wp, future_lane_width, future_one_way = getWaypointStartEnd(my_veh, veh_pos_future)
 
   local veh_pos_future2 = getFuturePosition(veh, 2, "center")
-  local future_start_wp2, future_end_wp2, future_lat_dist_from_wp2, future_lane_width2 = getWaypointStartEnd(my_veh, veh_pos_future2)
+  local future_start_wp2, future_end_wp2, future_lat_dist_from_wp2, future_lane_width2, future_one_way2 = getWaypointStartEnd(my_veh, veh_pos_future2)
 
   if start_wp == nil then
-    return start_wp, end_wp, lat_dist_from_wp, lane_width
+    return start_wp, end_wp, lat_dist_from_wp, lane_width, one_way
   end
 
   local wps = {}
@@ -306,7 +306,7 @@ local function getWaypointStartEndAdvanced(my_veh, veh, position)
     --debugDrawer:drawSphere((wp2_pos + vec3(0,0,2)):toPoint3F(), 0.5, ColorF(1,1,0,1))
   end
 
-  return min_wp_angle[2], min_wp_angle[3], lat_dist_from_wp, lane_width
+  return min_wp_angle[2], min_wp_angle[3], lat_dist_from_wp, lane_width, one_way
 end
 
 --returns true for right, false for left

@@ -1,11 +1,15 @@
 local M = {}
 
+require("controlSystems") -- for newPIDStandard
 local extra_utils = require('scripts/drivers_assistance_angelo234/extraUtils')
 local system_params = require('scripts/drivers_assistance_angelo234/vehicleSystemParameters')
 
 local parking_lines_params = system_params.parking_lines_params
 local params_per_veh = system_params.params_per_veh
 local aeb_params = system_params.aeb_params
+
+local steering_pid = newPIDStandard(0.1, 5, 0.5, -0.2, 0.2)
+local steering_smooth = newTemporalSmoothing(200, 200)
 
 local system_active = false
 
@@ -16,14 +20,25 @@ end
 local function getOffsetFromCenterOfLane(veh)
   local veh_props = extra_utils.getVehicleProperties(veh)
 
-  local start_wp, end_wp, lat_dist, lane_width = extra_utils.getWaypointStartEndAdvanced(veh, veh, veh_props.center_pos)
-  
-  return lat_dist - (lane_width / 2.0)
+  local start_wp, end_wp, lat_dist, lane_width, one_way = extra_utils.getWaypointStartEndAdvanced(veh, veh, veh_props.center_pos)
+
+  if one_way then -- and lane_width < 3 then
+    --One lane road
+    return lat_dist 
+  else
+    --Two lane road
+    return lat_dist - (lane_width / 2.0)
+  end
 end
 
-local function getSteeringValue(offset) 
-  print(offset) 
-  return math.min(-offset / 20, 0.2) 
+local function getSteeringValue(dt, offset) 
+  print(offset)
+
+  local output = steering_pid:get(offset, 0, dt)
+  --electrics.values.throttleOverride = steering_smooth:getUncapped(output, dt)
+  
+  return output
+  --return steering_smooth:getUncapped(output, dt)
 end
 
 local function update(dt, veh)
@@ -49,7 +64,7 @@ local function update(dt, veh)
     end
     
     local offset = getOffsetFromCenterOfLane(veh)
-    local steering_val = getSteeringValue(offset)
+    local steering_val = getSteeringValue(dt, offset)
     
     performSteering(veh, steering_val)
   end
