@@ -177,6 +177,41 @@ local function getWaypointPosition(wp)
   end
 end
 
+local function getLaneWidth(one_way, wp_radius)
+  local max_lane_width = 3.75
+  local lane_width = 0
+  local lanes = 0
+
+  if one_way then
+    if wp_radius * 2 < max_lane_width then
+      --For one lane road
+      lane_width = wp_radius * 2.0
+      lanes = 1
+      
+    elseif wp_radius * 2 < max_lane_width * 2 then
+      --For two lane road
+      lane_width = wp_radius
+      lanes = 2
+         
+    elseif wp_radius * 2 < max_lane_width * 3 then
+      --For three lane road
+      lane_width = wp_radius * 2.0 / 3.0 
+      lanes = 3
+      
+    elseif wp_radius * 2 < max_lane_width * 4 then
+      --For four lane road
+      lane_width = wp_radius * 2.0 / 4.0
+      lanes = 4
+      
+    end
+  else
+    lane_width = wp_radius
+    lanes = 2
+  end
+  
+  return lane_width, lanes
+end
+
 --Get start and end waypoints relative to my vehicle nearest to a position
 local function getWaypointStartEnd(my_veh, position)
   local my_car_dir = vec3(my_veh.obj:getDirectionVector()):normalized()
@@ -190,7 +225,7 @@ local function getWaypointStartEnd(my_veh, position)
   local wp1, wp2, lat_dist_from_wp = map.findClosestRoad(position)
 
   --Get lane width
-  local half_road_width = map.getMap().nodes[wp1].radius
+  local wp_radius = map.getMap().nodes[wp1].radius
   local my_start_links = map.getMap().nodes[wp1].links
   
   local one_way = false
@@ -200,13 +235,7 @@ local function getWaypointStartEnd(my_veh, position)
     break
   end
 
-  local lane_width = half_road_width
-
-  --For one lane road
-  if one_way then -- and half_road_width < 3 then
-    lane_width = lane_width * 2
-  end
-
+  local lane_width, num_of_lanes = getLaneWidth(one_way, wp_radius)
 
   --For some reason lateral distance from waypoint is offset by 0.5
   lat_dist_from_wp = lat_dist_from_wp - 0.5
@@ -227,7 +256,7 @@ local function getWaypointStartEnd(my_veh, position)
     end_wp = wp1
   end
 
-  return start_wp, end_wp, lat_dist_from_wp, lane_width, one_way
+  return start_wp, end_wp, lat_dist_from_wp, lane_width, one_way, num_of_lanes
 end
 
 --Also predicts your future position to find more suitable waypoints
@@ -235,7 +264,7 @@ local function getWaypointStartEndAdvanced(my_veh, veh, position)
   local my_veh_props = getVehicleProperties(my_veh)
   local veh_props = getVehicleProperties(veh)
 
-  local start_wp, end_wp, lat_dist_from_wp, lane_width, one_way = getWaypointStartEnd(my_veh, position)
+  local start_wp, end_wp, lat_dist_from_wp, lane_width, one_way, num_of_lanes = getWaypointStartEnd(my_veh, position)
 
   --Check using future positions
 
@@ -309,29 +338,7 @@ local function getWaypointStartEndAdvanced(my_veh, veh, position)
   return min_wp_angle[2], min_wp_angle[3], lat_dist_from_wp, lane_width, one_way
 end
 
---returns true for right, false for left
-local function getWhichSideCarIsOnAndWaypoints(my_veh, veh)
-  local veh_props = getVehicleProperties(veh)
-
-  --Gets waypoints with start and end relative to my vehicle (not other vehicles)
-  local start_wp, end_wp, lat_dist_from_wp = getWaypointStartEndAdvanced(my_veh, veh, veh_props.front_pos)
-
-  --If no waypoints exist, don't stop system as failsafe
-  if start_wp == nil or end_wp == nil then
-    return nil, nil, nil, nil, 0
-  end
-
-  local start_pos = getWaypointPosition(start_wp)
-  local end_pos = getWaypointPosition(end_wp)
-
-  local wp_mid_pos = (end_pos - start_pos) * 0.5 + start_pos
-
-  --If the waypoints are too far away, then don't use them
-  --but don't stop system
-  if (wp_mid_pos - veh_props.center_pos):length() > 50 then
-    return nil, nil, nil, nil, 0
-  end
-
+local function getWhichSideOfWaypointsCarIsOn(veh_props, start_pos, end_pos)
   local road_line_dir = toNormXYVec(end_pos - start_pos)
   local car_dir_xy = toNormXYVec(veh_props.dir)
 
@@ -339,15 +346,18 @@ local function getWhichSideCarIsOnAndWaypoints(my_veh, veh)
   --debugDrawer:drawSphere(wp_mid_pos:toPoint3F(), 0.5, ColorF(0,1,0,1))
   --debugDrawer:drawSphere(end_pos:toPoint3F(), 0.5, ColorF(0,0,1,1))
 
-  local color = toColorI(ColorF(1,0,0,0.25))
+  --local color = toColorI(ColorF(1,0,0,0.25))
 
   --debugDrawer:setSolidTriCulling(false)
   --debugDrawer:drawQuadSolid((start_pos):toPoint3F(), (start_pos + vec3(0,0,1)):toPoint3F(),
   --(end_pos + vec3(0,0,1)):toPoint3F(), (end_pos):toPoint3F(), color)
 
+  local wp_mid_pos = (end_pos - start_pos) * 0.5 + start_pos
+
   --Get angle between car dir and road dir that is between 0 and 360 degrees
   local line_to_left_side_dir = (veh_props.center_pos - veh_props.dir_right * veh_props.bb:getHalfExtents().x * 0.5 - wp_mid_pos):normalized()
   local line_to_right_side_dir = (veh_props.center_pos + veh_props.dir_right * veh_props.bb:getHalfExtents().x * 0.5 - wp_mid_pos):normalized()
+  local line_to_center_dir = (veh_props.center_pos - wp_mid_pos):normalized()
 
   local left_dot = line_to_left_side_dir:dot(road_line_dir)
   local left_det = line_to_left_side_dir.x * road_line_dir.y - line_to_left_side_dir.y * road_line_dir.x
@@ -355,10 +365,15 @@ local function getWhichSideCarIsOnAndWaypoints(my_veh, veh)
   local right_dot = line_to_right_side_dir:dot(road_line_dir)
   local right_det = line_to_right_side_dir.x * road_line_dir.y - line_to_right_side_dir.y * road_line_dir.x
 
+  local center_dot = line_to_center_dir:dot(road_line_dir)
+  local center_det = line_to_center_dir.x * road_line_dir.y - line_to_center_dir.y * road_line_dir.x
+
   local left_angle = math.atan2(left_det, left_dot) * 180.0 / math.pi
   local right_angle = math.atan2(right_det, right_dot) * 180.0 / math.pi
+  local center_angle = math.atan2(center_det, center_dot) * 180.0 / math.pi
 
   local side = nil
+  local in_wp_middle = false
 
   --Right side
   if left_angle > 0 and left_angle < 180 then
@@ -371,16 +386,79 @@ local function getWhichSideCarIsOnAndWaypoints(my_veh, veh)
   --Right side
   if right_angle > 0 and right_angle < 180 then
     if side == "left" then
-      side = "both"
+      in_wp_middle = true
     end
     --Left side
   else
     if side == "right" then
-      side = "both"
+      in_wp_middle = true
     end
   end
+  
+   --Right side
+  if center_angle > 0 and center_angle < 180 then
+    side = "right"
+    --Left side
+  else
+    side = "left"
+  end
+  
+  return side, in_wp_middle
+end
 
-  return side, start_wp, end_wp, lat_dist_from_wp
+--returns true for right, false for left
+local function getWhichSideCarIsOnAndWaypoints(my_veh, veh)
+  local veh_props = getVehicleProperties(veh)
+
+  --Gets waypoints with start and end relative to my vehicle (not other vehicles)
+  local start_wp, end_wp, lat_dist_from_wp, lane_width, one_way = getWaypointStartEndAdvanced(my_veh, veh, veh_props.front_pos)
+
+  --If no waypoints exist, don't stop system as failsafe
+  if start_wp == nil or end_wp == nil then
+    return nil, nil, nil, 0, 2, false
+  end
+
+  local start_pos = getWaypointPosition(start_wp)
+  local end_pos = getWaypointPosition(end_wp)
+
+  local wp_mid_pos = (end_pos - start_pos) * 0.5 + start_pos
+
+  --If the waypoints are too far away, then don't use them
+  --but don't stop system
+  if (wp_mid_pos - veh_props.center_pos):length() > 50 then
+    return nil, nil, nil, 0, 2, false
+  end
+
+  local side, in_wp_middle = getWhichSideOfWaypointsCarIsOn(veh_props, start_pos, end_pos)
+
+  return side, in_wp_middle, start_wp, end_wp, lat_dist_from_wp, lane_width, one_way
+end
+
+local function getLaneNum(my_veh, veh)
+  local veh_props = getVehicleProperties(veh)
+
+  --Gets waypoints with start and end relative to my vehicle (not other vehicles)
+  local start_wp, end_wp, lat_dist_from_wp, lane_width, one_way = getWaypointStartEndAdvanced(my_veh, veh, veh_props.front_pos)
+
+  --If no waypoints exist, don't stop system as failsafe
+  if start_wp == nil or end_wp == nil then
+    return nil, nil, nil, 0, 2, false
+  end
+
+  local start_pos = getWaypointPosition(start_wp)
+  local end_pos = getWaypointPosition(end_wp)
+  --getLaneWidth(one_way, )
+  local wp_mid_pos = (end_pos - start_pos) * 0.5 + start_pos
+
+  --If the waypoints are too far away, then don't use them
+  --but don't stop system
+  if (wp_mid_pos - veh_props.center_pos):length() > 50 then
+    return nil, nil, nil, 0, 2, false
+  end
+
+  local side, in_wp_middle = getWhichSideOfWaypointsCarIsOn(veh_props, start_pos, end_pos)
+
+  return side, in_wp_middle, start_wp, end_wp, lat_dist_from_wp, lane_width, one_way
 end
 
 local function checkIfOtherCarWithinMyRoadHalfWidth(my_veh, half_road_width, other_veh_props, my_veh_start_wp, my_start_wp_pos, my_end_wp_pos)
@@ -606,8 +684,10 @@ M.getFuturePosition = getFuturePosition
 M.getFuturePositionXY = getFuturePositionXY
 M.getFuturePositionXYWithAcc = getFuturePositionXYWithAcc
 M.getWaypointPosition = getWaypointPosition
+M.getLaneWidth = getLaneWidth
 M.getWaypointStartEnd = getWaypointStartEnd
 M.getWaypointStartEndAdvanced = getWaypointStartEndAdvanced
+M.getWhichSideOfWaypointsCarIsOn = getWhichSideOfWaypointsCarIsOn
 M.getWhichSideCarIsOnAndWaypoints = getWhichSideCarIsOnAndWaypoints
 M.checkIfCarsAreInSameLane = checkIfCarsAreInSameLane
 M.getNearbyVehicles = getNearbyVehicles
