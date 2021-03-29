@@ -282,11 +282,14 @@ local function getWaypointStartEndAdvanced(my_veh_props, veh_props, position)
 
   --Check using future positions
 
+  local veh_pos_past = getFuturePosition(veh_props, -1, "center")
+  local past_wps_props = getWaypointStartEnd(my_veh_props, veh_pos_past)
+
   local veh_pos_future = getFuturePosition(veh_props, 1, "center")
   local future_wps_props = getWaypointStartEnd(my_veh_props, veh_pos_future)
 
-  local veh_pos_future2 = getFuturePosition(veh_props, 2, "center")
-  local future_wps_props2 = getWaypointStartEnd(my_veh_props, veh_pos_future2)
+  --local veh_pos_future2 = getFuturePosition(veh_props, 2, "center")
+  --local future_wps_props2 = getWaypointStartEnd(my_veh_props, veh_pos_future2)
 
   if wps_props == nil then
     return nil
@@ -297,15 +300,20 @@ local function getWaypointStartEndAdvanced(my_veh_props, veh_props, position)
   table.insert(wps, wps_props.start_wp)
   table.insert(wps, wps_props.end_wp)
   
+  if past_wps_props ~= nil then
+    table.insert(wps, past_wps_props.start_wp)
+    table.insert(wps, past_wps_props.end_wp)
+  end
+  
   if future_wps_props ~= nil then
     table.insert(wps, future_wps_props.start_wp)
     table.insert(wps, future_wps_props.end_wp)
   end
   
-  if future_wps_props2 ~= nil then
-    table.insert(wps, future_wps_props2.start_wp)
-    table.insert(wps, future_wps_props2.end_wp) 
-  end
+  --if future_wps_props2 ~= nil then
+    --table.insert(wps, future_wps_props2.start_wp)
+    --table.insert(wps, future_wps_props2.end_wp) 
+  --end
   
   local angle_between_vehs = math.acos(my_veh_props.dir:dot(veh_props.dir))
 
@@ -346,7 +354,7 @@ local function getWaypointStartEndAdvanced(my_veh_props, veh_props, position)
         min_wp_angle[3] = wp2
       end
     end
-    --debugDrawer:drawSphere((wp2_pos + vec3(0,0,2)):toPoint3F(), 0.5, ColorF(1,1,0,1))
+    debugDrawer:drawSphere((wp2_pos + vec3(0,0,2)):toPoint3F(), 0.5, ColorF(1,1,0,1))
   end
 
   local new_wps_props = getWaypointsProperties(min_wp_angle[2], min_wp_angle[3], wps_props.lat_dist_from_wp)
@@ -361,15 +369,13 @@ local function getWhichSideOfWaypointsCarIsOn(veh_props, start_pos, end_pos)
 
   local wp_mid_pos = (end_pos - start_pos) * 0.5 + start_pos
 
-  --debugDrawer:drawSphere(start_pos:toPoint3F(), 0.5, ColorF(1,0,0,1))
-  --debugDrawer:drawSphere(wp_mid_pos:toPoint3F(), 0.5, ColorF(0,1,0,1))
-  --debugDrawer:drawSphere(end_pos:toPoint3F(), 0.5, ColorF(0,0,1,1))
+  debugDrawer:drawSphere(start_pos:toPoint3F(), 0.5, ColorF(1,0,0,1))
+  debugDrawer:drawSphere(wp_mid_pos:toPoint3F(), 0.5, ColorF(0,1,0,1))
+  debugDrawer:drawSphere(end_pos:toPoint3F(), 0.5, ColorF(0,0,1,1))
 
-  --local color = toColorI(ColorF(1,0,0,0.25))
-
-  --debugDrawer:setSolidTriCulling(false)
-  --debugDrawer:drawQuadSolid((start_pos):toPoint3F(), (start_pos + vec3(0,0,1)):toPoint3F(),
-  --(end_pos + vec3(0,0,1)):toPoint3F(), (end_pos):toPoint3F(), color)
+  debugDrawer:setSolidTriCulling(false)
+  debugDrawer:drawQuadSolid((start_pos):toPoint3F(), (start_pos + vec3(0,0,1)):toPoint3F(),
+  (end_pos + vec3(0,0,1)):toPoint3F(), (end_pos):toPoint3F(), ColorF(1,0,0,0.25))
 
   --Get angle between car dir and road dir that is between 0 and 360 degrees
   local line_to_left_side_dir = (veh_props.center_pos - veh_props.dir_right * veh_props.bb:getHalfExtents().x * 0.5 - wp_mid_pos):normalized()

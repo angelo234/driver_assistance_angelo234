@@ -53,7 +53,7 @@ local function drawLeftTrajectoryLine(camPos, camDir, camLeft, camRight, camUp, 
 	(camPos + vec_offset_center_width + line_start_width):toPoint3F(),
 	(camPos + vec_offset_center_width + line_end_width):toPoint3F(),
 	(camPos + vec_offset_center + line_end):toPoint3F(),
-	extra_utils.toColorI(ColorF(1,1,1,1)))
+	ColorF(1,1,1,1))
 end
 
 --camDir is just negative dir of car
@@ -74,7 +74,7 @@ local function drawRightTrajectoryLine(camPos, camDir, camLeft, camRight, camUp,
 	(camPos + vec_offset_center + line_start):toPoint3F(),	
 	(camPos + vec_offset_center + line_end):toPoint3F(),
 	(camPos + vec_offset_center_width + line_end_width):toPoint3F(),
-	extra_utils.toColorI(ColorF(1,1,1,1)))
+	ColorF(1,1,1,1))
 end
 
 local function drawTrajectoryLines(camPos, dir, camLeft, camRight, camUp, left_turning_radius, right_turning_radius)
@@ -196,7 +196,7 @@ local function drawParkingLines(camPos, camDir, camLeft, camRight, camUp)
 	(camPos + vec_offset_center_width_left):toPoint3F(),
 	(camPos + vec_offset_center_width_left + camDir * parking_lines_params.parking_line_red_len):toPoint3F(),
 	(camPos + vec_offset_center_left + camDir * parking_lines_params.parking_line_red_len):toPoint3F(),
-	extra_utils.toColorI(ColorF(1,0,0,1)))
+	ColorF(1,0,0,1))
 
 	--Right red lines
 	debugDrawer:drawQuadSolid(
@@ -204,7 +204,7 @@ local function drawParkingLines(camPos, camDir, camLeft, camRight, camUp)
 	(camPos + vec_offset_center_right):toPoint3F(),	
 	(camPos + vec_offset_center_right + camDir * parking_lines_params.parking_line_red_len):toPoint3F(),
 	(camPos + vec_offset_center_width_right + camDir * parking_lines_params.parking_line_red_len):toPoint3F(),
-	extra_utils.toColorI(ColorF(1,0,0,1)))
+	ColorF(1,0,0,1))
 	
 	--Perpendicular left red line
 	debugDrawer:drawQuadSolid(
@@ -212,7 +212,7 @@ local function drawParkingLines(camPos, camDir, camLeft, camRight, camUp)
 	(camPos + vec_offset_center_left_width_perp):toPoint3F(),
 	(camPos + vec_offset_center_left_width_inward_perp):toPoint3F(),
 	(camPos + vec_offset_center_left_inward_perp):toPoint3F(),
-	extra_utils.toColorI(ColorF(1,0,0,1)))
+	ColorF(1,0,0,1))
 	
 	--Perpendicular right red line
 	debugDrawer:drawQuadSolid(
@@ -220,7 +220,7 @@ local function drawParkingLines(camPos, camDir, camLeft, camRight, camUp)
 	(camPos + vec_offset_center_right_perp):toPoint3F(),	
 	(camPos + vec_offset_center_right_inward_perp):toPoint3F(),
 	(camPos + vec_offset_center_right_width_inward_perp):toPoint3F(),
-	extra_utils.toColorI(ColorF(1,0,0,1)))
+	ColorF(1,0,0,1))
 	
 	--Left yellow lines
 	debugDrawer:drawQuadSolid(
@@ -228,7 +228,7 @@ local function drawParkingLines(camPos, camDir, camLeft, camRight, camUp)
 	(camPos + vec_offset_center_width_left + camDir * parking_lines_params.parking_line_red_len):toPoint3F(),
 	(camPos + vec_offset_center_width_left + camDir * (parking_lines_params.parking_line_red_len + parking_lines_params.parking_line_yellow_len)):toPoint3F(),
 	(camPos + vec_offset_center_left + camDir * (parking_lines_params.parking_line_red_len + parking_lines_params.parking_line_yellow_len)):toPoint3F(),
-	extra_utils.toColorI(ColorF(1,1,0,1)))
+	ColorF(1,1,0,1))
 	
 	--Right yellow lines
 	debugDrawer:drawQuadSolid(
@@ -236,7 +236,7 @@ local function drawParkingLines(camPos, camDir, camLeft, camRight, camUp)
 	(camPos + vec_offset_center_right + camDir * parking_lines_params.parking_line_red_len):toPoint3F(),	
 	(camPos + vec_offset_center_right + camDir * (parking_lines_params.parking_line_red_len + parking_lines_params.parking_line_yellow_len)):toPoint3F(),
 	(camPos + vec_offset_center_width_right + camDir * (parking_lines_params.parking_line_red_len + parking_lines_params.parking_line_yellow_len)):toPoint3F(),
-	extra_utils.toColorI(ColorF(1,1,0,1)))
+  ColorF(1,1,0,1))
 	
 	--Perpendicular left yellow line
 	local yellow_offset_perp_vec = camDir * parking_lines_params.parking_line_yellow_len
@@ -246,7 +246,7 @@ local function drawParkingLines(camPos, camDir, camLeft, camRight, camUp)
 	(camPos + vec_offset_center_left_width_perp + yellow_offset_perp_vec):toPoint3F(),
 	(camPos + vec_offset_center_left_width_inward_perp + yellow_offset_perp_vec):toPoint3F(),
 	(camPos + vec_offset_center_left_inward_perp + yellow_offset_perp_vec):toPoint3F(),
-	extra_utils.toColorI(ColorF(1,1,0,1)))
+	ColorF(1,1,0,1))
 	
 	--Perpendicular right yellow line
 	debugDrawer:drawQuadSolid(
@@ -254,7 +254,7 @@ local function drawParkingLines(camPos, camDir, camLeft, camRight, camUp)
 	(camPos + vec_offset_center_right_perp + yellow_offset_perp_vec):toPoint3F(),	
 	(camPos + vec_offset_center_right_inward_perp + yellow_offset_perp_vec):toPoint3F(),
 	(camPos + vec_offset_center_right_width_inward_perp + yellow_offset_perp_vec):toPoint3F(),
-	extra_utils.toColorI(ColorF(1,1,0,1)))
+	ColorF(1,1,0,1))
 	
 	
 	--Left green lines
@@ -263,7 +263,7 @@ local function drawParkingLines(camPos, camDir, camLeft, camRight, camUp)
 	(camPos + vec_offset_center_width_left + camDir * (parking_lines_params.parking_line_red_len + parking_lines_params.parking_line_yellow_len)):toPoint3F(),
 	(camPos + vec_offset_center_width_left + camDir * (parking_lines_params.parking_line_red_len + parking_lines_params.parking_line_yellow_len + parking_lines_params.parking_line_green_len)):toPoint3F(),
 	(camPos + vec_offset_center_left + camDir * (parking_lines_params.parking_line_red_len + parking_lines_params.parking_line_yellow_len + parking_lines_params.parking_line_green_len)):toPoint3F(),
-	extra_utils.toColorI(ColorF(0,1,0,1)))
+	ColorF(0,1,0,1))
 	
 	--Right green lines
 	debugDrawer:drawQuadSolid(
@@ -271,7 +271,7 @@ local function drawParkingLines(camPos, camDir, camLeft, camRight, camUp)
 	(camPos + vec_offset_center_right + camDir * (parking_lines_params.parking_line_red_len + parking_lines_params.parking_line_yellow_len)):toPoint3F(),	
 	(camPos + vec_offset_center_right + camDir * (parking_lines_params.parking_line_red_len + parking_lines_params.parking_line_yellow_len + parking_lines_params.parking_line_green_len)):toPoint3F(),
 	(camPos + vec_offset_center_width_right + camDir * (parking_lines_params.parking_line_red_len + parking_lines_params.parking_line_yellow_len + parking_lines_params.parking_line_green_len)):toPoint3F(),
-	extra_utils.toColorI(ColorF(0,1,0,1)))
+	ColorF(0,1,0,1))
 	
 	--Perpendicular left green line
 	local green_offset_perp_vec = camDir * (parking_lines_params.parking_line_green_len + parking_lines_params.parking_line_yellow_len)
@@ -281,7 +281,7 @@ local function drawParkingLines(camPos, camDir, camLeft, camRight, camUp)
 	(camPos + vec_offset_center_left_width_perp + green_offset_perp_vec):toPoint3F(),
 	(camPos + vec_offset_center_left_width_inward_perp + green_offset_perp_vec):toPoint3F(),
 	(camPos + vec_offset_center_left_inward_perp + green_offset_perp_vec):toPoint3F(),
-	extra_utils.toColorI(ColorF(0,1,0,1)))
+	ColorF(0,1,0,1))
 	
 	--Perpendicular right green line
 	debugDrawer:drawQuadSolid(
@@ -289,7 +289,7 @@ local function drawParkingLines(camPos, camDir, camLeft, camRight, camUp)
 	(camPos + vec_offset_center_right_perp + green_offset_perp_vec):toPoint3F(),	
 	(camPos + vec_offset_center_right_inward_perp + green_offset_perp_vec):toPoint3F(),
 	(camPos + vec_offset_center_right_width_inward_perp + green_offset_perp_vec):toPoint3F(),
-	extra_utils.toColorI(ColorF(0,1,0,1)))
+	ColorF(0,1,0,1))
 end
 
 local function calculateTurningRadii(veh)
@@ -387,15 +387,17 @@ function C:update(data)
 	--debugDrawer:drawSphere((vec3(data.veh:getSpawnWorldOOBBRearPoint()) + camUp * params_per_veh[veh_name].rel_cam_height):toPoint3F(), 0.05, ColorF(1,0,0,1))
   debugDrawer:setSolidTriCulling(true)
 
+  --Draw trajectory lines
+  if cam_traj_lines_on then
+    drawTrajectoryLines(vec3(data.veh:getSpawnWorldOOBBRearPoint()), -dir, camLeft, -camLeft, camUp, -left_turning_radius, -right_turning_radius)
+  end
+
 	--Draw parking lines
 	if cam_park_lines_on then
 		drawParkingLines(vec3(data.veh:getSpawnWorldOOBBRearPoint()), -dir, camLeft, -camLeft, camUp)
 	end
 	
-	--Draw trajectory lines
-	if cam_traj_lines_on then
-		drawTrajectoryLines(vec3(data.veh:getSpawnWorldOOBBRearPoint()), -dir, camLeft, -camLeft, camUp, -left_turning_radius, -right_turning_radius)
-	end
+	
 
 	-- application
 	data.res.pos = camPos
