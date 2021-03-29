@@ -27,7 +27,7 @@ M.params_per_veh = {
     veh_half_width_line_width = 0.6 + 0.05,
     parking_sensor_rel_height = -0.5,
     safety_offset_width_sensor = 0.25,
-    fwd_friction_coeff = 0.95,
+    fwd_friction_coeff = 1.0,
     rev_friction_coeff = 0.8,
     systems = {"fwd_aeb", "parking_sensors_with_aeb", "reverse_cam", "cam_traj_lines", "cam_park_lines"}
   },

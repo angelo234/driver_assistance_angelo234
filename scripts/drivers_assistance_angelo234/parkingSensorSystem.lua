@@ -14,19 +14,19 @@ local min_dist = 9999
 
 local system_active = false
 
-local function staticCastRay(sensorPos, dir, max_distance, rightDir, veh_name, same_ray, speed)
+local function staticCastRay(veh_props, sensorPos, same_ray)
   local hit = nil
 
-  local car_half_width = params_per_veh[veh_name].safety_offset_width_sensor + params_per_veh[veh_name].veh_half_width
+  local car_half_width = params_per_veh[veh_props.name].safety_offset_width_sensor + params_per_veh[veh_props.name].veh_half_width
 
   if not same_ray then
     if static_sensor_id >= parking_sensor_params.num_of_sensors - 1 then static_sensor_id = -1 end
     static_sensor_id = static_sensor_id + 1
   end
 
-  local pos = sensorPos + rightDir * (car_half_width - car_half_width / ((parking_sensor_params.num_of_sensors - 1) / 2.0) * static_sensor_id)
+  local pos = sensorPos + veh_props.dir_right * (car_half_width - car_half_width / ((parking_sensor_params.num_of_sensors - 1) / 2.0) * static_sensor_id)
 
-  local dest = dir * max_distance + pos
+  local dest = -veh_props.dir * parking_sensor_params.sensor_max_distance + pos
 
   --use castRayDebug to show lines
   hit = castRay(pos, dest, true, true)
@@ -36,11 +36,9 @@ local function staticCastRay(sensorPos, dir, max_distance, rightDir, veh_name, s
   return {hit.norm, hit.dist, hit.pt, static_sensor_id}
 end
 
-local function processRayCasts(veh, static_hit, vehicle_hit)
+local function processRayCasts(veh_props, static_hit, vehicle_hit)
   --static hit returns {hit.norm, hit.dist, hit.pt, static_sensor_id}
   --vehicle hit returns {other_veh, min_distance, veh_sensor_id}
-
-  local veh_props = extra_utils.getVehicleProperties(veh)
 
   local static_dist = 9999
   local vehicle_dist = 9999
@@ -91,8 +89,8 @@ local function getClosestVehicle(other_vehs_data)
   local other_veh = nil
 
   for _, other_veh_data in pairs(other_vehs_data) do
-    local veh = other_veh_data[1]
-    local this_distance = other_veh_data[2]
+    local veh = other_veh_data.other_veh
+    local this_distance = other_veh_data.distance
 
     if this_distance <= distance then
       distance = this_distance
@@ -129,25 +127,21 @@ local function soundBeepers(dt, dist)
   end
 end
 
-local function pollReverseSensors(dt, veh)
-  local veh_name = veh:getJBeamFilename()
-
-  local my_veh_props = extra_utils.getVehicleProperties(veh)
-
-  local parking_sensor_height = params_per_veh[veh_name].parking_sensor_rel_height
+local function pollReverseSensors(dt, my_veh_props)
+  local parking_sensor_height = params_per_veh[my_veh_props.name].parking_sensor_rel_height
 
   --Fixes lag of sensorPos
   local sensorPos = my_veh_props.rear_pos + (parking_sensor_params.num_of_sensors / parking_sensor_params.sensors_polled_per_iteration) * my_veh_props.velocity * dt
     + my_veh_props.dir_up * parking_sensor_height + my_veh_props.dir * parking_sensor_params.sensor_offset_forward
   
-  local static_hit = staticCastRay(sensorPos, -my_veh_props.dir, parking_sensor_params.sensor_max_distance, my_veh_props.dir_right, veh_name, false, my_veh_props.speed)
+  local static_hit = staticCastRay(my_veh_props, sensorPos, false)
   --local vehicle_hit = vehicleCastRay(veh:getID(), max_raycast_distance, sensorPos, -carDir, carDirRight, veh_name, false, veh_speed)
 
   --Get vehicles in a 7.5m radius behind my vehicle
-  local other_vehs_data = extra_utils.getNearbyVehicles(veh, parking_sensor_params.sensor_max_distance, angular_speed_angelo234, 0, false)
+  local other_vehs_data = extra_utils.getNearbyVehicles(my_veh_props, parking_sensor_params.sensor_max_distance, 0, false)
   local vehicle_hit = getClosestVehicle(other_vehs_data)
 
-  local other_veh, min_dist = processRayCasts(veh, static_hit, vehicle_hit)
+  local other_veh, min_dist = processRayCasts(my_veh_props, static_hit, vehicle_hit)
 
   min_dist = min_dist - parking_sensor_params.sensor_offset_forward - 0.1
 
@@ -179,8 +173,8 @@ local function performEmergencyBraking(dt, my_veh, distance)
 end
 
 local function update(dt, veh, aeb_enabled)
-  local the_veh_name = veh:getJBeamFilename()
-  local veh_speed = vec3(veh:getVelocity()):length()
+  local veh_props = extra_utils.getVehicleProperties(veh)
+
   local in_reverse = electrics_values_angelo234["reverse"]
   local gear_selected = electrics_values_angelo234["gear"]
 
@@ -200,7 +194,7 @@ local function update(dt, veh, aeb_enabled)
     end
   
     --Get distance and other data of nearest obstacle 
-    local other_veh, dist = pollReverseSensors(dt, veh)
+    local other_veh, dist = pollReverseSensors(dt, veh_props)
      
     min_dist = math.min(dist, min_dist)
   end
@@ -208,7 +202,7 @@ local function update(dt, veh, aeb_enabled)
   if not aeb_enabled then return end 
   
   --If vehicle is stopped then deactivate system
-  if veh_speed <= aeb_params.min_speed then 
+  if veh_props.speed <= aeb_params.min_speed then 
     system_active = false
     return 
   end  

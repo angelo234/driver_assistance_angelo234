@@ -17,21 +17,16 @@ local function performSteering(veh, val)
   veh:queueLuaCommand("input.event('steering'," .. val .. ", 0)")
 end
 
-local function getOffsetFromCenterOfLane(veh)
-  local veh_props = extra_utils.getVehicleProperties(veh)
+local function getOffsetFromCenterOfLane(veh_props)
+  local veh_wps_props = extra_utils.getWaypointStartEndAdvanced(veh_props, veh_props, veh_props.center_pos)
 
-  local start_wp, end_wp, lat_dist, lane_width, one_way = extra_utils.getWaypointStartEndAdvanced(veh, veh, veh_props.center_pos)
+  local side_of_wp, in_wp_middle = extra_utils.getWhichSideOfWaypointsCarIsOn(veh_props, veh_wps_props.start_wp_pos, veh_wps_props.end_wp_pos)
 
-  local start_pos = extra_utils.getWaypointPosition(start_wp)
-  local end_pos = extra_utils.getWaypointPosition(end_wp)
+  print(veh_wps_props.lane_width)
 
-  local side_of_wp, in_wp_middle = extra_utils.getWhichSideOfWaypointsCarIsOn(veh_props, start_pos, end_pos)
-
-  print(lane_width)
-
-  if one_way then -- and lane_width < 3 then
+  if veh_wps_props.one_way then -- and lane_width < 3 then
     --One lane road
-    local new_lat_dist = lat_dist
+    local new_lat_dist = veh_wps_props.lat_dist_from_wp
     
     
     
@@ -41,7 +36,7 @@ local function getOffsetFromCenterOfLane(veh)
     return new_lat_dist 
   else
     --Two lane road
-    return lat_dist - (lane_width / 2.0)
+    return veh_wps_props.lat_dist_from_wp - (veh_wps_props.lane_width / 2.0)
   end
 end
 
@@ -56,28 +51,28 @@ local function getSteeringValue(dt, offset)
 end
 
 local function update(dt, veh)
-  local the_veh_name = veh:getJBeamFilename()
-  local veh_speed = vec3(veh:getVelocity()):length()
+  local veh_props = extra_utils.getVehicleProperties(veh)
+
   local in_reverse = electrics_values_angelo234["reverse"]
   local gear_selected = electrics_values_angelo234["gear"]
   local esc_color = electrics_values_angelo234["dseColor"]
 
   --ESC must be in comfort mode, otherwise it is deactivated
   --sunburst uses different color for comfort mode
-  if (the_veh_name == "sunburst" and esc_color == "98FB00")
-    or (the_veh_name ~= "sunburst" and esc_color == "238BE6")
+  if (veh_props.name == "sunburst" and esc_color == "98FB00")
+    or (veh_props.name ~= "sunburst" and esc_color == "238BE6")
   then
      --Deactivate system based on any of these variables
     if in_reverse == nil or in_reverse == 1 or gear_selected == nil
       or gear_selected == 'P' or gear_selected == 0
-      or veh_speed > aeb_params.max_speed or veh_speed <= aeb_params.min_speed then 
+      or veh_props.speed > aeb_params.max_speed or veh_props.speed <= aeb_params.min_speed then 
       if system_active then
         system_active = false
       end
       return 
     end
     
-    local offset = getOffsetFromCenterOfLane(veh)
+    local offset = getOffsetFromCenterOfLane(veh_props)
     local steering_val = getSteeringValue(dt, offset)
     
     performSteering(veh, steering_val)

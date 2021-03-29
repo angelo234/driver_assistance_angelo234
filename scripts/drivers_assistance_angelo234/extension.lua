@@ -148,7 +148,7 @@ local function onUpdate(dt)
 
   end
   
-  lane_assist_system.update(dt, veh)
+  --lane_assist_system.update(dt, veh)
   
 end
 
