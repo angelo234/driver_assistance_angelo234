@@ -1,8 +1,8 @@
 local M = {}
 
 local control_systems = require("controlSystems") -- for newPIDStandard
-local extra_utils = require('scripts/drivers_assistance_angelo234/extraUtils')
-local system_params = require('scripts/drivers_assistance_angelo234/vehicleSystemParameters')
+local extra_utils = require('scripts/driver_assistance_angelo234/extraUtils')
+local system_params = require('scripts/driver_assistance_angelo234/vehicleSystemParameters')
 
 local parking_lines_params = system_params.parking_lines_params
 local params_per_veh = system_params.params_per_veh

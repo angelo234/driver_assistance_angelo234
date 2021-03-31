@@ -7,12 +7,12 @@ veh_accs_angelo234 = {}
 
 local M = {}
 
-local extra_utils = require('scripts/drivers_assistance_angelo234/extraUtils')
+local extra_utils = require('scripts/driver_assistance_angelo234/extraUtils')
 
-local system_params = require('scripts/drivers_assistance_angelo234/vehicleSystemParameters')
-local aeb_system = require('scripts/drivers_assistance_angelo234/aebSystem')
-local parking_sensor_system = require('scripts/drivers_assistance_angelo234/parkingSensorSystem')
-local lane_assist_system = require('scripts/drivers_assistance_angelo234/laneAssistSystem')
+local system_params = require('scripts/driver_assistance_angelo234/vehicleSystemParameters')
+local aeb_system = require('scripts/driver_assistance_angelo234/aebSystem')
+local parking_sensor_system = require('scripts/driver_assistance_angelo234/parkingSensorSystem')
+local lane_assist_system = require('scripts/driver_assistance_angelo234/laneAssistSystem')
 
 --Bunch of parameters
 local parking_lines_params = system_params.parking_lines_params
