@@ -84,9 +84,9 @@ local function getOtherVehBoundingBox(other_veh_props, other_veh_wp_dir, distanc
   return other_x, other_y, other_z
 end
 
-local function getFreePathInLane(my_veh_side, lane_width, other_lat_dist_from_wp, my_veh_width, other_veh_width)
+local function getFreePathInLane(my_veh_side, in_wp_middle, lane_width, other_lat_dist_from_wp, my_veh_width, other_veh_width)
   --If we can't fit our vehicles in same lane, then no free path available
-  if my_veh_width + other_veh_width + 0.5 > lane_width then
+  if my_veh_width + other_veh_width + 0.5 > lane_width or in_wp_middle then
     return "none"
   end
   
@@ -102,8 +102,6 @@ local function getFreePathInLane(my_veh_side, lane_width, other_lat_dist_from_wp
     else
       return "left"
     end
-  else
-    return "none"
   end
 end
 
@@ -112,6 +110,7 @@ local function checkIfCarsIntersectAtTTC(dt, my_veh_props, data)
   local my_lat_dist_from_wp = data.my_veh_wps_props.lat_dist_from_wp
   local other_lat_dist_from_wp = data.other_veh_wps_props.lat_dist_from_wp
   local my_veh_side = data.my_veh_wps_props.side_of_wp
+  local in_wp_middle = data.my_veh_wps_props.in_wp_middle
   local lane_width = data.my_veh_wps_props.lane_width
   
   --Other vehicle properties
@@ -140,7 +139,7 @@ local function checkIfCarsIntersectAtTTC(dt, my_veh_props, data)
   
   --print(my_veh_side)
 
-  if my_veh_side ~= nil and my_veh_side ~= "both" then
+  if my_veh_side ~= nil and not in_wp_middle then
     my_veh_pos_future.z = my_veh_props.center_pos.z
     my_veh_pos_future, my_veh_wp_dir = getFutureVehPosCorrectedWithWP(my_veh_props, my_veh_props, my_veh_pos_future, my_lat_dist_from_wp, my_veh_side)
     my_veh_pos_future.z = 0
@@ -176,7 +175,7 @@ local function checkIfCarsIntersectAtTTC(dt, my_veh_props, data)
     --At low speeds, predict if light steering input (0.1 g's laterally) can avoid collision
     --then deactivate system
     if my_veh_props.speed < 20 or true then
-      local free_path = getFreePathInLane(my_veh_side, lane_width, other_lat_dist_from_wp, 
+      local free_path = getFreePathInLane(my_veh_side, in_wp_middle, lane_width, other_lat_dist_from_wp, 
       my_veh_props.bb:getHalfExtents().x * 2, other_veh_props.bb:getHalfExtents().x * 2)
             
       local turning_acc_vec = nil
@@ -184,9 +183,9 @@ local function checkIfCarsIntersectAtTTC(dt, my_veh_props, data)
       --print(free_path)
     
       if free_path == "left" then
-        turning_acc_vec = vec3(aeb_params.lateral_acc_to_avoid_collision * aeb_params.gravity, 0, 0)
+        turning_acc_vec = vec3(aeb_params.lateral_acc_to_avoid_collision * aeb_params.gravity + my_veh_props.acceleration.x, 0, 0)
       elseif free_path == "right" then
-        turning_acc_vec = vec3(-aeb_params.lateral_acc_to_avoid_collision * aeb_params.gravity, 0, 0)
+        turning_acc_vec = vec3(-aeb_params.lateral_acc_to_avoid_collision * aeb_params.gravity + my_veh_props.acceleration.x, 0, 0)
       else
         return overlap
       end

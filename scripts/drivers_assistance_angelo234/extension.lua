@@ -134,6 +134,10 @@ local function onUpdate(dt)
   --Process data gathered from Vehicle Lua to be usable in our context
   processVELuaData()
 
+  local missionFile = getMissionFilename()
+  local levelDir, filename, ext = path.split(missionFile)
+  local levelName = levelDir:sub(9, -2)
+
   --Update systems based on what is supported by vehicle
   for _, val in pairs(params_per_veh[veh:getJBeamFilename()].systems) do
     if val == "parking_sensors" then
@@ -143,7 +147,11 @@ local function onUpdate(dt)
       parking_sensor_system.update(dt, veh, true)
 
     elseif val == "fwd_aeb" then
-      aeb_system.update(dt, veh)
+      --Disable on gridmap since AI paths do exist but not apparent to user
+      if levelName ~= "gridmap" then
+        --print(levelName)
+        aeb_system.update(dt, veh)
+      end
     end
 
   end

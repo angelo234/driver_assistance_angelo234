@@ -119,7 +119,7 @@ M.params_per_veh = {
 M.aeb_params = {
   gravity = 9.81,
 
-  min_speed = 1,
+  min_speed = 0.75,
   max_speed = 40,
   brake_till_stop_speed = 3,
   braking_time_leeway = 0.1,
@@ -129,7 +129,7 @@ M.aeb_params = {
 
   fwd_warning_tone_hertz = 7,
 
-  lateral_acc_to_avoid_collision = 0.1
+  lateral_acc_to_avoid_collision = 0.15
 }
 
 M.parking_sensor_params = {

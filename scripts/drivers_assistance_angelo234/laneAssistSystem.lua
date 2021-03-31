@@ -1,6 +1,6 @@
 local M = {}
 
-require("controlSystems") -- for newPIDStandard
+local control_systems = require("controlSystems") -- for newPIDStandard
 local extra_utils = require('scripts/drivers_assistance_angelo234/extraUtils')
 local system_params = require('scripts/drivers_assistance_angelo234/vehicleSystemParameters')
 
