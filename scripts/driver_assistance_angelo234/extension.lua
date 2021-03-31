@@ -44,6 +44,7 @@ local function getAllVehiclesPropertiesFromVELua()
   my_veh:queueLuaCommand("obj:queueGameEngineLua('throttle_pos_angelo234 = ' .. input.throttle )")
   my_veh:queueLuaCommand('obj:queueGameEngineLua("electrics_values_angelo234 = (\'" .. jsonEncode(electrics.values) .. "\')")')
   my_veh:queueLuaCommand("obj:queueGameEngineLua('angular_speed_angelo234 = ' .. obj:getYawAngularVelocity() )")
+  my_veh:queueLuaCommand('obj:queueGameEngineLua("gearbox_mode_angelo234 = (\'" .. jsonEncode(controller.mainController.onSerialize()) .. "\')")')
 
   if electrics_values_angelo234 == nil then
     return false
@@ -53,14 +54,16 @@ local function getAllVehiclesPropertiesFromVELua()
     and #electrics_values_angelo234 ~= 0
     and angular_speed_angelo234 ~= nil
     and throttle_pos_angelo234 ~= nil
+    and gearbox_mode_angelo234 ~= nil
 end
 
 local yawSmooth = newExponentialSmoothing(10) --exponential smoothing for yaw rate
 
 local function processVELuaData()
-  --Decode electrics.values json result
+  --Decode json results
   electrics_values_angelo234 = jsonDecode(electrics_values_angelo234)
-
+  gearbox_mode_angelo234 = jsonDecode(gearbox_mode_angelo234)
+  
   --Smoothes angular velocity
   angular_speed_angelo234 = yawSmooth:get(angular_speed_angelo234)
 end

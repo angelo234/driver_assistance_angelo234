@@ -359,7 +359,7 @@ function C:update(data)
 
 	--If vehicle doesn't have a backup camera or not in reverse, set camera to previous camera mode
 	if in_reverse == nil or is_supported == false or in_reverse == 0 then
-	  local prev_cam = scripts_drivers__assistance__angelo234_extension.prev_camera_mode
+	  local prev_cam = scripts_driver__assistance__angelo234_extension.prev_camera_mode
 		core_camera.setByName(0, prev_cam)
 		return
 	end

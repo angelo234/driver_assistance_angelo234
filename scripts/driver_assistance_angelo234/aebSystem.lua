@@ -318,7 +318,10 @@ local function update(dt, veh)
       or gear_selected == 'P' or gear_selected == 0
       or veh_props.speed > aeb_params.max_speed or veh_props.speed <= aeb_params.min_speed then 
       if system_active then
-        system_active = false
+        --Release brake and apply parking brake
+        veh:queueLuaCommand("input.event('brake', 0, 2)")
+        veh:queueLuaCommand("input.event('parkingbrake', 1, 2)")
+        system_active = false       
       end
       return 
     end
