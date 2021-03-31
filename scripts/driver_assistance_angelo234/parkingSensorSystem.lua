@@ -207,16 +207,18 @@ local function update(dt, veh, aeb_enabled)
   if not aeb_enabled then return end 
   
   --If vehicle is stopped then deactivate system
-  if veh_props.speed <= aeb_params.min_speed and system_active then
-    --Release brake and apply parking brake
-    if gearbox_mode_angelo234.previousGearboxBehavior == "realistic" then      
-      veh:queueLuaCommand("input.event('brake', 0, 2)")
-    else
-      veh:queueLuaCommand("input.event('throttle', 0, 2)")
+  if veh_props.speed <= aeb_params.min_speed then
+    if system_active then
+      --Release brake and apply parking brake
+      if gearbox_mode_angelo234.previousGearboxBehavior == "realistic" then      
+        veh:queueLuaCommand("input.event('brake', 0, 2)")
+      else
+        veh:queueLuaCommand("input.event('throttle', 0, 2)")
+      end
+      
+      veh:queueLuaCommand("input.event('parkingbrake', 1, 2)") 
+      system_active = false
     end
-    
-    veh:queueLuaCommand("input.event('parkingbrake', 1, 2)") 
-    system_active = false
     return 
   end  
   

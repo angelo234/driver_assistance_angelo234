@@ -44,6 +44,8 @@ local function getAllVehiclesPropertiesFromVELua()
   my_veh:queueLuaCommand("obj:queueGameEngineLua('throttle_pos_angelo234 = ' .. input.throttle )")
   my_veh:queueLuaCommand('obj:queueGameEngineLua("electrics_values_angelo234 = (\'" .. jsonEncode(electrics.values) .. "\')")')
   my_veh:queueLuaCommand("obj:queueGameEngineLua('angular_speed_angelo234 = ' .. obj:getYawAngularVelocity() )")
+  
+  --Gets whether gearbox is in arcade or realistic mode
   my_veh:queueLuaCommand('obj:queueGameEngineLua("gearbox_mode_angelo234 = (\'" .. jsonEncode(controller.mainController.onSerialize()) .. "\')")')
 
   if electrics_values_angelo234 == nil then
