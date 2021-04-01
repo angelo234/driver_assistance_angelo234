@@ -103,25 +103,25 @@ local function getClosestVehicle(other_vehs_data)
   return {other_veh, distance}
 end
 
-local timeElapsed2 = 0
+local beeper_timer = 0
 
 local function soundBeepers(dt, dist)
-  timeElapsed2 = timeElapsed2 + dt
+  beeper_timer = beeper_timer + dt
 
   if dist <= parking_lines_params.parking_line_total_len + parking_lines_params.parking_line_offset_long then
     
     --If object is within red line distance, play constant tone
     if dist <= parking_lines_params.parking_line_red_len + parking_lines_params.parking_line_offset_long then
-      if timeElapsed2 >= 1.0 / parking_sensor_params.parking_warning_tone_hertz then
+      if beeper_timer >= 1.0 / parking_sensor_params.parking_warning_tone_hertz then
         Engine.Audio.playOnce('AudioGui','core/art/sound/proximity_tone_50ms.wav')
-        timeElapsed2 = 0
+        beeper_timer = 0
       end
       
     --Else tone depends on distance
     else
-      if timeElapsed2 >= dist / parking_sensor_params.parking_warning_tone_dist_per_hertz then
+      if beeper_timer >= dist / parking_sensor_params.parking_warning_tone_dist_per_hertz then
         Engine.Audio.playOnce('AudioGui','core/art/sound/proximity_tone_50ms.wav')
-        timeElapsed2 = 0
+        beeper_timer = 0
       end
     end
   end

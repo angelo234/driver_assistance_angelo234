@@ -248,39 +248,31 @@ local function getNearestVehicleInPath(dt, my_veh_props, data_table)
 end
 
 
-local timeElapsed3 = 0
+local beeper_timer = 0
+
+
+local function soundBeepers(dt, time_before_braking, vel_rel)
+  beeper_timer = beeper_timer + dt
+
+  --Sound warning tone if 1.0 * (0.5 + vel_rel / 40.0) seconds away from braking
+  if time_before_braking <= 1.0 * (0.5 + vel_rel / 40.0) then
+    --
+    if beeper_timer >= 1.0 / aeb_params.fwd_warning_tone_hertz then
+      Engine.Audio.playOnce('AudioGui','core/art/sound/proximity_tone_50ms.wav')
+      beeper_timer = 0
+    end
+  end
+end
+
 local release_brake_confidence_level = 0
 
-local function performEmergencyBraking(dt, my_veh, distance, vel_rel)
-  local my_veh_props = extra_utils.getVehicleProperties(my_veh)
-
+local function performEmergencyBraking(dt, my_veh, my_veh_props, time_before_braking)
   if system_active and my_veh_props.speed < aeb_params.brake_till_stop_speed then
     my_veh:queueLuaCommand("input.event('brake', 1, -1)")
     return
   end
 
-  --Max braking acceleration = gravity * coefficient of static friction
-  local acc = math.min(-veh_accs_angelo234[my_veh:getID()][3], aeb_params.gravity) * params_per_veh[my_veh_props.name].fwd_friction_coeff
-
-  --Calculate TTC
-  local ttc = distance / vel_rel
-  local time_to_brake = vel_rel / (2 * acc)
-
-  --leeway time depending on speed
-  local time_before_braking = ttc - time_to_brake - aeb_params.braking_time_leeway
-
   --debugDrawer:drawTextAdvanced((my_veh_props.front_pos + my_veh_props.dir * 2):toPoint3F(), String("Time till braking: " .. tostring(time_before_braking)),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
-
-  timeElapsed3 = timeElapsed3 + dt
-
-  --Sound warning tone if 1.0 * (0.5 + vel_rel / 40.0) seconds away from braking
-  if time_before_braking <= 1.0 * (0.5 + vel_rel / 40.0) then
-    --
-    if timeElapsed3 >= 1.0 / aeb_params.fwd_warning_tone_hertz then
-      Engine.Audio.playOnce('AudioGui','core/art/sound/proximity_tone_50ms.wav')
-      timeElapsed3 = 0
-    end
-  end
 
   --Maximum Braking
   if time_before_braking <= 0 then
@@ -301,6 +293,20 @@ local function performEmergencyBraking(dt, my_veh, distance, vel_rel)
   end
 end
 
+local function calculateTimeBeforeBraking(veh_props, distance, vel_rel)
+  --Max braking acceleration = gravity * coefficient of static friction
+  local acc = math.min(-veh_accs_angelo234[veh_props.id][3], aeb_params.gravity) * params_per_veh[veh_props.name].fwd_friction_coeff
+
+  --Calculate TTC
+  local ttc = distance / vel_rel
+  local time_to_brake = vel_rel / (2 * acc)
+
+  --leeway time depending on speed
+  local time_before_braking = ttc - time_to_brake - aeb_params.braking_time_leeway
+  
+  return time_before_braking
+end
+
 local function update(dt, veh)
   local veh_props = extra_utils.getVehicleProperties(veh)
 
@@ -316,16 +322,23 @@ local function update(dt, veh)
      --Deactivate system based on any of these variables
     if in_reverse == nil or in_reverse == 1 or gear_selected == nil
       or gear_selected == 'P' or gear_selected == 0
-      or veh_props.speed > aeb_params.max_speed or veh_props.speed <= aeb_params.min_speed then 
+      or veh_props.speed > aeb_params.max_speed then
       if system_active then
-        --Release brake and apply parking brake
-        veh:queueLuaCommand("input.event('brake', 0, 2)")
-        veh:queueLuaCommand("input.event('parkingbrake', 1, 2)")
-        system_active = false       
+        veh:queueLuaCommand("input.event('brake', 0, 2)")       
+        system_active = false 
       end
-      return 
+      return
     end
-
+    
+    --When coming to a stop with system activated, release brakes but apply parking brake
+    if system_active and veh_props.speed <= aeb_params.min_speed then
+      --Release brake and apply parking brake
+      veh:queueLuaCommand("input.event('brake', 0, 2)")
+      veh:queueLuaCommand("input.event('parkingbrake', 1, 2)")
+      system_active = false  
+      return   
+    end
+     
     --Get vehicles in the same lane as me
     local data = extra_utils.getNearbyVehiclesInSameLane(veh_props, aeb_params.vehicle_search_radius, (veh_props.speed / 30.0 + 1) * aeb_params.min_distance_from_car, true)
     
@@ -333,8 +346,22 @@ local function update(dt, veh)
     --to the vehicle that I'm planning to collide with
     local distance, vel_rel = getNearestVehicleInPath(dt, veh_props, data)
 
+    local time_before_braking = calculateTimeBeforeBraking(veh_props, distance, vel_rel)
+
+    soundBeepers(dt, time_before_braking, vel_rel)
+
+    --If throttle pedal is only slightly pressed then perform braking
+    --But if throttle is highly requested then override braking
+    if electrics_values_angelo234["throttle"] > 0.35 then
+      if system_active then
+        veh:queueLuaCommand("input.event('brake', 0, 2)")       
+        system_active = false 
+      end
+      return
+    end
+
     --Use distance, relative velocity, and max acceleration to determine when to apply emergency braking
-    performEmergencyBraking(dt, veh, distance, vel_rel)
+    performEmergencyBraking(dt, veh, veh_props, time_before_braking)
   end
 end
 
