@@ -350,9 +350,9 @@ local function update(dt, veh)
 
     soundBeepers(dt, time_before_braking, vel_rel)
 
-    --If throttle pedal is only slightly pressed then perform braking
+    --If throttle pedal is about half pressed then perform braking
     --But if throttle is highly requested then override braking
-    if electrics_values_angelo234["throttle"] > 0.35 then
+    if electrics_values_angelo234["throttle"] > 0.4 then
       if system_active then
         veh:queueLuaCommand("input.event('brake', 0, 2)")       
         system_active = false 

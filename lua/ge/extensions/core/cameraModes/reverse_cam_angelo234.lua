@@ -355,13 +355,15 @@ function C:update(data)
   
   if electrics_values_angelo234 == nil then return end
 
+  local gear_selected = electrics_values_angelo234["gear"]
   local in_reverse = electrics_values_angelo234["reverse"]
 
-	--If vehicle doesn't have a backup camera or not in reverse, set camera to previous camera mode
-	if in_reverse == nil or is_supported == false or in_reverse == 0 then
-	  local prev_cam = scripts_driver__assistance__angelo234_extension.prev_camera_mode
-		core_camera.setByName(0, prev_cam)
-		return
+	--If vehicle doesn't have a backup camera or not in reverse and neutral, set camera to previous camera mode
+	if in_reverse == nil or is_supported == false or gear_selected == nil
+	or (gear_selected ~= 'N' and gear_selected ~= 'R' and gear_selected ~= 0 and gear_selected ~= -1) then    
+    local prev_cam = scripts_driver__assistance__angelo234_extension.prev_camera_mode
+    core_camera.setByName(0, prev_cam)
+    return    
 	end
 	
 	local carPos = data.pos
