@@ -1,0 +1,16 @@
+{
+    "reverse_aeb": {
+        "information":{
+            "authors":"angelo234",
+            "name":"Reverse AEB",
+            "value":250,
+        },
+        "slotType" : "reverse_aeb",
+
+        "controller": [
+            ["fileName"],
+			["parkingAEBSystem",]
+        ],
+
+    },
+}

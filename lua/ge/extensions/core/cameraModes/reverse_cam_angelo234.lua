@@ -4,14 +4,13 @@
 
 local extra_utils = require('scripts/driver_assistance_angelo234/extraUtils')
 --File with all parameters for system
-local system_params = require('scripts/driver_assistance_angelo234/vehicleSystemParameters')
+local system_params = nil
 
-local parking_lines_params = system_params.parking_lines_params
-local params_per_veh = system_params.params_per_veh
-local aeb_params = system_params.aeb_params
+local parking_lines_params = nil
+local rev_cam_params = nil
 
 local first_update = true
-local veh_name = nil
+local veh_name = "nil"
 local is_supported = false
 local cam_traj_lines_on = false
 local cam_park_lines_on = false
@@ -23,6 +22,21 @@ function C:init()
 	self.disabledByDefault = true
 	self.register = true
 	self:onVehicleCameraConfigChanged()
+	
+
+	local default_param_file_dir = 'vehicles/common/parameters'
+  local param_file_dir = 'vehicles/' .. veh_name .. '/parameters'
+  
+  if FS:fileExists(param_file_dir) then
+    --load parameter lua file dependent on vehicle
+    system_params = require(param_file_dir)
+  else
+    --use default parameters if they don't exist for current vehicle
+    system_params = require(default_param_file_dir)
+  end
+  
+  rev_cam_params = system_params.rev_cam_params
+  parking_lines_params = rev_cam_params.parking_lines_params
 end
 
 function C:onVehicleCameraConfigChanged()
@@ -40,13 +54,13 @@ end
 
 --camDir is just negative dir of car
 local function drawLeftTrajectoryLine(camPos, camDir, camLeft, camRight, camUp, line_start, line_end, line_start_width, line_end_width)
-	local offset_height_vec = camUp * params_per_veh[veh_name].line_height_rel_cam --line offset height
+	local offset_height_vec = camUp * rev_cam_params.line_height_rel_cam --line offset height
 
-	local vec_offset_center = camLeft * params_per_veh[veh_name].veh_half_width --line offset lat
-		+ offset_height_vec + camDir * params_per_veh[veh_name].cam_to_wheel_len --line offset long
+	local vec_offset_center = camLeft * rev_cam_params.veh_half_width --line offset lat
+		+ offset_height_vec + camDir * rev_cam_params.cam_to_wheel_len --line offset long
 
-	local vec_offset_center_width = camLeft * params_per_veh[veh_name].veh_half_width_line_width --line offset lat + width
-		+ offset_height_vec + camDir * params_per_veh[veh_name].cam_to_wheel_len --line offset long
+	local vec_offset_center_width = camLeft * rev_cam_params.veh_half_width_line_width --line offset lat + width
+		+ offset_height_vec + camDir * rev_cam_params.cam_to_wheel_len --line offset long
 
 	debugDrawer:drawQuadSolid(
 	(camPos + vec_offset_center + line_start):toPoint3F(),
@@ -58,13 +72,13 @@ end
 
 --camDir is just negative dir of car
 local function drawRightTrajectoryLine(camPos, camDir, camLeft, camRight, camUp, line_start, line_end, line_start_width, line_end_width)
-	local offset_height_vec = camUp * params_per_veh[veh_name].line_height_rel_cam --line offset height
+	local offset_height_vec = camUp * rev_cam_params.line_height_rel_cam --line offset height
 
-	local vec_offset_center = camRight * params_per_veh[veh_name].veh_half_width --line offset lat
-		+ offset_height_vec + camDir * params_per_veh[veh_name].cam_to_wheel_len --line offset long
+	local vec_offset_center = camRight * rev_cam_params.veh_half_width --line offset lat
+		+ offset_height_vec + camDir * rev_cam_params.cam_to_wheel_len --line offset long
 	
-	local vec_offset_center_width = camRight * params_per_veh[veh_name].veh_half_width_line_width --line offset lat + width
-		+ offset_height_vec + camDir * params_per_veh[veh_name].cam_to_wheel_len --line offset long
+	local vec_offset_center_width = camRight * rev_cam_params.veh_half_width_line_width --line offset lat + width
+		+ offset_height_vec + camDir * rev_cam_params.cam_to_wheel_len --line offset long
 
 	--debugDrawer:drawSphere((camPos + vec_offset_center + line_start):toPoint3F(), 0.05, ColorF(1,0,0,1))
 	--debugDrawer:drawSphere((camPos + vec_offset_center_width + line_start_width):toPoint3F(), 0.05, ColorF(0,1,0,1))
@@ -82,8 +96,8 @@ local function drawTrajectoryLines(camPos, dir, camLeft, camRight, camUp, left_t
 	local is_turning_left = left_turning_radius > 0
 	
 	--If negative turning radius, make is positive and then set angle to negative
-	local left_start_angle = math.atan2(parking_lines_params.parking_line_offset_long - params_per_veh[veh_name].cam_to_wheel_len, math.abs(left_turning_radius))
-	local right_start_angle = math.atan2(parking_lines_params.parking_line_offset_long - params_per_veh[veh_name].cam_to_wheel_len, math.abs(right_turning_radius))
+	local left_start_angle = math.atan2(parking_lines_params.parking_line_offset_long - rev_cam_params.cam_to_wheel_len, math.abs(left_turning_radius))
+	local right_start_angle = math.atan2(parking_lines_params.parking_line_offset_long - rev_cam_params.cam_to_wheel_len, math.abs(right_turning_radius))
 	
 	if is_turning_left == false then
 		left_start_angle = -left_start_angle
@@ -162,18 +176,18 @@ local function drawTrajectoryLines(camPos, dir, camLeft, camRight, camUp, left_t
 end
 
 local function drawParkingLines(camPos, camDir, camLeft, camRight, camUp)
-	local offset_height_vec = camUp * params_per_veh[veh_name].line_height_rel_cam
+	local offset_height_vec = camUp * rev_cam_params.line_height_rel_cam
   
-	local vec_offset_center_left = camLeft * params_per_veh[veh_name].veh_half_width
+	local vec_offset_center_left = camLeft * rev_cam_params.veh_half_width
 		+ offset_height_vec + camDir * parking_lines_params.parking_line_offset_long
 
-	local vec_offset_center_width_left = camLeft * params_per_veh[veh_name].veh_half_width_line_width
+	local vec_offset_center_width_left = camLeft * rev_cam_params.veh_half_width_line_width
 		+ offset_height_vec + camDir * parking_lines_params.parking_line_offset_long
 
-	local vec_offset_center_right = camRight * params_per_veh[veh_name].veh_half_width
+	local vec_offset_center_right = camRight * rev_cam_params.veh_half_width
 		+ offset_height_vec + camDir * parking_lines_params.parking_line_offset_long
 	
-	local vec_offset_center_width_right = camRight * params_per_veh[veh_name].veh_half_width_line_width
+	local vec_offset_center_width_right = camRight * rev_cam_params.veh_half_width_line_width
 		+ offset_height_vec + camDir * parking_lines_params.parking_line_offset_long
 
   --Vectors to draw perpendicular/interval lines
@@ -306,11 +320,11 @@ local function calculateTurningRadii(veh)
 		
 	else
 		if steering_input > 0 then
-			rear_left_turning_radius = params_per_veh[veh_name].min_steer_radius / steering_input
-			rear_right_turning_radius = params_per_veh[veh_name].max_steer_radius / steering_input 	
+			rear_left_turning_radius = system_params.min_steer_radius / steering_input
+			rear_right_turning_radius = system_params.max_steer_radius / steering_input 	
 		else
-			rear_left_turning_radius = params_per_veh[veh_name].max_steer_radius / steering_input
-			rear_right_turning_radius = params_per_veh[veh_name].min_steer_radius / steering_input 
+			rear_left_turning_radius = system_params.max_steer_radius / steering_input
+			rear_right_turning_radius = system_params.min_steer_radius / steering_input 
 		end	
 	end
 
@@ -324,32 +338,12 @@ local function checkVehicleSupported(id)
 	
 	local the_veh_name = be:getObjectByID(id):getJBeamFilename()
 	
-	for curr_veh_name, params in pairs(params_per_veh) do
-		if the_veh_name == curr_veh_name then
-			for _, system in pairs(params.systems) do
-				if system == "reverse_cam" then
-					is_supported = true
-					veh_name = the_veh_name				
-				elseif system == "cam_traj_lines" then
-					cam_traj_lines_on = true
-				
-				elseif system == "cam_park_lines" then
-					cam_park_lines_on = true
-				end
-			end
-		
-			if is_supported then 
-			  --check if Driving and Safety Electronics (DSE) part is the regular one (not race one)
-        local dse_part_selected = extensions.core_vehicle_manager.getVehicleData(id)
-        .chosenParts[params_per_veh[the_veh_name].dse_part_name]
-  
-        is_supported = dse_part_selected == params_per_veh[the_veh_name].dse_part_name			
-			end
-		end
-	end
+	
 end
 
 function C:update(data)
+  --[[
+
   --Check if vehicle supported
   checkVehicleSupported(data.veh:getID())
   
@@ -377,8 +371,8 @@ function C:update(data)
 	local qdir = quatFromDir(dir)
 	local rotatedUp = qdir * vec3(0, 0, 1)
 
-	qdir = extra_utils.rotateEuler(math.rad(180),math.rad(params_per_veh[veh_name].cam_down_angle),math.atan2(rotatedUp:dot(camLeft), rotatedUp:dot(camUp)),qdir)
-	local camPos = vec3(data.veh:getSpawnWorldOOBBRearPoint()) + camUp * params_per_veh[veh_name].rel_cam_height
+	qdir = extra_utils.rotateEuler(math.rad(180),math.rad(rev_cam_params.cam_down_angle),math.atan2(rotatedUp:dot(camLeft), rotatedUp:dot(camUp)),qdir)
+	local camPos = vec3(data.veh:getSpawnWorldOOBBRearPoint()) + camUp * rev_cam_params.rel_cam_height
 
 	--Get turning radius of both rear wheels (they are different)
 	local radii = calculateTurningRadii(data.veh)
@@ -386,7 +380,7 @@ function C:update(data)
 	local left_turning_radius = radii[1]
 	local right_turning_radius = radii[2]
 
-	--debugDrawer:drawSphere((vec3(data.veh:getSpawnWorldOOBBRearPoint()) + camUp * params_per_veh[veh_name].rel_cam_height):toPoint3F(), 0.05, ColorF(1,0,0,1))
+	--debugDrawer:drawSphere((vec3(data.veh:getSpawnWorldOOBBRearPoint()) + camUp * rev_cam_params.rel_cam_height):toPoint3F(), 0.05, ColorF(1,0,0,1))
   debugDrawer:setSolidTriCulling(true)
 
   --Draw trajectory lines
@@ -404,7 +398,9 @@ function C:update(data)
 	-- application
 	data.res.pos = camPos
 	data.res.rot = qdir
-	data.res.fov = params_per_veh[veh_name].cam_fov
+	data.res.fov = rev_cam_params.cam_fov
+
+  ]]--
 
 	return true
 end
