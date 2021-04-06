@@ -1,7 +1,5 @@
 local M = {}
 
---local extra_utils = require('lua/common/controller/extraUtils')
-
 local system_params = nil
 local parking_lines_params = nil
 local rev_aeb_params = nil
@@ -66,9 +64,6 @@ local function processRayCasts(static_hit, vehicle_hit)
   
   --[[
   if static_hit ~= nil then
-    
-  
-    
     local norm = static_hit[1]
     local distance = static_hit[2]
 
@@ -91,12 +86,13 @@ local function processRayCasts(static_hit, vehicle_hit)
       static_dist = static_hit[2]
     end
   end
-
+  ]]--
+  
   if vehicle_hit[1] ~= nil then
     other_veh = vehicle_hit[1]
     vehicle_dist = vehicle_hit[2]
   end
-  ]]--
+  
 
   local min_dist = math.min(static_dist, vehicle_dist)
 
@@ -158,13 +154,10 @@ local function pollReverseSensors(dt)
     + car_dir_up * rev_aeb_params.parking_sensor_rel_height + car_dir * rev_aeb_params.sensor_offset_forward
   
   local static_hit = staticCastRay(sensorPos, false)
-  --local vehicle_hit = vehicleCastRay(veh:getID(), max_raycast_distance, sensorPos, -carDir, carDirRight, veh_name, false, veh_speed)
 
   --Get vehicles in a 7.5m radius behind my vehicle
-  --local other_vehs_data = extra_utils.getNearbyVehicles(my_veh_props, rev_aeb_params.sensor_max_distance, 0, false)
-  --local vehicle_hit = getClosestVehicle(other_vehs_data)
-
-  local vehicle_hit = nil
+  local other_vehs_data = controller.getController("extraUtils").getNearbyVehicles(rev_aeb_params.sensor_max_distance, 0, false)
+  local vehicle_hit = getClosestVehicle(other_vehs_data)
 
   local other_veh, min_dist = processRayCasts(static_hit, vehicle_hit)
 
@@ -280,12 +273,12 @@ local function updateGFX(dt)
   
   local future_pos = extra_utils.getFuturePosition(obj:getID(), 1, "front")
   
-  obj.debugDrawProxy:drawSphere(0.25, future_pos:toFloat3(), color(255,0,0,255))
+  --obj.debugDrawProxy:drawSphere(0.25, future_pos:toFloat3(), color(255,0,0,255))
   
   for id, vals in pairs(mapmgr.objects) do
     local front_pos = vec3(obj:getObjectFrontPosition(id))
   
-    obj.debugDrawProxy:drawSphere(0.25, front_pos:toFloat3(), color(255,0,0,255))
+    --obj.debugDrawProxy:drawSphere(0.25, front_pos:toFloat3(), color(255,0,0,255))
   end
 end
 
