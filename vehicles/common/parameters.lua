@@ -17,6 +17,8 @@ M.fwd_aeb_params = {
 }
 
 M.rev_aeb_params = {
+    min_speed = 0.75,
+
     parking_sensor_rel_height = -0.5,
     safety_offset_width_sensor = 0.25,
 

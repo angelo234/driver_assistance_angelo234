@@ -1,6 +1,6 @@
 local M = {}
 
-local extra_utils = require('scripts/driver_assistance_angelo234/extraUtils')
+--local extra_utils = require('lua/common/controller/extraUtils')
 
 local system_params = nil
 local parking_lines_params = nil
@@ -15,6 +15,7 @@ local car_dir_right = vec3(obj:getDirectionVectorRight())
 local front_pos = vec3(obj:getFrontPosition()) + car_dir * 0.5
 local rear_pos = front_pos + -car_dir * obj:getInitialLength() 
 local speed = vec3(obj:getVelocity()):length()
+local acc_vec = quatFromDir(car_dir, vec3(0,0,1)) * vec3(sensors.gx2, sensors.gy2, 9.81 + sensors.gz2)
 
 local static_sensor_id = -1
 local prev_min_dist = 9999
@@ -274,6 +275,18 @@ local function updateGFX(dt)
   --print(min_dist)
   
   performEmergencyBraking(dt, min_dist)
+  
+  local extra_utils = controller.getController("extraUtils")
+  
+  local future_pos = extra_utils.getFuturePosition(obj:getID(), 1, "front")
+  
+  obj.debugDrawProxy:drawSphere(0.25, future_pos:toFloat3(), color(255,0,0,255))
+  
+  for id, vals in pairs(mapmgr.objects) do
+    local front_pos = vec3(obj:getObjectFrontPosition(id))
+  
+    obj.debugDrawProxy:drawSphere(0.25, front_pos:toFloat3(), color(255,0,0,255))
+  end
 end
 
 M.init = init

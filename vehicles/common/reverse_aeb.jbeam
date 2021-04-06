@@ -9,7 +9,8 @@
 
         "controller": [
             ["fileName"],
-			["parkingAEBSystem",]
+			["parkingAEBSystem",],
+			["extraUtils",]
         ],
 
     },
