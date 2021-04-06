@@ -553,10 +553,9 @@ local function getCircularDistance(other_veh_id, min_distance_from_car)
   local shoot_ray_dir = (my_front_pos - other_center_pos):normalized()
 
   --Now get exact distance
-  local max_distance, min_distance = intersectsRay_OBB(my_front_pos, shoot_ray_dir, other_center_pos, other_x, other_y, other_z)
+  local min_distance, max_distance = intersectsRay_OBB(my_front_pos, shoot_ray_dir, other_center_pos, other_x, other_y, other_z)
 
-  --For some reason, distance is negative
-  min_distance = math.abs(min_distance) - min_distance_from_car
+  min_distance = min_distance - min_distance_from_car
 
   if min_distance < 0 then
     min_distance = 0
@@ -573,9 +572,10 @@ local function getCircularDistance(other_veh_id, min_distance_from_car)
   return cir_dist
 end
 
-local function getStraightDistance(other_veh_id, min_distance_from_car, front)
+--Get straight line distance to other car and whether to check in a straight line path
+local function getStraightDistance(other_veh_id, min_distance_from_car, front, in_my_vehs_straight_path)
   --My vehicle properties
- 
+
   local my_car_dir = vec3(obj:getDirectionVector())
   local my_car_dir_up = vec3(obj:getDirectionVectorUp())
   local my_car_dir_right = vec3(obj:getDirectionVectorRight())
@@ -607,13 +607,33 @@ local function getStraightDistance(other_veh_id, min_distance_from_car, front)
     ray_pos = my_rear_pos
   end
 
-  local shoot_ray_dir = (ray_pos - other_center_pos):normalized()
+  local min_distance = 9999
+  local shoot_ray_dir = nil
+  
+  if in_my_vehs_straight_path then
+    if front then
+      shoot_ray_dir = my_car_dir
+    else
+      shoot_ray_dir = -my_car_dir
+    end    
+    
+    --Now get exact distance
+    local min_distance1, max_distance1 = intersectsRay_OBB(ray_pos + rightVec * obj:getInitialWidth() * 0.5, shoot_ray_dir, other_center_pos, other_x, other_y, other_z)
+    
+    --Now get exact distance
+    local min_distance2, max_distance2 = intersectsRay_OBB(ray_pos - rightVec * obj:getInitialWidth() * 0.5, shoot_ray_dir, other_center_pos, other_x, other_y, other_z)
+    
+    min_distance = math.min(min_distance1, min_distance2)    
+  else
+    shoot_ray_dir = (other_center_pos - ray_pos):normalized()
+    
+    --Now get exact distance
+    local min_distance1, max_distance1 = intersectsRay_OBB(ray_pos, shoot_ray_dir, other_center_pos, other_x, other_y, other_z)
+    
+    min_distance = min_distance1
+  end
 
-  --Now get exact distance
-  local max_distance, min_distance = intersectsRay_OBB(ray_pos, shoot_ray_dir, other_center_pos, other_x, other_y, other_z)
-
-  --For some reason, distance is negative
-  min_distance = math.abs(min_distance) - min_distance_from_car
+  min_distance = min_distance - min_distance_from_car
 
   if min_distance < 0 then
     min_distance = 0
@@ -672,7 +692,7 @@ local function getNearbyVehicles(max_dist, min_distance_from_car, in_front)
               
         --If front distance is larger than rear distance, then vehicle is in rear
       elseif rear_dist < max_dist and front_dist > rear_dist and not in_front then
-        local dist = getStraightDistance(other_veh_id, min_distance_from_car, false)
+        local dist = getStraightDistance(other_veh_id, min_distance_from_car, false, true)
         
         local other_veh_data = 
         {
@@ -687,7 +707,6 @@ local function getNearbyVehicles(max_dist, min_distance_from_car, in_front)
 
   return other_vehs
 end
-
 
 --Returns a table of vehicles and distance to them within a max_dist radius and in the same lane
 local function getNearbyVehiclesInSameLane(max_dist, min_distance_from_car, in_front)  

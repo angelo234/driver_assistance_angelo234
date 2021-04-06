@@ -25,7 +25,7 @@ M.rev_aeb_params = {
     num_of_sensors = 9,
     sensors_polled_per_iteration = 2,
     sensor_offset_forward = 0.2,
-    sensor_max_distance = 7.5
+    sensor_max_distance = 15
 }
 
 M.beeper_params = {

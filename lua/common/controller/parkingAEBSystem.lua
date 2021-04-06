@@ -217,7 +217,9 @@ local function init(jbeamData)
   local default_param_file_dir = 'vehicles/common/parameters'
   local param_file_dir = 'vehicles/' .. veh_name .. '/parameters'
   
-  if FS:fileExists(param_file_dir) then
+  print(param_file_dir)
+  
+  if FS:fileExists(param_file_dir .. ".lua") then
     --load parameter lua file dependent on vehicle
     system_params = require(param_file_dir)
   else
@@ -231,6 +233,14 @@ local function init(jbeamData)
 end
 
 local function updateGFX(dt)
+  --Don't update if player not in vehicle
+  
+  if mapmgr.objects[obj:getID()] then
+    if not mapmgr.objects[obj:getID()].active then
+      return
+    end
+  end
+  
   --update stuff
   car_dir:set(obj:getDirectionVector())
   car_dir_up:set(obj:getDirectionVectorUp())
