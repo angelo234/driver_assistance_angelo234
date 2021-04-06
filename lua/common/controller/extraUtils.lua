@@ -172,9 +172,9 @@ local function getWaypointsProperties(start_wp, end_wp, lat_dist_from_wp)
   local end_wp_pos = getWaypointPosition(end_wp)
 
   --Get lane width
-  local wp_radius = mapmgr.mapData.radius.start_wp
+  local wp_radius = mapmgr.mapData.radius[start_wp]
   --local my_start_links = map.getMap().nodes[start_wp].links
-  
+
   local one_way = false
 
   --for wp, data in pairs(my_start_links) do
@@ -262,7 +262,7 @@ local function getWaypointStartEndAdvanced(veh_id, position)
   table.insert(wps, wps_props.end_wp)
   
   if past_wps_props ~= nil then
-    local within = checkIfWaypointsWithinMyCar(past_wps_props)
+    local within = checkIfWaypointsWithinMyCar(veh_id, past_wps_props)
   
     if within then
       table.insert(wps, past_wps_props.start_wp)
@@ -271,7 +271,7 @@ local function getWaypointStartEndAdvanced(veh_id, position)
   end
   
   if future_wps_props ~= nil then
-    local within = checkIfWaypointsWithinMyCar(future_wps_props)
+    local within = checkIfWaypointsWithinMyCar(veh_id, future_wps_props)
   
     if within then
       table.insert(wps, future_wps_props.start_wp)
@@ -298,7 +298,7 @@ local function getWaypointStartEndAdvanced(veh_id, position)
   wps = res
   
   --Sort waypoints relative to my vehicle
-  local back_origin = my_.dir * -9999
+  local back_origin = vec3(obj:getDirectionVector()) * -9999
   
   local new_wps = {}
   
@@ -368,9 +368,11 @@ local function getWaypointStartEndAdvanced(veh_id, position)
         min_wp_angle[3] = wp2
       end
     end
+    obj.debugDrawProxy:drawSphere(0.5, (wp1_pos + vec3(0,0,2)):toFloat3(), color(255,255,0,255))
     --debugDrawer:drawSphere((wp1_pos + vec3(0,0,2)):toPoint3F(), 0.5, ColorF(1,1,0,1))
     --debugDrawer:drawTextAdvanced((wp1_pos + vec3(0,0,3)):toPoint3F(), String("ID: " .. tostring(i)),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
     
+    obj.debugDrawProxy:drawSphere(0.5, (wp2_pos + vec3(0,0,2)):toFloat3(), color(255,255,0,255))
     --debugDrawer:drawSphere((wp2_pos + vec3(0,0,2)):toPoint3F(), 0.5, ColorF(1,1,0,1))
     --debugDrawer:drawTextAdvanced((wp2_pos + vec3(0,0,3)):toPoint3F(), String("ID: " .. tostring(i + 1)),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
   end
@@ -396,6 +398,10 @@ local function getWhichSideOfWaypointsCarIsOn(veh_id, start_pos, end_pos)
   local car_dir_xy = toNormXYVec(veh.dirVec)
 
   local wp_mid_pos = (end_pos - start_pos) * 0.5 + start_pos
+
+  obj.debugDrawProxy:drawSphere(0.5, start_pos:toFloat3(), color(255,0,0,255))
+  obj.debugDrawProxy:drawSphere(0.5, wp_mid_pos:toFloat3(), color(0,255,0,255))
+  obj.debugDrawProxy:drawSphere(0.5, end_pos:toFloat3(), color(0,0,255,255))
 
   --debugDrawer:drawSphere(start_pos:toPoint3F(), 0.5, ColorF(1,0,0,1))
   --debugDrawer:drawSphere(wp_mid_pos:toPoint3F(), 0.5, ColorF(0,1,0,1))
@@ -589,13 +595,13 @@ local function getStraightDistance(other_veh_id, min_distance_from_car, front, i
   
   local other_veh = mapmgr.objects[other_veh_id]
 
-  local rightVec = other_veh.dirVec:cross(other_veh.dirVecUp)
+  local other_veh_right_vec = other_veh.dirVec:cross(other_veh.dirVecUp)
 
   local other_front_pos = vec3(obj:getObjectFrontPosition(other_veh_id)) + other_veh.dirVec * 0.5
   local other_center_pos = other_front_pos - other_veh.dirVec * obj:getObjectInitialLength(other_veh_id) * 0.5
   local other_rear_pos = other_front_pos - other_veh.dirVec * obj:getObjectInitialLength(other_veh_id)
   
-  local other_x = obj:getObjectInitialWidth(other_veh_id) * 0.5 * rightVec
+  local other_x = obj:getObjectInitialWidth(other_veh_id) * 0.5 * other_veh_right_vec
   local other_y = obj:getObjectInitialLength(other_veh_id) * 0.5 * other_veh.dirVec
   local other_z = 2 * other_veh.dirVecUp
   
@@ -618,10 +624,10 @@ local function getStraightDistance(other_veh_id, min_distance_from_car, front, i
     end    
     
     --Now get exact distance
-    local min_distance1, max_distance1 = intersectsRay_OBB(ray_pos + rightVec * obj:getInitialWidth() * 0.5, shoot_ray_dir, other_center_pos, other_x, other_y, other_z)
+    local min_distance1, max_distance1 = intersectsRay_OBB(ray_pos + my_car_dir_right * obj:getInitialWidth() * 0.5, shoot_ray_dir, other_center_pos, other_x, other_y, other_z)
     
     --Now get exact distance
-    local min_distance2, max_distance2 = intersectsRay_OBB(ray_pos - rightVec * obj:getInitialWidth() * 0.5, shoot_ray_dir, other_center_pos, other_x, other_y, other_z)
+    local min_distance2, max_distance2 = intersectsRay_OBB(ray_pos - my_car_dir_right * obj:getInitialWidth() * 0.5, shoot_ray_dir, other_center_pos, other_x, other_y, other_z)
     
     min_distance = math.min(min_distance1, min_distance2)    
   else
@@ -739,11 +745,14 @@ local function getNearbyVehiclesInSameLane(max_dist, min_distance_from_car, in_f
 
   for _, other_veh_data in pairs(other_vehs_data) do
     
-    local speed_rel = my_speed - other_veh_data.vel:length()
+    local other_veh = other_veh_data.other_veh
     
-    local other_veh_wps_props = getWaypointStartEndAdvanced(other_veh_data.id, other_.front_pos)
+    local speed_rel = my_speed - other_veh.vel:length()
     
-    local other_veh_side_of_wp, other_in_wp_middle = getWhichSideOfWaypointsCarIsOn(other_veh_data.id, other_veh_wps_props.start_wp_pos, other_veh_wps_props.end_wp_pos)
+    local other_front_pos = vec3(obj:getObjectFrontPosition(other_veh.id)) + other_veh.dirVec * 0.5
+    local other_veh_wps_props = getWaypointStartEndAdvanced(other_veh.id, other_front_pos)
+    
+    local other_veh_side_of_wp, other_in_wp_middle = getWhichSideOfWaypointsCarIsOn(other_veh.id, other_veh_wps_props.start_wp_pos, other_veh_wps_props.end_wp_pos)
     local other_veh_lane_num = getLaneNum(other_veh_wps_props, other_veh_side_of_wp)
     
     --debugDrawer:drawTextAdvanced((other_.front_pos):toPoint3F(), String("Lane Num: " .. tostring(other_veh_lane_num)),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
@@ -755,7 +764,7 @@ local function getNearbyVehiclesInSameLane(max_dist, min_distance_from_car, in_f
     other_veh_data.my_veh_wps_props = my_veh_wps_props
     other_veh_data.other_veh_wps_props = other_veh_wps_props
 
-    local on_same_road = checkIfOtherCarOnSameRoad(other_veh_data.id, my_veh_wps_props)
+    local on_same_road = checkIfOtherCarOnSameRoad(other_veh.id, my_veh_wps_props)
 
     --debugDrawer:drawTextAdvanced((other_.front_pos):toPoint3F(), String("Same Road: " .. tostring(on_same_road)),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
 

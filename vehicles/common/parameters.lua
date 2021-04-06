@@ -6,7 +6,6 @@ M.rev_friction_coeff = 0.8
 
 M.fwd_aeb_params = {  
     min_speed = 0.75,
-    max_speed = 40,
     brake_till_stop_speed = 3,
     braking_time_leeway = 0.1,
   

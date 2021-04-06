@@ -8,6 +8,7 @@
     "slotType" : "licenseplate_design_2_1",
     "slots": [
 		["type", "default", "description"],
+		["forward_aeb","forward_aeb","Forward AEB"],
 		["reverse_aeb","reverse_aeb","Reverse AEB"],
 	],
 },

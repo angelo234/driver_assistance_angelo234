@@ -1,0 +1,17 @@
+{
+    "forward_aeb": {
+        "information":{
+            "authors":"angelo234",
+            "name":"Forward AEB",
+            "value":250,
+        },
+        "slotType" : "forward_aeb",
+
+        "controller": [
+            ["fileName"],
+			["aebSystem",],
+			["extraUtils",]
+        ],
+
+    },
+}

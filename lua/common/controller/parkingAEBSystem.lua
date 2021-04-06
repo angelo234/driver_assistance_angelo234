@@ -217,8 +217,6 @@ local function init(jbeamData)
   local default_param_file_dir = 'vehicles/common/parameters'
   local param_file_dir = 'vehicles/' .. veh_name .. '/parameters'
   
-  print(param_file_dir)
-  
   if FS:fileExists(param_file_dir .. ".lua") then
     --load parameter lua file dependent on vehicle
     system_params = require(param_file_dir)
@@ -248,6 +246,7 @@ local function updateGFX(dt)
   front_pos:set(vec3(obj:getFrontPosition()) + car_dir * 0.5)
   rear_pos:set(front_pos + -car_dir * obj:getInitialLength())
   speed = vec3(obj:getVelocity()):length()
+  acc_vec = quatFromDir(car_dir, vec3(0,0,1)) * vec3(sensors.gx2, sensors.gy2, 9.81 + sensors.gz2)
 
   local in_reverse = electrics.values.reverse
   local gear_selected = electrics.values.gear
