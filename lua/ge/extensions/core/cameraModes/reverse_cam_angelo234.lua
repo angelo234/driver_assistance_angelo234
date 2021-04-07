@@ -2,7 +2,6 @@
 -- If a copy of the bCDDL was not distributed with this
 -- file, You can obtain one at http://beamng.com/bCDDL-1.1.txt
 
-local extra_utils = require('scripts/driver_assistance_angelo234/extraUtils')
 --File with all parameters for system
 local system_params = nil
 
@@ -18,6 +17,14 @@ local cam_park_lines_on = false
 local C = {}
 C.__index = C
 
+local function rotateEuler(x, y, z, q)
+  q = q or quat()
+  q = quatFromEuler(0, z, 0) * q
+  q = quatFromEuler(0, 0, x) * q
+  q = quatFromEuler(y, 0, 0) * q
+  return q
+end
+
 function C:init()
 	self.disabledByDefault = true
 	self.register = true
@@ -27,7 +34,7 @@ function C:init()
 	local default_param_file_dir = 'vehicles/common/parameters'
   local param_file_dir = 'vehicles/' .. veh_name .. '/parameters'
   
-  if FS:fileExists(param_file_dir) then
+  if FS:fileExists(param_file_dir .. ".lua") then
     --load parameter lua file dependent on vehicle
     system_params = require(param_file_dir)
   else
@@ -336,21 +343,24 @@ local function checkVehicleSupported(id)
 	cam_traj_lines_on = false
 	cam_park_lines_on = false
 	
-	local the_veh_name = be:getObjectByID(id):getJBeamFilename()
+	local backup_cam_part = extensions.core_vehicle_manager.getVehicleData(id).chosenParts.backup_cam
 	
-	
+	--Does backup cam part exists?
+	is_supported = backup_cam_part == "backup_cam"
+	cam_traj_lines_on = true
+  cam_park_lines_on = true
 end
 
 function C:update(data)
-  --[[
-
   --Check if vehicle supported
   checkVehicleSupported(data.veh:getID())
-  
+
   if electrics_values_angelo234 == nil then return end
 
   local gear_selected = electrics_values_angelo234["gear"]
   local in_reverse = electrics_values_angelo234["reverse"]
+
+  if gear_selected == nil or in_reverse == nil then return end
 
 	--If vehicle doesn't have a backup camera or not in reverse and neutral, set camera to previous camera mode
 	if in_reverse == nil or is_supported == false or gear_selected == nil
@@ -371,7 +381,7 @@ function C:update(data)
 	local qdir = quatFromDir(dir)
 	local rotatedUp = qdir * vec3(0, 0, 1)
 
-	qdir = extra_utils.rotateEuler(math.rad(180),math.rad(rev_cam_params.cam_down_angle),math.atan2(rotatedUp:dot(camLeft), rotatedUp:dot(camUp)),qdir)
+	qdir = rotateEuler(math.rad(180), math.rad(rev_cam_params.cam_down_angle), math.atan2(rotatedUp:dot(camLeft), rotatedUp:dot(camUp)), qdir)
 	local camPos = vec3(data.veh:getSpawnWorldOOBBRearPoint()) + camUp * rev_cam_params.rel_cam_height
 
 	--Get turning radius of both rear wheels (they are different)
@@ -393,14 +403,10 @@ function C:update(data)
 		drawParkingLines(vec3(data.veh:getSpawnWorldOOBBRearPoint()), -dir, camLeft, -camLeft, camUp)
 	end
 	
-	
-
 	-- application
 	data.res.pos = camPos
 	data.res.rot = qdir
 	data.res.fov = rev_cam_params.cam_fov
-
-  ]]--
 
 	return true
 end

@@ -341,7 +341,7 @@ local function calculateTimeBeforeBraking(distance, vel_rel)
 end
 
 local function init(jbeamData)
-  veh_name = v.config.model
+  veh_name = v.config.partConfigFilename:match("/(%S+)/")
   
   local default_param_file_dir = 'vehicles/common/parameters'
   local param_file_dir = 'vehicles/' .. veh_name .. '/parameters'

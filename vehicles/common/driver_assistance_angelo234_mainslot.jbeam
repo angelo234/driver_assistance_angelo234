@@ -10,7 +10,12 @@
 		["type", "default", "description"],
 		["forward_aeb","forward_aeb","Forward AEB"],
 		["reverse_aeb","reverse_aeb","Reverse AEB"],
+		["backup_cam","backup_cam","Back-up Camera"],
 	],
+	"controller": [
+        ["fileName"],
+		["extraUtils",]
+    ],
 },
 
 }

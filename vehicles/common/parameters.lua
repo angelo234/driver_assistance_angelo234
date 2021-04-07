@@ -3,6 +3,8 @@ local M = {}
 M.gravity = 9.81
 M.fwd_friction_coeff = 1.0
 M.rev_friction_coeff = 0.8
+M.max_steer_radius = 4.3
+M.min_steer_radius = 3.1
 
 M.fwd_aeb_params = {  
     min_speed = 0.75,
@@ -37,8 +39,6 @@ M.beeper_params = {
 M.rev_cam_params = {
     cam_fov = 120,
     cam_down_angle = 35,
-    max_steer_radius = 4.3,
-    min_steer_radius = 3.1,
     rel_cam_height = 0.25,
     cam_to_wheel_len = -1,
     veh_half_width = 0.6,

@@ -1,15 +1,14 @@
 {
-    "forward_aeb": {
+    "backup_cam": {
         "information":{
             "authors":"angelo234",
-            "name":"Forward AEB",
+            "name":"Back-up Camera",
             "value":250,
         },
-        "slotType" : "forward_aeb",
+        "slotType" : "backup_cam",
 
         "controller": [
             ["fileName"],
-			["aebSystem",],
         ],
 
     },

@@ -1,8 +1,16 @@
 local M = {}
 
+M.my_car_dir = vec3(obj:getDirectionVector())
+M.my_car_dir_up = vec3(obj:getDirectionVectorUp())
+M.my_car_dir_right = vec3(obj:getDirectionVectorRight())
+M.my_front_pos = vec3(obj:getFrontPosition()) + M.my_car_dir * 0.5
+M.my_rear_pos = M.my_front_pos + -M.my_car_dir * obj:getInitialLength() 
+M.my_velocity = vec3(obj:getVelocity())
+M.my_speed = M.my_velocity:length()
+M.my_acc_vec = quatFromDir(M.my_car_dir, vec3(0,0,1)) * vec3(sensors.gx2, sensors.gy2, 9.81 + sensors.gz2)
+
 local prev_mapmgr_objects = deepcopy(mapmgr.objects)
 local yawSmooth = newExponentialSmoothing(50)
-
 
 local function rotateEuler(x, y, z, q)
   q = q or quat()
@@ -33,7 +41,10 @@ local function checkIfWaypointsWithinMyCar(veh_id, wps_props)
 end
 
 local function getFuturePosition(veh_id, time, rel_car_pos)
+  local veh_pos_future = vec3(0,0,0)
+  
   local veh = mapmgr.objects[veh_id]
+  if veh == nil then return veh_pos_future end
   
   local acc_vec = vec3()
   
@@ -44,8 +55,6 @@ local function getFuturePosition(veh_id, time, rel_car_pos)
   local front_pos = vec3(obj:getObjectFrontPosition(veh_id)) + veh.dirVec * 0.5
   local center_pos = front_pos - veh.dirVec * obj:getObjectInitialLength(veh_id) * 0.5
   local rear_pos = front_pos - veh.dirVec * obj:getObjectInitialLength(veh_id)
-  
-  local veh_pos_future = vec3(0,0,0)
 
   if rel_car_pos == "front" then
     veh_pos_future = front_pos + (veh.vel + acc_vec * time) * time
@@ -60,7 +69,10 @@ end
 
 
 local function getFuturePositionXY(veh_id, time, rel_car_pos)
+  local veh_pos_future = vec3(0,0,0)
+  
   local veh = mapmgr.objects[veh_id]
+  if veh == nil then return veh_pos_future end
   
   --Set position, velocity, and acceleration vectors z component to zero
   --for less error in calculating future position
@@ -77,8 +89,6 @@ local function getFuturePositionXY(veh_id, time, rel_car_pos)
 
   local velocity_xy = veh.vel:z0()
 
-  local veh_pos_future = vec3(0,0,0)
-
   if rel_car_pos == "front" then
     veh_pos_future = front_pos_xy + (velocity_xy + acc_vec_xy * time) * time
   elseif rel_car_pos == "center" then
@@ -93,7 +103,10 @@ end
 
 
 local function getFuturePositionXYWithAcc(veh_id, time, the_acc_vec, rel_car_pos)
+  local veh_pos_future = vec3(0,0,0)
+  
   local veh = mapmgr.objects[veh_id]
+  if veh == nil then return veh_pos_future end
   
   --Set position, velocity, and acceleration vectors z component to zero
   --for less error in calculating future position
@@ -108,7 +121,7 @@ local function getFuturePositionXYWithAcc(veh_id, time, the_acc_vec, rel_car_pos
 
   local velocity_xy = veh.vel:z0()
 
-  local veh_pos_future = vec3(0,0,0)
+  
 
   if rel_car_pos == "front" then
     veh_pos_future = front_pos_xy + (velocity_xy + the_acc_vec * time) * time
@@ -218,7 +231,7 @@ local function getWaypointStartEnd(position)
   local wp2_pos = getWaypointPosition(wp2)
 
   --Relative to my car
-  local origin = vec3(obj:getDirectionVector()) * -9999
+  local origin = M.my_car_dir * -9999
 
   --Figure out which waypoints are the start and end waypoint
   if math.abs((origin - wp1_pos):length()) < math.abs((origin - wp2_pos):length()) then
@@ -238,6 +251,7 @@ end
 --Also predicts your future position to find more suitable waypoints
 local function getWaypointStartEndAdvanced(veh_id, position)
   local veh = mapmgr.objects[veh_id]
+  if veh == nil then return nil end
   
   local wps = {}
 
@@ -298,7 +312,7 @@ local function getWaypointStartEndAdvanced(veh_id, position)
   wps = res
   
   --Sort waypoints relative to my vehicle
-  local back_origin = vec3(obj:getDirectionVector()) * -9999
+  local back_origin = M.my_car_dir * -9999
   
   local new_wps = {}
   
@@ -329,7 +343,7 @@ local function getWaypointStartEndAdvanced(veh_id, position)
   end
   
 
-  local angle_between_vehs = math.acos(vec3(obj:getDirectionVector()):dot(veh.dirVec))
+  local angle_between_vehs = math.acos(M.my_car_dir:dot(veh.dirVec))
 
   if angle_between_vehs > math.pi / 2.0 then
     angle_between_vehs = math.pi
@@ -383,10 +397,10 @@ local function getWaypointStartEndAdvanced(veh_id, position)
 end
 
 
-
 --Gets whether we are to the left or right of waypoints
 local function getWhichSideOfWaypointsCarIsOn(veh_id, start_pos, end_pos)
   local veh = mapmgr.objects[veh_id]
+  if veh == nil then return "left",true end
   
   local front_pos = vec3(obj:getObjectFrontPosition(veh_id)) + veh.dirVec * 0.5
   local center_pos = front_pos - veh.dirVec * obj:getObjectInitialLength(veh_id) * 0.5
@@ -502,6 +516,7 @@ end
 --Check if other car is on the same road as me (not lane)
 local function checkIfOtherCarOnSameRoad(other_veh_id, wps_props)
   local other_veh = mapmgr.objects[other_veh_id]
+  if other_veh == nil then return true end
 
   local other_front_pos = vec3(obj:getObjectFrontPosition(other_veh_id)) + other_veh.dirVec * 0.5
   local other_center_pos = other_front_pos - other_veh.dirVec * obj:getObjectInitialLength(other_veh_id) * 0.5
@@ -531,20 +546,10 @@ local function checkIfOtherCarOnSameRoad(other_veh_id, wps_props)
 end
 
 local function getCircularDistance(other_veh_id, min_distance_from_car)
-  --My vehicle properties
- 
-  local my_car_dir = vec3(obj:getDirectionVector())
-  local my_car_dir_up = vec3(obj:getDirectionVectorUp())
-  local my_car_dir_right = vec3(obj:getDirectionVectorRight())
-
-  local my_front_pos = vec3(obj:getFrontPosition()) + my_car_dir * 0.5
-  local my_rear_pos = my_front_pos + -my_car_dir * obj:getInitialLength() 
-  
-  local my_speed = vec3(obj:getVelocity()):length()  
-  
   --Other vehicle properties
   
   local other_veh = mapmgr.objects[other_veh_id]
+  if other_veh == nil then return 9999 end
 
   local rightVec = other_veh.dirVec:cross(other_veh.dirVecUp)
 
@@ -556,10 +561,10 @@ local function getCircularDistance(other_veh_id, min_distance_from_car)
   local other_y = obj:getObjectInitialLength(other_veh_id) * 0.5 * other_veh.dirVec
   local other_z = 3 * other_veh.dirVecUp
 
-  local shoot_ray_dir = (my_front_pos - other_center_pos):normalized()
+  local shoot_ray_dir = (M.my_front_pos - other_center_pos):normalized()
 
   --Now get exact distance
-  local min_distance, max_distance = intersectsRay_OBB(my_front_pos, shoot_ray_dir, other_center_pos, other_x, other_y, other_z)
+  local min_distance, max_distance = intersectsRay_OBB(M.my_front_pos, shoot_ray_dir, other_center_pos, other_x, other_y, other_z)
 
   min_distance = min_distance - min_distance_from_car
 
@@ -568,7 +573,7 @@ local function getCircularDistance(other_veh_id, min_distance_from_car)
   end
 
   --Convert to circular distance
-  local turning_radius = math.abs(my_speed / yawSmooth:get(obj:getYawAngularVelocity()))
+  local turning_radius = math.abs(M.my_speed / yawSmooth:get(obj:getYawAngularVelocity()))
 
   local angle = math.acos(
     (min_distance * min_distance) / (-2 * turning_radius * turning_radius) + 1)
@@ -580,20 +585,10 @@ end
 
 --Get straight line distance to other car and whether to check in a straight line path
 local function getStraightDistance(other_veh_id, min_distance_from_car, front, in_my_vehs_straight_path)
-  --My vehicle properties
-
-  local my_car_dir = vec3(obj:getDirectionVector())
-  local my_car_dir_up = vec3(obj:getDirectionVectorUp())
-  local my_car_dir_right = vec3(obj:getDirectionVectorRight())
-
-  local my_front_pos = vec3(obj:getFrontPosition()) + my_car_dir * 0.5
-  local my_rear_pos = my_front_pos + -my_car_dir * obj:getInitialLength() 
-  
-  local my_speed = vec3(obj:getVelocity()):length()  
-  
   --Other vehicle properties
   
   local other_veh = mapmgr.objects[other_veh_id]
+  if other_veh == nil then return 9999 end
 
   local other_veh_right_vec = other_veh.dirVec:cross(other_veh.dirVecUp)
 
@@ -608,9 +603,9 @@ local function getStraightDistance(other_veh_id, min_distance_from_car, front, i
   local ray_pos = nil
 
   if front then
-    ray_pos = my_front_pos
+    ray_pos = M.my_front_pos
   else
-    ray_pos = my_rear_pos
+    ray_pos = M.my_rear_pos
   end
 
   local min_distance = 9999
@@ -618,16 +613,16 @@ local function getStraightDistance(other_veh_id, min_distance_from_car, front, i
   
   if in_my_vehs_straight_path then
     if front then
-      shoot_ray_dir = my_car_dir
+      shoot_ray_dir = M.my_car_dir
     else
-      shoot_ray_dir = -my_car_dir
+      shoot_ray_dir = -M.my_car_dir
     end    
     
     --Now get exact distance
-    local min_distance1, max_distance1 = intersectsRay_OBB(ray_pos + my_car_dir_right * obj:getInitialWidth() * 0.5, shoot_ray_dir, other_center_pos, other_x, other_y, other_z)
+    local min_distance1, max_distance1 = intersectsRay_OBB(ray_pos + M.my_car_dir_right * obj:getInitialWidth() * 0.5, shoot_ray_dir, other_center_pos, other_x, other_y, other_z)
     
     --Now get exact distance
-    local min_distance2, max_distance2 = intersectsRay_OBB(ray_pos - my_car_dir_right * obj:getInitialWidth() * 0.5, shoot_ray_dir, other_center_pos, other_x, other_y, other_z)
+    local min_distance2, max_distance2 = intersectsRay_OBB(ray_pos - M.my_car_dir_right * obj:getInitialWidth() * 0.5, shoot_ray_dir, other_center_pos, other_x, other_y, other_z)
     
     min_distance = math.min(min_distance1, min_distance2)    
   else
@@ -652,17 +647,6 @@ end
 --Returns a table of vehicles and distance to them within a max_dist radius
 --only in front of our vehicle, so it discards vehicles behind
 local function getNearbyVehicles(max_dist, min_distance_from_car, in_front)
-  --My vehicle properties
-  local my_car_dir = vec3(obj:getDirectionVector())
-  local my_car_dir_up = vec3(obj:getDirectionVectorUp())
-  local my_car_dir_right = vec3(obj:getDirectionVectorRight())
-
-  local my_front_pos = vec3(obj:getFrontPosition()) + my_car_dir * 0.5
-  local my_rear_pos = my_front_pos + -my_car_dir * obj:getInitialLength() 
-  
-  local my_speed = vec3(obj:getVelocity()):length()  
-  
-  
   local other_vehs = {}
 
   local vehicles = mapmgr.objects
@@ -681,8 +665,8 @@ local function getNearbyVehicles(max_dist, min_distance_from_car, in_front)
       local other_rear_pos = other_front_pos - other_veh.dirVec * obj:getObjectInitialLength(other_veh_id)
 
 
-      local front_dist = (my_front_pos - other_center_pos):length()
-      local rear_dist = (my_rear_pos - other_center_pos):length()
+      local front_dist = (M.my_front_pos - other_center_pos):length()
+      local rear_dist = (M.my_rear_pos - other_center_pos):length()
 
       --If rear distance is larger than front distance, then vehicle is in front
       if front_dist < max_dist and front_dist < rear_dist and in_front then
@@ -716,16 +700,7 @@ end
 
 --Returns a table of vehicles and distance to them within a max_dist radius and in the same lane
 local function getNearbyVehiclesInSameLane(max_dist, min_distance_from_car, in_front)  
-  local my_car_dir = vec3(obj:getDirectionVector())
-  local my_car_dir_up = vec3(obj:getDirectionVectorUp())
-  local my_car_dir_right = vec3(obj:getDirectionVectorRight())
-  
-  local my_front_pos = vec3(obj:getFrontPosition()) + my_car_dir * 0.5
-  local my_rear_pos = my_front_pos + -my_car_dir * obj:getInitialLength() 
-  
-  local my_speed = vec3(obj:getVelocity()):length()
-  
-  local my_veh_wps_props = getWaypointStartEndAdvanced(obj:getID(), my_front_pos)
+  local my_veh_wps_props = getWaypointStartEndAdvanced(obj:getID(), M.my_front_pos)
   
   if my_veh_wps_props == nil then
     return {}
@@ -747,7 +722,7 @@ local function getNearbyVehiclesInSameLane(max_dist, min_distance_from_car, in_f
     
     local other_veh = other_veh_data.other_veh
     
-    local speed_rel = my_speed - other_veh.vel:length()
+    local speed_rel = M.my_speed - other_veh.vel:length()
     
     local other_front_pos = vec3(obj:getObjectFrontPosition(other_veh.id)) + other_veh.dirVec * 0.5
     local other_veh_wps_props = getWaypointStartEndAdvanced(other_veh.id, other_front_pos)
@@ -788,6 +763,14 @@ local smoothing_table = {}
 
 local function updateGFX(dt)
   --update stuff
+  M.my_car_dir:set(obj:getDirectionVector())
+  M.my_car_dir_up:set(obj:getDirectionVectorUp())
+  M.my_car_dir_right:set(obj:getDirectionVectorRight())
+  M.my_front_pos:set(vec3(obj:getFrontPosition()) + M.my_car_dir * 0.5)
+  M.my_rear_pos:set(M.my_front_pos + -M.my_car_dir * obj:getInitialLength())
+  M.my_velocity:set(obj:getVelocity())
+  M.my_speed = M.my_velocity:length()
+  M.my_acc_vec = quatFromDir(M.my_car_dir, vec3(0,0,1)) * vec3(sensors.gx2, sensors.gy2, 9.81 + sensors.gz2)
   
   --all this to get acceleration vectors from vehicles
   

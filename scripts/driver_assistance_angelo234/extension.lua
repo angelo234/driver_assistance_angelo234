@@ -54,6 +54,13 @@ local function onUpdate(dt)
     doLuaReload()   
     first_update = false
   end
+  
+  local my_veh = be:getPlayerVehicle(0)
+  my_veh:queueLuaCommand('obj:queueGameEngineLua("electrics_values_angelo234 = (\'" .. jsonEncode(electrics.values) .. "\')")')
+  
+  if electrics_values_angelo234 == nil or #electrics_values_angelo234 == 0 then return end
+  
+  electrics_values_angelo234 = jsonDecode(electrics_values_angelo234)
 end
 
 M.onCameraModeChanged = onCameraModeChanged
