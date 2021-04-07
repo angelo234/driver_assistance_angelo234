@@ -2,6 +2,12 @@
 -- If a copy of the bCDDL was not distributed with this
 -- file, You can obtain one at http://beamng.com/bCDDL-1.1.txt
 
+--global table of all vehicles acceleration vectors
+veh_accs_angelo234 = {}
+
+local aeb_system_ge = require('scripts/driver_assistance_angelo234/aebSystemGE')
+local parking_aeb_system_ge = require('scripts/driver_assistance_angelo234/parkingAEBSystemGE')
+
 local M = {}
 
 M.curr_camera_mode = "orbit"
@@ -13,6 +19,46 @@ local function onCameraModeChanged(new_camera_mode)
     M.prev_camera_mode = M.curr_camera_mode
     M.curr_camera_mode = new_camera_mode
   end
+end
+
+local function getAllVehiclesPropertiesFromVELua()
+  local vehicles = getAllVehicles()
+  local my_veh = be:getPlayerVehicle(0)
+
+  for _, this_veh in pairs(vehicles) do
+    local id = this_veh:getID()
+
+    this_veh:queueLuaCommand('obj:queueGameEngineLua("veh_accs_angelo234[' .. id .. '] = {" .. sensors.gx2 .. "," .. sensors.gy2 .. "," .. sensors.gz2 .. "}")')
+  end
+
+  --Get properties of my vehicle
+  my_veh:queueLuaCommand("obj:queueGameEngineLua('throttle_pos_angelo234 = ' .. input.throttle )")
+  my_veh:queueLuaCommand('obj:queueGameEngineLua("electrics_values_angelo234 = (\'" .. jsonEncode(electrics.values) .. "\')")')
+  my_veh:queueLuaCommand("obj:queueGameEngineLua('angular_speed_angelo234 = ' .. obj:getYawAngularVelocity() )")
+  
+  --Gets whether gearbox is in arcade or realistic mode
+  my_veh:queueLuaCommand('obj:queueGameEngineLua("gearbox_mode_angelo234 = (\'" .. jsonEncode(controller.mainController.onSerialize()) .. "\')")')
+
+  if electrics_values_angelo234 == nil then
+    return false
+  end
+
+  return veh_accs_angelo234 ~= nil
+    and #electrics_values_angelo234 ~= 0
+    and angular_speed_angelo234 ~= nil
+    and throttle_pos_angelo234 ~= nil
+    and gearbox_mode_angelo234 ~= nil
+end
+
+local yawSmooth = newExponentialSmoothing(10) --exponential smoothing for yaw rate
+
+local function processVELuaData()
+  --Decode json results
+  electrics_values_angelo234 = jsonDecode(electrics_values_angelo234)
+  gearbox_mode_angelo234 = jsonDecode(gearbox_mode_angelo234)
+  
+  --Smoothes angular velocity
+  angular_speed_angelo234 = yawSmooth:get(angular_speed_angelo234)
 end
 
 --Complicated way to load in camera (but it works quite seamlessly)
@@ -56,11 +102,17 @@ local function onUpdate(dt)
   end
   
   local my_veh = be:getPlayerVehicle(0)
-  my_veh:queueLuaCommand('obj:queueGameEngineLua("electrics_values_angelo234 = (\'" .. jsonEncode(electrics.values) .. "\')")')
+  if my_veh == nil then return end
   
-  if electrics_values_angelo234 == nil or #electrics_values_angelo234 == 0 then return end
+  local ready = getAllVehiclesPropertiesFromVELua()
+  --If Vehicle Lua data is nil then return
+  if not ready then return end
+
+  --Process data gathered from Vehicle Lua to be usable in our context
+  processVELuaData()
   
-  electrics_values_angelo234 = jsonDecode(electrics_values_angelo234)
+  aeb_system_ge.update(dt)
+  parking_aeb_system_ge.update(dt)
 end
 
 M.onCameraModeChanged = onCameraModeChanged

@@ -1,5 +1,17 @@
 local M = {}
 
+--For efficiency
+local max = math.max
+local min = math.min
+local sin = math.sin
+local asin = math.asin
+local acos = math.acos
+local atan2 = math.atan2
+local pi = math.pi
+local abs = math.abs
+local sqrt = math.sqrt
+local floor = math.floor
+
 M.my_car_dir = vec3(obj:getDirectionVector())
 M.my_car_dir_up = vec3(obj:getDirectionVectorUp())
 M.my_car_dir_right = vec3(obj:getDirectionVectorRight())
@@ -11,6 +23,7 @@ M.my_acc_vec = quatFromDir(M.my_car_dir, vec3(0,0,1)) * vec3(sensors.gx2, sensor
 
 local prev_mapmgr_objects = deepcopy(mapmgr.objects)
 local yawSmooth = newExponentialSmoothing(50)
+
 
 local function rotateEuler(x, y, z, q)
   q = q or quat()
@@ -234,7 +247,7 @@ local function getWaypointStartEnd(position)
   local origin = M.my_car_dir * -9999
 
   --Figure out which waypoints are the start and end waypoint
-  if math.abs((origin - wp1_pos):length()) < math.abs((origin - wp2_pos):length()) then
+  if abs((origin - wp1_pos):length()) < abs((origin - wp2_pos):length()) then
     start_wp = wp1
     end_wp = wp2
   else
@@ -257,6 +270,10 @@ local function getWaypointStartEndAdvanced(veh_id, position)
 
   local wps_props = getWaypointStartEnd(position)
 
+  return wps_props
+
+  --[[
+
   --Check using future positions
 
   local veh_pos_past = getFuturePosition(veh_id, -1, "center")
@@ -272,15 +289,15 @@ local function getWaypointStartEndAdvanced(veh_id, position)
     return nil
   end
 
-  table.insert(wps, wps_props.start_wp)
-  table.insert(wps, wps_props.end_wp)
+  table.insert(wps, {wps_props.start_wp, wps_props.start_wp_pos})
+  table.insert(wps, {wps_props.end_wp, wps_props.end_wp_pos})
   
   if past_wps_props ~= nil then
     local within = checkIfWaypointsWithinMyCar(veh_id, past_wps_props)
   
     if within then
-      table.insert(wps, past_wps_props.start_wp)
-      table.insert(wps, past_wps_props.end_wp)
+      table.insert(wps, {past_wps_props.start_wp, past_wps_props.start_wp_pos})
+      table.insert(wps, {past_wps_props.end_wp, past_wps_props.end_wp_pos})
     end
   end
   
@@ -288,8 +305,8 @@ local function getWaypointStartEndAdvanced(veh_id, position)
     local within = checkIfWaypointsWithinMyCar(veh_id, future_wps_props)
   
     if within then
-      table.insert(wps, future_wps_props.start_wp)
-      table.insert(wps, future_wps_props.end_wp)
+      table.insert(wps, {future_wps_props.start_wp, future_wps_props.start_wp_pos})
+      table.insert(wps, {future_wps_props.end_wp, future_wps_props.end_wp_pos})
     end
   end
   
@@ -317,17 +334,17 @@ local function getWaypointStartEndAdvanced(veh_id, position)
   local new_wps = {}
   
   --Calculate distance from origin displaced far away from back of vehicle to waypoints
-  for _, wp in ipairs(wps) do
-    local wp_pos = getWaypointPosition(wp)
-    local dist = (wp_pos - back_origin):length()
+  for _, wp_data in ipairs(wps) do
+    local dist = (wp_data[2] - back_origin):length()
   
-    table.insert(new_wps, {dist, wp})
+    table.insert(new_wps, {dist, wp_data})
   end
   
   wps = {}
 
   local len = #new_wps
 
+  --Sort by distances
   for j = 2, len do
     local val = new_wps[j]
     local i = j - 1
@@ -343,32 +360,32 @@ local function getWaypointStartEndAdvanced(veh_id, position)
   end
   
 
-  local angle_between_vehs = math.acos(M.my_car_dir:dot(veh.dirVec))
+  local angle_between_vehs = acos(M.my_car_dir:dot(veh.dirVec))
 
-  if angle_between_vehs > math.pi / 2.0 then
-    angle_between_vehs = math.pi
+  if angle_between_vehs > pi / 2.0 then
+    angle_between_vehs = pi
   else
     angle_between_vehs = 0
   end
 
-  local min_wp_angle = {math.pi, nil, nil}
+  local min_wp_angle = {pi, nil, nil}
 
   for i = 1, #wps - 1 do
-    local wp1 = wps[i]
-    local wp2 = wps[i + 1]
-    local wp1_pos = getWaypointPosition(wp1)
-    local wp2_pos = getWaypointPosition(wp2)
+    local wp1 = wps[i][1]
+    local wp2 = wps[i + 1][1]
+    local wp1_pos = wps[i][2]
+    local wp2_pos = wps[i + 1][2]
 
     --Get direction between our waypoints and one of its linked waypoints
     local wp_dir = (wp2_pos - wp1_pos):normalized()
 
     --Angle between waypoint dir and car dir
-    local angle = math.acos(wp_dir:dot(veh.dirVec))
+    local angle = acos(wp_dir:dot(veh.dirVec))
 
-    angle = math.abs(angle_between_vehs - angle)
+    angle = abs(angle_between_vehs - angle)
 
-    if angle > math.pi / 2.0 then
-      angle = math.pi - angle
+    if angle > pi / 2.0 then
+      angle = pi - angle
 
       if angle < min_wp_angle[1] then
         min_wp_angle[1] = angle
@@ -394,6 +411,8 @@ local function getWaypointStartEndAdvanced(veh_id, position)
   local new_wps_props = getWaypointsProperties(min_wp_angle[2], min_wp_angle[3], wps_props.lat_dist_from_wp)
 
   return new_wps_props
+  
+  ]]--
 end
 
 
@@ -413,9 +432,9 @@ local function getWhichSideOfWaypointsCarIsOn(veh_id, start_pos, end_pos)
 
   local wp_mid_pos = (end_pos - start_pos) * 0.5 + start_pos
 
-  obj.debugDrawProxy:drawSphere(0.5, start_pos:toFloat3(), color(255,0,0,255))
-  obj.debugDrawProxy:drawSphere(0.5, wp_mid_pos:toFloat3(), color(0,255,0,255))
-  obj.debugDrawProxy:drawSphere(0.5, end_pos:toFloat3(), color(0,0,255,255))
+  --obj.debugDrawProxy:drawSphere(0.5, start_pos:toFloat3(), color(255,0,0,255))
+  --obj.debugDrawProxy:drawSphere(0.5, wp_mid_pos:toFloat3(), color(0,255,0,255))
+  --obj.debugDrawProxy:drawSphere(0.5, end_pos:toFloat3(), color(0,0,255,255))
 
   --debugDrawer:drawSphere(start_pos:toPoint3F(), 0.5, ColorF(1,0,0,1))
   --debugDrawer:drawSphere(wp_mid_pos:toPoint3F(), 0.5, ColorF(0,1,0,1))
@@ -439,9 +458,9 @@ local function getWhichSideOfWaypointsCarIsOn(veh_id, start_pos, end_pos)
   local center_dot = line_to_center_dir:dot(road_line_dir)
   local center_det = line_to_center_dir.x * road_line_dir.y - line_to_center_dir.y * road_line_dir.x
 
-  local left_angle = math.atan2(left_det, left_dot) * 180.0 / math.pi
-  local right_angle = math.atan2(right_det, right_dot) * 180.0 / math.pi
-  local center_angle = math.atan2(center_det, center_dot) * 180.0 / math.pi
+  local left_angle = atan2(left_det, left_dot) * 180.0 / pi
+  local right_angle = atan2(right_det, right_dot) * 180.0 / pi
+  local center_angle = atan2(center_det, center_dot) * 180.0 / pi
 
   local side = nil
   local in_wp_middle = false
@@ -490,7 +509,7 @@ local function getLaneNum(wps_props, side_of_wps)
   --Waypoint is in middle of lane lines when even
   --Waypoint is in middle of lane when odd
   if even_lanes then
-    lanes_from_wp = math.floor(wps_props.lat_dist_from_wp / wps_props.lane_width)
+    lanes_from_wp = floor(wps_props.lat_dist_from_wp / wps_props.lane_width)
     
     if side_of_wps == "right" then
       lane_num = wps_props.num_of_lanes / 2.0 + lanes_from_wp
@@ -498,7 +517,7 @@ local function getLaneNum(wps_props, side_of_wps)
       lane_num = wps_props.num_of_lanes / 2.0 - lanes_from_wp - 1
     end
   else
-    lanes_from_wp = math.floor(wps_props.lat_dist_from_wp / wps_props.lane_width + 0.5)
+    lanes_from_wp = floor(wps_props.lat_dist_from_wp / wps_props.lane_width + 0.5)
     
     if side_of_wps == "right" then
       lane_num = wps_props.num_of_lanes / 2.0 + lanes_from_wp - 0.5
@@ -508,7 +527,7 @@ local function getLaneNum(wps_props, side_of_wps)
   end
 
   --Cap between 0 and wps_props.num_of_lanes - 1
-  lane_num = math.min(wps_props.num_of_lanes - 1, math.max(lane_num, 0))
+  lane_num = min(wps_props.num_of_lanes - 1, max(lane_num, 0))
 
   return lane_num
 end
@@ -573,9 +592,9 @@ local function getCircularDistance(other_veh_id, min_distance_from_car)
   end
 
   --Convert to circular distance
-  local turning_radius = math.abs(M.my_speed / yawSmooth:get(obj:getYawAngularVelocity()))
+  local turning_radius = abs(M.my_speed / yawSmooth:get(obj:getYawAngularVelocity()))
 
-  local angle = math.acos(
+  local angle = acos(
     (min_distance * min_distance) / (-2 * turning_radius * turning_radius) + 1)
 
   local cir_dist = angle * turning_radius
@@ -624,7 +643,7 @@ local function getStraightDistance(other_veh_id, min_distance_from_car, front, i
     --Now get exact distance
     local min_distance2, max_distance2 = intersectsRay_OBB(ray_pos - M.my_car_dir_right * obj:getInitialWidth() * 0.5, shoot_ray_dir, other_center_pos, other_x, other_y, other_z)
     
-    min_distance = math.min(min_distance1, min_distance2)    
+    min_distance = min(min_distance1, min_distance2)    
   else
     shoot_ray_dir = (other_center_pos - ray_pos):normalized()
     
@@ -707,6 +726,7 @@ local function getNearbyVehiclesInSameLane(max_dist, min_distance_from_car, in_f
   end
   
   local my_veh_side_of_wp, my_in_wp_middle = getWhichSideOfWaypointsCarIsOn(obj:getID(), my_veh_wps_props.start_wp_pos, my_veh_wps_props.end_wp_pos)
+  
   local my_veh_lane_num = getLaneNum(my_veh_wps_props, my_veh_side_of_wp)
   
   --debugDrawer:drawTextAdvanced((my_.front_pos):toPoint3F(), String("Lane Num: " .. tostring(my_veh_lane_num)),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
@@ -719,17 +739,17 @@ local function getNearbyVehiclesInSameLane(max_dist, min_distance_from_car, in_f
   local other_vehs_in_my_lane = {}
 
   for _, other_veh_data in pairs(other_vehs_data) do
-    
     local other_veh = other_veh_data.other_veh
     
     local speed_rel = M.my_speed - other_veh.vel:length()
     
     local other_front_pos = vec3(obj:getObjectFrontPosition(other_veh.id)) + other_veh.dirVec * 0.5
     local other_veh_wps_props = getWaypointStartEndAdvanced(other_veh.id, other_front_pos)
-    
+
     local other_veh_side_of_wp, other_in_wp_middle = getWhichSideOfWaypointsCarIsOn(other_veh.id, other_veh_wps_props.start_wp_pos, other_veh_wps_props.end_wp_pos)
     local other_veh_lane_num = getLaneNum(other_veh_wps_props, other_veh_side_of_wp)
     
+  
     --debugDrawer:drawTextAdvanced((other_.front_pos):toPoint3F(), String("Lane Num: " .. tostring(other_veh_lane_num)),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
     --print("Other Lane: " .. other_veh_lane_num)
     

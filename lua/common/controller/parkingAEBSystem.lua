@@ -7,127 +7,16 @@ local beeper_params = nil
 
 local veh_name = nil
 
-local car_dir = vec3(obj:getDirectionVector())
-local car_dir_up = vec3(obj:getDirectionVectorUp())
-local car_dir_right = vec3(obj:getDirectionVectorRight())
-local front_pos = vec3(obj:getFrontPosition()) + car_dir * 0.5
-local rear_pos = front_pos + -car_dir * obj:getInitialLength() 
 local speed = vec3(obj:getVelocity()):length()
-local acc_vec = quatFromDir(car_dir, vec3(0,0,1)) * vec3(sensors.gx2, sensors.gy2, 9.81 + sensors.gz2)
-
-local static_sensor_id = -1
-local prev_min_dist = 9999
-local min_dist = 9999
 
 local system_active = false
-
-local function staticCastRay(sensorPos, same_ray)
-  local hit = nil
-  
-  local car_half_width = rev_aeb_params.safety_offset_width_sensor + obj:getInitialWidth() / 2.0
-
-  if not same_ray then
-    if static_sensor_id >= rev_aeb_params.num_of_sensors - 1 then static_sensor_id = -1 end
-    static_sensor_id = static_sensor_id + 1
-  end
-
-  local pos = sensorPos + car_dir_right * (car_half_width - car_half_width / ((rev_aeb_params.num_of_sensors - 1) / 2.0) * static_sensor_id)
-
-  --use castRayDebug to show lines
-  --hit = castRay(pos, dest, true, true)
-  --local param_arr = {origin, dest, false, true, index, true} 
-  --obj:queueGameEngineLua("be:getPlayerVehicle(0):queueLuaCommand('raycastdata = ' .. aeb_angelo234_castRay('" ..jsonEncode(param_arr) .. "'))")
-  --local data = jsonDecode(raycastdata)
-
-  local dist = obj:castRayStatic(pos:toFloat3(), (-car_dir):toFloat3(), rev_aeb_params.sensor_max_distance)
-
-  if dist == rev_aeb_params.sensor_max_distance then
-    return 9999
-  end
-
-  return dist
-
-  --if hit == nil then return nil end
-
-  --return {hit.norm, hit.dist, hit.pt, static_sensor_id}
-end
-
-local function processRayCasts(static_hit, vehicle_hit)
-  --static hit returns {hit.norm, hit.dist, hit.pt, static_sensor_id}
-  --vehicle hit returns {other_veh, min_distance, veh_sensor_id}
-
-  local static_dist = 9999
-  local vehicle_dist = 9999
-  local other_veh = nil
-  
-  static_dist = static_hit
-  
-  --[[
-  if static_hit ~= nil then
-    local norm = static_hit[1]
-    local distance = static_hit[2]
-
-    local new_dir_x = math.sqrt(veh_props.dir.x * veh_props.dir.x 
-    + veh_props.dir.y * veh_props.dir.y)
-    
-    local new_norm_x = math.sqrt(norm.x * norm.x + norm.y * norm.y)
-
-    local dir_xy = vec3(new_dir_x, veh_props.dir.z, 0)
-    local norm_xy = vec3(new_norm_x, norm.z, 0)
-
-    dir_xy = dir_xy:normalized()
-    norm_xy = norm_xy:normalized()
-     
-    local angle = math.acos(dir_xy:dot(norm_xy))
-    --print(angle * 180.0 / math.pi)
-    
-    --If surface is < 60 degrees then count it as obstacle
-    if angle < 60 * math.pi / 180.0 then
-      static_dist = static_hit[2]
-    end
-  end
-  ]]--
-  
-  if vehicle_hit[1] ~= nil then
-    other_veh = vehicle_hit[1]
-    vehicle_dist = vehicle_hit[2]
-  end
-  
-
-  local min_dist = math.min(static_dist, vehicle_dist)
-
-  --Vehicle is closest
-  --if min_dist ~= 9999 and min_dist == vehicle_dist then
-
-  --end
-
-  return other_veh, min_dist
-end
-
-
-local function getClosestVehicle(other_vehs_data)
-  local distance = 9999
-  local other_veh = nil
-
-  for _, other_veh_data in pairs(other_vehs_data) do
-    local veh = other_veh_data.other_veh
-    local this_distance = other_veh_data.distance
-
-    if this_distance <= distance then
-      distance = this_distance
-      other_veh = veh
-    end
-  end
-
-  --print(distance)
-
-  return {other_veh, distance}
-end
 
 local beeper_timer = 0
 
 local function soundBeepers(dt, dist)
   beeper_timer = beeper_timer + dt
+
+  dist = dist + 0.2
 
   if dist <= parking_lines_params.parking_line_total_len + parking_lines_params.parking_line_offset_long then
     
@@ -146,24 +35,6 @@ local function soundBeepers(dt, dist)
       end
     end
   end
-end
-
-local function pollReverseSensors(dt)
-  --Fixes lag of sensorPos
-  local sensorPos = rear_pos --+ (rev_aeb_params.num_of_sensors / rev_aeb_params.sensors_polled_per_iteration) * vec3(obj:getVelocity()) * dt 
-    + car_dir_up * rev_aeb_params.parking_sensor_rel_height + car_dir * rev_aeb_params.sensor_offset_forward
-  
-  local static_hit = staticCastRay(sensorPos, false)
-
-  --Get vehicles in a 7.5m radius behind my vehicle
-  local other_vehs_data = controller.getController("extraUtils").getNearbyVehicles(rev_aeb_params.sensor_max_distance, 0, false)
-  local vehicle_hit = getClosestVehicle(other_vehs_data)
-
-  local other_veh, min_dist = processRayCasts(static_hit, vehicle_hit)
-
-  min_dist = min_dist - rev_aeb_params.sensor_offset_forward - 0.1
-
-  return other_veh, min_dist
 end
 
 local function performEmergencyBraking(dt, distance)
@@ -212,7 +83,11 @@ local function performEmergencyBraking(dt, distance)
 end
 
 local function init(jbeamData)
-  veh_name = v.config.partConfigFilename:match("/(%S+)/")
+  if v.config.model then
+    veh_name = v.config.model
+  else
+    veh_name = v.config.partConfigFilename:match("/(%S+)/")
+  end 
 
   local default_param_file_dir = 'vehicles/common/parameters'
   local param_file_dir = 'vehicles/' .. veh_name .. '/parameters'
@@ -240,25 +115,35 @@ local function updateGFX(dt)
   end
   
   --update stuff
-  car_dir:set(obj:getDirectionVector())
-  car_dir_up:set(obj:getDirectionVectorUp())
-  car_dir_right:set(obj:getDirectionVectorRight())
-  front_pos:set(vec3(obj:getFrontPosition()) + car_dir * 0.5)
-  rear_pos:set(front_pos + -car_dir * obj:getInitialLength())
   speed = vec3(obj:getVelocity()):length()
-  acc_vec = quatFromDir(car_dir, vec3(0,0,1)) * vec3(sensors.gx2, sensors.gy2, 9.81 + sensors.gz2)
 
   local in_reverse = electrics.values.reverse
   local gear_selected = electrics.values.gear
 
   if in_reverse == nil or gear_selected == nil or in_reverse == 0 then 
-    prev_min_dist = 9999
-    min_dist = 9999
     return 
   end
   
+  local param_arr = 
+  {
+    obj:getID(), 
+    rev_aeb_params
+  }
+   
+  --Set params for AEB system
+  obj:queueGameEngineLua("ve_rev_json_params_angelo234 = '" .. jsonEncode(param_arr) .. "'")
+  obj:queueGameEngineLua("be:getPlayerVehicle(0):queueLuaCommand('rev_aeb_data_angelo234 = ' .. ge_rev_aeb_data_angelo234)")
+
+  if rev_aeb_data_angelo234 == nil then return end
+  
+  local aeb_data = jsonDecode(rev_aeb_data_angelo234)
+  
+  local distance = aeb_data[1]
+  
   --Play beeping sound based on min distance of prev sensor detections to obstacle
-  soundBeepers(dt, prev_min_dist)
+  soundBeepers(dt, distance)
+  
+  --[[
 
   for i = 1, rev_aeb_params.sensors_polled_per_iteration do
     if static_sensor_id == rev_aeb_params.num_of_sensors - 1 then
@@ -271,24 +156,16 @@ local function updateGFX(dt)
      
     min_dist = math.min(dist, min_dist)
   end
+  ]]--
+
+  
+
 
   --if not aeb_enabled then return end 
 
   --print(min_dist)
   
-  performEmergencyBraking(dt, min_dist)
-  
-  local extra_utils = controller.getController("extraUtils")
-  
-  local future_pos = extra_utils.getFuturePosition(obj:getID(), 1, "front")
-  
-  --obj.debugDrawProxy:drawSphere(0.25, future_pos:toFloat3(), color(255,0,0,255))
-  
-  for id, vals in pairs(mapmgr.objects) do
-    local front_pos = vec3(obj:getObjectFrontPosition(id))
-  
-    --obj.debugDrawProxy:drawSphere(0.25, front_pos:toFloat3(), color(255,0,0,255))
-  end
+  performEmergencyBraking(dt, distance)
 end
 
 M.init = init

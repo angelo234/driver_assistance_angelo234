@@ -1,3 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <buildpath>
+	<buildpathentry external="true" kind="lib" path="F:/SteamLibrary/steamapps/common/BeamNG.drive/lua"/>
 </buildpath>
