@@ -19,7 +19,7 @@ local function soundBeepers(dt, time_before_braking, vel_rel)
   beeper_timer = beeper_timer + dt
 
   --Sound warning tone if 1.0 * (0.5 + vel_rel / 40.0) seconds away from braking
-  if time_before_braking <= 1.0 * (0.5 + vel_rel / 40.0) then
+  if time_before_braking <= 1.0 * (math.min(0.5 + vel_rel / 30.0, 1.5)) then
     --
     if beeper_timer >= 1.0 / beeper_params.fwd_warning_tone_hertz then
       obj:queueGameEngineLua("Engine.Audio.playOnce('AudioGui','art/sound/proximity_tone_50ms.wav')")

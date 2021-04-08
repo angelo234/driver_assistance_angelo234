@@ -692,14 +692,28 @@ local function getNearbyVehiclesInSameLane(my_veh_props, max_dist, min_distance_
 
     other_veh_data.my_veh_wps_props = my_veh_wps_props
     other_veh_data.other_veh_wps_props = other_veh_wps_props
+    
+    local free_path_to_veh = false
+
+    local ray_cast_dist = castRayStatic(my_veh_props.front_pos:toPoint3F(), (other_veh_props.center_pos - my_veh_props.front_pos):normalized():toPoint3F(), max_dist)
+
+    if ray_cast_dist > other_veh_data.distance then
+      --Freepath to vehicle
+      free_path_to_veh = true
+    end
+
+    debugDrawer:drawTextAdvanced((other_veh_props.front_pos):toPoint3F(), String("Free path? " .. tostring(free_path_to_veh)),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
 
     local on_same_road = checkIfOtherCarOnSameRoad(my_veh_props, other_veh_props, my_veh_wps_props)
 
-    debugDrawer:drawTextAdvanced((other_veh_props.front_pos):toPoint3F(), String("Same Road: " .. tostring(on_same_road)),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
+    if free_path_to_veh and on_same_road then
+      --debugDrawer:drawTextAdvanced((other_veh_props.front_pos):toPoint3F(), String("On same road"),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
 
-    --In same lane or either vehicle in middle of road and my vehicle speed is >= to other
-    if (my_in_wp_middle or other_in_wp_middle or (my_veh_lane_num == other_veh_lane_num and on_same_road)) and speed_rel >= 0 then
-      table.insert(other_vehs_in_my_lane, other_veh_data)
+      --In same lane or either vehicle in middle of road and my vehicle speed is >= to other
+      if (my_in_wp_middle or other_in_wp_middle or (my_veh_lane_num == other_veh_lane_num and on_same_road)) and speed_rel >= 0 then
+
+        table.insert(other_vehs_in_my_lane, other_veh_data)
+      end
     end
   end
 

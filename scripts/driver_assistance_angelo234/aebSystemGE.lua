@@ -13,7 +13,6 @@ local function getFutureVehPosCorrectedWithWP(my_veh_props, veh_props, veh_pos_f
     return veh_pos_future, nil
   end
 
-  --Convert waypoints to positions
   local wp_start_end = veh_wps_props.end_wp_pos - veh_wps_props.start_wp_pos
   local wp_dir = wp_start_end:normalized()
 
@@ -46,11 +45,11 @@ local function getMyVehBoundingBox(my_veh_props, my_veh_wp_dir)
   local my_z = nil -- height
 
   if my_veh_wp_dir ~= nil then
-    my_x = my_bb:getHalfExtents().x * vec3(my_veh_wp_dir.y, -my_veh_wp_dir.x, 0) * 0.95
+    my_x = my_bb:getHalfExtents().x * vec3(my_veh_wp_dir.y, -my_veh_wp_dir.x, 0) * 1.05
     my_y = my_bb:getHalfExtents().y * my_veh_wp_dir * (1.25 + my_veh_props.speed * my_veh_props.speed / 200)
     my_z = my_bb:getHalfExtents().z * vec3(0,0,1) * 2
   else
-    my_x = my_bb:getHalfExtents().x * vec3(my_bb:getAxis(0)) * 0.95
+    my_x = my_bb:getHalfExtents().x * vec3(my_bb:getAxis(0)) * 1.05
     my_y = my_bb:getHalfExtents().y * vec3(my_bb:getAxis(1)) * (1.25 + my_veh_props.speed * my_veh_props.speed / 200)
     my_z = my_bb:getHalfExtents().z * vec3(my_bb:getAxis(2)) * 2
   end
@@ -101,16 +100,13 @@ local function getFreePathInLane(my_veh_side, in_wp_middle, lane_width, other_la
 end
 
 --We know cars are in same lane, now check if we'll actually crash at TTC
-local function checkIfCarsIntersectAtTTC(my_veh_props, data, lateral_acc_to_avoid_collision)
+local function checkIfCarsIntersectAtTTC(my_veh_props, other_veh_props, data, lateral_acc_to_avoid_collision)
   local my_lat_dist_from_wp = data.my_veh_wps_props.lat_dist_from_wp
   local other_lat_dist_from_wp = data.other_veh_wps_props.lat_dist_from_wp
   local my_veh_side = data.my_veh_wps_props.side_of_wp
   local in_wp_middle = data.my_veh_wps_props.in_wp_middle
   local lane_width = data.my_veh_wps_props.lane_width
   
-  --Other vehicle properties
-  local other_veh_props = extra_utils.getVehicleProperties(data.other_veh)
-
   --Calculate TTC
   local vel_rel = (my_veh_props.velocity - other_veh_props.velocity):length()
   local speed_rel = my_veh_props.speed - other_veh_props.speed
@@ -123,7 +119,7 @@ local function checkIfCarsIntersectAtTTC(my_veh_props, data, lateral_acc_to_avoi
   --Capping to 5 seconds to prevent too much error in predicting position
   local ttc = math.min(data.distance / vel_rel, 5)
 
-  local my_veh_pos_future = extra_utils.getFuturePositionXY(my_veh_props, ttc, "front")
+  local my_veh_pos_future = extra_utils.getFuturePositionXYWithAcc(my_veh_props, ttc, vec3(), "front")
   local other_veh_pos_future = extra_utils.getFuturePositionXY(other_veh_props, ttc, "center")
 
   local my_veh_wp_dir = nil
@@ -217,17 +213,42 @@ local function getNearestVehicleInPath(my_veh_props, data_table, lateral_acc_to_
   --Analyze the trajectory of other vehicles with my trajectory
   --to see if collision imminent
   for _, data in pairs(data_table) do
+    local my_veh_side = data.my_veh_wps_props.side_of_wp
+  
+    --Other vehicle properties
+    local other_veh_props = extra_utils.getVehicleProperties(data.other_veh)
 
-    local other_veh_velocity = vec3(data.other_veh:getVelocity())
+    local this_rel_vel = (my_veh_props.velocity - other_veh_props.velocity):length()
 
-    local this_rel_vel = (my_veh_props.velocity - other_veh_velocity):length()
+    --local overlap_at_ttc = checkIfCarsIntersectAtTTC(my_veh_props, other_veh_props, data, lateral_acc_to_avoid_collision)
 
-    local overlap_at_ttc = checkIfCarsIntersectAtTTC(my_veh_props, data, lateral_acc_to_avoid_collision)
+    local overlap_at_ttc = false
+    
+    local my_lat_dist_from_wp = data.my_veh_wps_props.lat_dist_from_wp
+    local other_lat_dist_from_wp = data.other_veh_wps_props.lat_dist_from_wp
+    
+    
+    if my_veh_side == "right" then
+      if my_lat_dist_from_wp - my_veh_props.bb:getHalfExtents().x < other_lat_dist_from_wp + other_veh_props.bb:getHalfExtents().x
+      or my_lat_dist_from_wp + my_veh_props.bb:getHalfExtents().x > other_lat_dist_from_wp - other_veh_props.bb:getHalfExtents().x
+      then
+        overlap_at_ttc = true
+      end    
+    else
+      if my_lat_dist_from_wp + my_veh_props.bb:getHalfExtents().x > other_lat_dist_from_wp - other_veh_props.bb:getHalfExtents().x
+      or my_lat_dist_from_wp - my_veh_props.bb:getHalfExtents().x < other_lat_dist_from_wp + other_veh_props.bb:getHalfExtents().x
+      then
+        overlap_at_ttc = true
+      end  
+    end
+    
 
     --print(overlap_at_ttc)
 
     --Collision may be possible
     if overlap_at_ttc then
+      debugDrawer:drawSphere((other_veh_props.center_pos):toPoint3F(), 1, ColorF(1,0,0,1))
+    
       --If this distance is less than current min distance
       --then this is new min distance
       if data.distance <= distance then
