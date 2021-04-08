@@ -1,6 +1,6 @@
 local M = {}
 
-require("lua/common/luaProfiler")
+--require("lua/common/luaProfiler")
 
 local system_params = nil
 local aeb_params = nil
@@ -22,7 +22,7 @@ local function soundBeepers(dt, time_before_braking, vel_rel)
   if time_before_braking <= 1.0 * (0.5 + vel_rel / 40.0) then
     --
     if beeper_timer >= 1.0 / beeper_params.fwd_warning_tone_hertz then
-      obj:queueGameEngineLua("Engine.Audio.playOnce('AudioGui','core/art/sound/proximity_tone_50ms.wav')")
+      obj:queueGameEngineLua("Engine.Audio.playOnce('AudioGui','art/sound/proximity_tone_50ms.wav')")
       beeper_timer = 0
     end
   end
@@ -48,7 +48,7 @@ local function performEmergencyBraking(dt, time_before_braking)
     release_brake_confidence_level = release_brake_confidence_level + 1
 
     --Only release brakes if confident
-    if release_brake_confidence_level >= 5 then
+    if release_brake_confidence_level >= 15 then
       if system_active then
         input.event('brake', 0, -1)
         system_active = false
@@ -95,11 +95,7 @@ local function init(jbeamData)
   beeper_params = system_params.beeper_params
 end
 
---local p = LuaProfiler("my profiler")
-
 local function updateGFX(dt)
-  --p:start()
-
   if mapmgr.objects[obj:getID()] then
     if not mapmgr.objects[obj:getID()].active then
       return
@@ -128,13 +124,15 @@ local function updateGFX(dt)
       end
       return
     end
-    
-    --When coming to a stop with system activated, release brakes but apply parking brake
-    if system_active and speed <= aeb_params.min_speed then
-      --Release brake and apply parking brake
-      input.event('brake', 0, 2)
-      input.event('parkingbrake', 1, 2)
-      system_active = false  
+        
+    if speed <= aeb_params.min_speed then
+      --When coming to a stop with system activated, release brakes but apply parking brake
+      if system_active then
+        --Release brake and apply parking brake
+        input.event('brake', 0, 2)
+        input.event('parkingbrake', 1, 2)
+        system_active = false        
+      end
       return   
     end
 
@@ -156,20 +154,6 @@ local function updateGFX(dt)
     local distance = aeb_data[1]
     local vel_rel = aeb_data[2]
 
-    --p:add("getNearestVehicleInPath")
-
-    --[[
-    local extra_utils = controller.getController("extraUtils")
-     
-    --Get vehicles in the same lane as me
-    local data = extra_utils.getNearbyVehiclesInSameLane(aeb_params.vehicle_search_radius, (speed / 30.0 + 1) * aeb_params.min_distance_from_car, true)
-    
-    --Determine if a collision will actually occur and return the distance and relative velocity 
-    --to the vehicle that I'm planning to collide with
-    local distance, vel_rel = getNearestVehicleInPath(dt, data)
-    ]]--
-
-
     local time_before_braking = calculateTimeBeforeBraking(distance, vel_rel)
 
     soundBeepers(dt, time_before_braking, vel_rel)
@@ -190,9 +174,6 @@ local function updateGFX(dt)
   else
     obj:queueGameEngineLua("ve_json_params_angelo234 = 'nil'")
   end
-  
-  --p:add("total")
-  --p:finish(true)
 end
 
 M.init = init

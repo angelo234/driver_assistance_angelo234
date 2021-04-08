@@ -1,3 +1,5 @@
+require("lua/common/luaProfiler")
+
 local M = {}
 
 local extra_utils = require('scripts/driver_assistance_angelo234/extraUtilsGE')
@@ -145,8 +147,8 @@ local function checkIfCarsIntersectAtTTC(my_veh_props, data, lateral_acc_to_avoi
   my_veh_pos_future.z = my_veh_props.center_pos.z
   other_veh_pos_future.z = other_veh_props.center_pos.z
 
-  --debugDrawer:drawSphere((my_veh_pos_future):toPoint3F(), 0.5, ColorF(1,0,0,1))
-  --debugDrawer:drawSphere((other_veh_pos_future):toPoint3F(), 0.5, ColorF(1,0,0,1))
+  debugDrawer:drawSphere((my_veh_pos_future):toPoint3F(), 1, ColorF(0,1,0,1))
+  debugDrawer:drawSphere((other_veh_pos_future):toPoint3F(), 1, ColorF(1,0,0,1))
   
   my_veh_pos_future.z = 0
   other_veh_pos_future.z = 0
@@ -192,8 +194,8 @@ local function checkIfCarsIntersectAtTTC(my_veh_props, data, lateral_acc_to_avoi
       my_veh_pos_future_turning.z = my_veh_props.center_pos.z
       other_veh_pos_future.z = my_veh_props.center_pos.z
 
-      --debugDrawer:drawSphere((my_veh_pos_future_turning):toPoint3F(), 0.5, ColorF(1,0,1,1))
-      --debugDrawer:drawSphere((other_veh_pos_future):toPoint3F(), 0.5, ColorF(1,0,1,1))
+      debugDrawer:drawSphere((my_veh_pos_future_turning):toPoint3F(), 0.5, ColorF(1,0,1,1))
+      debugDrawer:drawSphere((other_veh_pos_future):toPoint3F(), 0.5, ColorF(1,0,1,1))
 
       return overlap2
     end
@@ -245,7 +247,7 @@ ge_aeb_data_angelo234 = "'[9999,0]'"
 
 --Executing functions here because you get extreme lag for some reason
 --executing them in Vehicle Lua. Will then send results back
-local function getNearestVehicleInPathForVELua()
+local function getNearestVehicleInPathForVELua(dt)
   if ve_json_params_angelo234 == nil or ve_json_params_angelo234 == 'nil' then return end
   
   local params = jsonDecode(ve_json_params_angelo234)
@@ -265,12 +267,17 @@ local function getNearestVehicleInPathForVELua()
   --Determine if a collision will actually occur and return the distance and relative velocity 
   --to the vehicle that I'm planning to collide with
   local distance, vel_rel = getNearestVehicleInPath(veh_props, data, aeb_params.lateral_acc_to_avoid_collision)
-  
+
+  --Takes 1 frame to actually send data so account for that
+  distance = distance - vel_rel * dt 
+
   ge_aeb_data_angelo234 = "'" .. jsonEncode({distance, vel_rel}) .. "'"
 end
 
 local function update(dt)
-  getNearestVehicleInPathForVELua()
+  if be:getEnabled() then
+    getNearestVehicleInPathForVELua(dt)
+  end
 end
 
 M.update = update

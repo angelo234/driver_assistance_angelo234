@@ -23,14 +23,14 @@ local function soundBeepers(dt, dist)
     --If object is within red line distance, play constant tone
     if dist <= parking_lines_params.parking_line_red_len + parking_lines_params.parking_line_offset_long then
       if beeper_timer >= 1.0 / beeper_params.parking_warning_tone_hertz then
-        obj:queueGameEngineLua("Engine.Audio.playOnce('AudioGui','core/art/sound/proximity_tone_50ms.wav')")
+        obj:queueGameEngineLua("Engine.Audio.playOnce('AudioGui','art/sound/proximity_tone_50ms.wav')")
         beeper_timer = 0
       end
       
     --Else tone depends on distance
     else
       if beeper_timer >= dist / beeper_params.parking_warning_tone_dist_per_hertz then
-        obj:queueGameEngineLua("Engine.Audio.playOnce('AudioGui','core/art/sound/proximity_tone_50ms.wav')")
+        obj:queueGameEngineLua("Engine.Audio.playOnce('AudioGui','art/sound/proximity_tone_50ms.wav')")
         beeper_timer = 0
       end
     end

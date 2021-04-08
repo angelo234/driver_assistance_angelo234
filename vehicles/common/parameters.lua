@@ -11,7 +11,7 @@ M.fwd_aeb_params = {
     brake_till_stop_speed = 3,
     braking_time_leeway = 0.1,
   
-    vehicle_search_radius = 100,
+    vehicle_search_radius = 200,
     min_distance_from_car = 0.5,
   
     lateral_acc_to_avoid_collision = 0.15

@@ -153,7 +153,9 @@ local function pollReverseSensorsForVELua(dt)
 end
 
 local function update(dt)
-  pollReverseSensorsForVELua(dt)
+  if be:getEnabled() then
+    pollReverseSensorsForVELua(dt)
+  end
 end
 
 M.update = update
