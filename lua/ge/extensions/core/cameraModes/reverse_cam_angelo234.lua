@@ -25,17 +25,13 @@ local function rotateEuler(x, y, z, q)
   return q
 end
 
-function C:init()
-	self.disabledByDefault = true
-	self.register = true
-	self:onVehicleCameraConfigChanged()
-	
-	local veh = be:getPlayerVehicle(0)
-	if veh == nil then return end
-	
+local function initProperties()
+  local veh = be:getPlayerVehicle(0)
+  if veh == nil then return end
+  
   veh_name = veh:getJBeamFilename()
 
-	local default_param_file_dir = 'vehicles/common/parameters'
+  local default_param_file_dir = 'vehicles/common/parameters'
   local param_file_dir = 'vehicles/' .. veh_name .. '/parameters'
   
   if FS:fileExists(param_file_dir .. ".lua") then
@@ -50,11 +46,20 @@ function C:init()
   parking_lines_params = rev_cam_params.parking_lines_params
 end
 
+function C:init()
+	self.disabledByDefault = true
+	self.register = true
+	self:onVehicleCameraConfigChanged()
+	
+	initProperties()
+end
+
 function C:onVehicleCameraConfigChanged()
 end
 
 function C:onCameraChanged(focused)
 	if focused then
+	  initProperties()
 		be:executeJS('HookManager.trigger("onCameraNameChanged", ' .. jsonEncode({ name = "driver"}) .. ')')
 	end
 end
