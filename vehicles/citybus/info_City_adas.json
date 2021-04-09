@@ -1,0 +1,34 @@
+{
+  "BoundingBox":[
+    [
+      -1,
+      -1.54,
+      -0.319
+    ],
+    [
+      2.11,
+      11.09,
+      2.675
+    ]
+  ],
+  "Config Type":"Service",
+  "Configuration":"City w/ Back-up Camera",
+  "Description":"Equipped with a 4 speed automatic and short final drive, better suited to use in the city, equipped with a back up camera",
+  "Drivetrain":"Other",
+  "Fuel Type":"Diesel",
+  "Induction Type":"Turbo",
+  "Off-Road Score":23,
+  "Population":5000,
+  "Power":350,
+  "PowerPeakRPM":1900,
+  "Propulsion":"ICE",
+  "Top Speed":25.551084,
+  "Torque":1475,
+  "TorquePeakRPM":1200,
+  "Transmission":"Automatic",
+  "Value":35000,
+  "Weight":12215,
+  "Weight/Power":34.9,
+  "default_color":"Pearl White",
+  "default_color_2":"Aquamarine"
+}

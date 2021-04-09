@@ -1,0 +1,42 @@
+{
+  "0-100 km/h":2.5,
+  "0-100 mph":4.5,
+  "0-200 km/h":6.6,
+  "0-60 mph":2.4,
+  "100-0 km/h":35.2,
+  "100-200 km/h":4.1,
+  "60-0 mph":107.8,
+  "60-100 mph":2,
+  "BoundingBox":[
+    [
+      -0.67,
+      -1.08,
+      -0.187
+    ],
+    [
+      1.33,
+      3.12,
+      1.07
+    ]
+  ],
+  "Braking G":1.116,
+  "Config Type":"Factory",
+  "Configuration":"eSBR 800 w/ ADAS",
+  "Description":"High performance dual motor electric variant with Advanced Driver Assistance Systems",
+  "Drivetrain":"Other",
+  "Fuel Type":"Battery",
+  "Off-Road Score":27,
+  "Performance Class":"12",
+  "Population":200,
+  "Power":807,
+  "PowerPeakRPM":"6800 - 9700",
+  "Propulsion":"Electric",
+  "Top Speed":71.4677305,
+  "Torque":950,
+  "TorquePeakRPM":"0 - 5600",
+  "Transmission":"Other",
+  "Value":125000,
+  "Weight":1635,
+  "Weight/Power":2.0260223,
+  "default_color":"Lime"
+}

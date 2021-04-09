@@ -106,13 +106,14 @@ local function pollReverseSensors(dt, my_veh_props, parking_sensor_params)
   local static_hit = staticCastRay(my_veh_props, sensorPos, false, parking_sensor_params)
   --local vehicle_hit = vehicleCastRay(veh:getID(), max_raycast_distance, sensorPos, -carDir, carDirRight, veh_name, false, veh_speed)
 
-  --Get vehicles in a 7.5m radius behind my vehicle
+  --Get vehicles behind my vehicle
   local other_vehs_data = extra_utils.getNearbyVehicles(my_veh_props, parking_sensor_params.sensor_max_distance, 0, false)
+
   local vehicle_hit = getClosestVehicle(other_vehs_data)
 
   local other_veh, min_dist = processRayCasts(my_veh_props, static_hit, vehicle_hit)
 
-  min_dist = min_dist - parking_sensor_params.sensor_offset_forward - 0.2
+  min_dist = min_dist - parking_sensor_params.sensor_offset_forward - 0.15
 
   return other_veh, min_dist
 end

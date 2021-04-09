@@ -1,0 +1,10 @@
+{
+    "parking_lines_angelo234": {
+        "information":{
+            "authors":"angelo234",
+            "name":"Parking Lines",
+            "value":250,
+        },
+        "slotType" : "parking_lines_angelo234",
+    },
+}

@@ -88,7 +88,7 @@ local function init(jbeamData)
   else
     veh_name = v.config.partConfigFilename:match("/(%S+)/")
   end 
-
+  
   local default_param_file_dir = 'vehicles/common/parameters'
   local param_file_dir = 'vehicles/' .. veh_name .. '/parameters'
   

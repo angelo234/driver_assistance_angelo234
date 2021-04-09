@@ -1,0 +1,15 @@
+{
+    "backup_cam_angelo234": {
+        "information":{
+            "authors":"angelo234",
+            "name":"Back-up Camera",
+            "value":250,
+        },
+        "slotType" : "backup_cam_angelo234",
+		"slots": [
+			["type", "default", "description"],
+			["trajectory_lines_angelo234", "", 	"Trajectory Lines"],
+			["parking_lines_angelo234",    "", 	"Parking Lines"],
+		],
+    },
+}

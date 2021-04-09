@@ -125,68 +125,65 @@ local function updateGFX(dt)
 
   --ESC must be in comfort mode, otherwise it is deactivated
   --sunburst uses different color for comfort mode
-  if (veh_name == "sunburst" and esc_color == "98FB00")
-    or (veh_name ~= "sunburst" and esc_color == "238BE6")
-  then
-     --Deactivate system based on any of these variables
-    if in_reverse == nil or in_reverse == 1 or gear_selected == nil
-      or gear_selected == 'P' or gear_selected == 0 then
-      if system_active then
-        input.event('brake', 0, 2)   
-        system_active = false 
-      end
-      obj:queueGameEngineLua("ve_json_params_angelo234 = 'nil'")
-      
-      return
+  --if (veh_name == "sunburst" and esc_color == "98FB00")
+   --or (veh_name ~= "sunburst" and esc_color == "238BE6")
+  --then
+  
+  --Deactivate system based on any of these variables
+  if in_reverse == nil or in_reverse == 1 or gear_selected == nil
+    or gear_selected == 'P' or gear_selected == 0 then
+    if system_active then
+      input.event('brake', 0, 2)   
+      system_active = false 
     end
-        
-    if speed <= aeb_params.min_speed then
-      --When coming to a stop with system activated, release brakes but apply parking brake
-      if system_active then
-        --Release brake and apply parking brake
-        input.event('brake', 0, 2)
-        input.event('parkingbrake', 1, 2)
-        system_active = false        
-      end
-      
-      obj:queueGameEngineLua("ve_json_params_angelo234 = 'nil'")
-      
-      return   
-    end
-
-    local param_arr = 
-    {
-      obj:getID(), 
-      aeb_params, 
-      (speed / 20.0 + 0.1) --* aeb_params.min_distance_from_car
-    }
-   
-    --Set params for AEB system
-    obj:queueGameEngineLua("ve_json_params_angelo234 = '" .. jsonEncode(param_arr) .. "'")
-    
-    --Get AEB system data
-    obj:queueGameEngineLua("be:getPlayerVehicle(0):queueLuaCommand('aeb_data_angelo234 = ' .. ge_aeb_data_angelo234)")
-
-    if aeb_data_angelo234 == nil then return end
-    
-    local aeb_data = jsonDecode(aeb_data_angelo234)
-    
-    local distance = aeb_data[1]
-    local vel_rel = aeb_data[2]
-
-    local time_before_braking = calculateTimeBeforeBraking(distance, vel_rel)
-
-    --At low speeds don't sound beepers
-    if speed > 5 then
-      soundBeepers(dt, time_before_braking, vel_rel)
-    end
-    
-    --Use distance, relative velocity, and max acceleration to determine when to apply emergency braking
-    performEmergencyBraking(dt, time_before_braking)
-
-  else
     obj:queueGameEngineLua("ve_json_params_angelo234 = 'nil'")
+    
+    return
   end
+      
+  if speed <= aeb_params.min_speed then
+    --When coming to a stop with system activated, release brakes but apply parking brake
+    if system_active then
+      --Release brake and apply parking brake
+      input.event('brake', 0, 2)
+      input.event('parkingbrake', 1, 2)
+      system_active = false        
+    end
+    
+    obj:queueGameEngineLua("ve_json_params_angelo234 = 'nil'")
+    
+    return   
+  end
+
+  local param_arr = 
+  {
+    obj:getID(), 
+    aeb_params, 
+    (speed / 20.0 + 0.1) --* aeb_params.min_distance_from_car
+  }
+
+  --Set params for AEB system
+  obj:queueGameEngineLua("ve_json_params_angelo234 = '" .. jsonEncode(param_arr) .. "'")
+  
+  --Get AEB system data
+  obj:queueGameEngineLua("be:getPlayerVehicle(0):queueLuaCommand('aeb_data_angelo234 = ' .. ge_aeb_data_angelo234)")
+
+  if aeb_data_angelo234 == nil then return end
+  
+  local aeb_data = jsonDecode(aeb_data_angelo234)
+  
+  local distance = aeb_data[1]
+  local vel_rel = aeb_data[2]
+
+  local time_before_braking = calculateTimeBeforeBraking(distance, vel_rel)
+
+  --At low speeds don't sound beepers
+  if speed > 5 then
+    soundBeepers(dt, time_before_braking, vel_rel)
+  end
+  
+  --Use distance, relative velocity, and max acceleration to determine when to apply emergency braking
+  performEmergencyBraking(dt, time_before_braking)
 end
 
 M.init = init

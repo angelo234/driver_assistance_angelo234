@@ -1,15 +1,15 @@
 {
-    "forward_aeb": {
+    "reverse_aeb_angelo234": {
         "information":{
             "authors":"angelo234",
-            "name":"Forward AEB",
+            "name":"Reverse AEB",
             "value":250,
         },
-        "slotType" : "forward_aeb",
+        "slotType" : "reverse_aeb_angelo234",
 
         "controller": [
             ["fileName"],
-			["aebSystem",],
+			["parkingAEBSystem",],
         ],
 
     },

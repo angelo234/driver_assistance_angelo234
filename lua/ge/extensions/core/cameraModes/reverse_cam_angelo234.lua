@@ -30,6 +30,10 @@ function C:init()
 	self.register = true
 	self:onVehicleCameraConfigChanged()
 	
+	local veh = be:getPlayerVehicle(0)
+	if veh == nil then return end
+	
+  veh_name = veh:getJBeamFilename()
 
 	local default_param_file_dir = 'vehicles/common/parameters'
   local param_file_dir = 'vehicles/' .. veh_name .. '/parameters'
@@ -343,12 +347,18 @@ local function checkVehicleSupported(id)
 	cam_traj_lines_on = false
 	cam_park_lines_on = false
 	
-	local backup_cam_part = extensions.core_vehicle_manager.getVehicleData(id).chosenParts.backup_cam
-	
+	local backup_cam_part = extensions.core_vehicle_manager.getVehicleData(id).chosenParts.backup_cam_angelo234
+
 	--Does backup cam part exists?
-	is_supported = backup_cam_part == "backup_cam"
-	cam_traj_lines_on = true
-  cam_park_lines_on = true
+	is_supported = backup_cam_part == "backup_cam_angelo234"
+	
+	if is_supported then
+	  local trajectory_lines_part = extensions.core_vehicle_manager.getVehicleData(id).chosenParts.trajectory_lines_angelo234
+	  local parking_lines_part = extensions.core_vehicle_manager.getVehicleData(id).chosenParts.parking_lines_angelo234
+	  
+	  cam_traj_lines_on = trajectory_lines_part == "trajectory_lines_angelo234"
+	  cam_park_lines_on = parking_lines_part == "parking_lines_angelo234" 
+	end
 end
 
 function C:update(data)

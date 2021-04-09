@@ -1,15 +1,15 @@
 local M = {}
 
 M.gravity = 9.81
-M.fwd_friction_coeff = 0.85
-M.rev_friction_coeff = 0.8
+M.fwd_friction_coeff = 1.0
+M.rev_friction_coeff = 0.9
 M.max_steer_radius = 4.3
 M.min_steer_radius = 3.1
 
 M.fwd_aeb_params = {  
     min_speed = 0.75,
     brake_till_stop_speed = 3,
-    braking_time_leeway = 0.3,
+    braking_time_leeway = 0.2,
   
     vehicle_search_radius = 200,
     min_distance_from_car = 0.5,
@@ -20,8 +20,8 @@ M.fwd_aeb_params = {
 M.rev_aeb_params = {
     min_speed = 0.75,
 
-    parking_sensor_rel_height = -0.5,
-    safety_offset_width_sensor = 0.25,
+    parking_sensor_rel_height = -0.55,
+    safety_offset_width_sensor = 0.2,
 
     num_of_sensors = 9,
     sensors_polled_per_iteration = 2,

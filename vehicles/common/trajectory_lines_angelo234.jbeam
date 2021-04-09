@@ -1,0 +1,10 @@
+{
+    "trajectory_lines_angelo234": {
+        "information":{
+            "authors":"angelo234",
+            "name":"Trajectory Lines",
+            "value":250,
+        },
+        "slotType" : "trajectory_lines_angelo234",
+    },
+}

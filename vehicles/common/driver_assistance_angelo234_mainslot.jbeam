@@ -8,9 +8,9 @@
     "slotType" : "licenseplate_design_2_1",
     "slots": [
 		["type", "default", "description"],
-		["forward_aeb","forward_aeb","Forward AEB"],
-		["reverse_aeb","reverse_aeb","Reverse AEB"],
-		["backup_cam","backup_cam","Back-up Camera"],
+		["forward_aeb_angelo234",	"", 					"Forward AEB"],
+		["reverse_aeb_angelo234",	"", 					"Reverse AEB"],
+		["backup_cam_angelo234",    "backup_cam_angelo234",	"Back-up Camera"],
 	],
 },
 

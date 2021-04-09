@@ -244,18 +244,22 @@ local function getNearestVehicleInPath(dt, my_veh_props, data_table, lateral_acc
     local other_lat_dist_from_wp = data.other_veh_wps_props.lat_dist_from_wp
     
     local my_speed_in_wp_perp_dir = my_veh_props.velocity:dot(my_wp_perp_dir_right)
+    local other_speed_in_wp_perp_dir = other_veh_props.velocity:dot(my_wp_perp_dir_right)
+
 
     if my_veh_side == "right" then
-       my_lat_dist_from_wp = my_lat_dist_from_wp + my_speed_in_wp_perp_dir * ttc
-    
+      my_lat_dist_from_wp = my_lat_dist_from_wp + my_speed_in_wp_perp_dir * ttc
+      other_lat_dist_from_wp = other_lat_dist_from_wp + other_speed_in_wp_perp_dir * ttc
+        
       if my_lat_dist_from_wp - my_veh_props.bb:getHalfExtents().x < other_lat_dist_from_wp + other_veh_props.bb:getHalfExtents().x
       or my_lat_dist_from_wp + my_veh_props.bb:getHalfExtents().x > other_lat_dist_from_wp - other_veh_props.bb:getHalfExtents().x
       then
         overlap_at_ttc = true
       end    
     else
-       my_lat_dist_from_wp = my_lat_dist_from_wp - my_speed_in_wp_perp_dir * ttc
-    
+      my_lat_dist_from_wp = my_lat_dist_from_wp - my_speed_in_wp_perp_dir * ttc
+      other_lat_dist_from_wp = other_lat_dist_from_wp + other_speed_in_wp_perp_dir * ttc
+       
       if my_lat_dist_from_wp + my_veh_props.bb:getHalfExtents().x > other_lat_dist_from_wp - other_veh_props.bb:getHalfExtents().x
       or my_lat_dist_from_wp - my_veh_props.bb:getHalfExtents().x < other_lat_dist_from_wp + other_veh_props.bb:getHalfExtents().x
       then
@@ -265,7 +269,7 @@ local function getNearestVehicleInPath(dt, my_veh_props, data_table, lateral_acc
 
     --Collision may be possible
     if overlap_at_ttc then
-      debugDrawer:drawSphere((other_veh_props.center_pos):toPoint3F(), 1, ColorF(1,0,0,1))
+      --debugDrawer:drawSphere((other_veh_props.center_pos):toPoint3F(), 1, ColorF(1,0,0,1))
     
       --If this distance is less than current min distance
       --then this is new min distance

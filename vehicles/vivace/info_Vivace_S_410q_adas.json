@@ -1,0 +1,46 @@
+{
+  "0-100 km/h":4.4,
+  "0-100 mph":8.8,
+  "0-120 mph":0,
+  "0-200 km/h":13.2,
+  "0-60 mph":4.2,
+  "100-0 km/h":35.5,
+  "100-200 km/h":8.9,
+  "60-0 mph":108.6,
+  "60-100 mph":4.6,
+  "60-120 mph":0,
+  "BoundingBox":[
+    [
+      -0.85,
+      -1.858,
+      -0.243
+    ],
+    [
+      1.17,
+      2.489,
+      1.197
+    ]
+  ],
+  "Braking G":1.108,
+  "Config Type":"Factory",
+  "Configuration":"Vivace S 410Q Arsenic w/ ADAS (DCT)",
+  "Description":"Special edition sport model with a powerful 5-cylinder engine, sport suspension, all-wheel drive, and Advanced Driver Assistance Systems",
+  "Drivetrain":"AWD",
+  "Fuel Type":"Gasoline",
+  "Induction Type":"Turbo",
+  "Off-Road Score":27,
+  "Performance Class":"0",
+  "Population":7000,
+  "Power":409,
+  "PowerPeakRPM":"6000 - 7300",
+  "Propulsion":"ICE",
+  "Top Speed":74.7591953,
+  "Torque":525,
+  "TorquePeakRPM":"1650 - 5250",
+  "Transmission":"DCT",
+  "Value":55600,
+  "Weight":1625,
+  "Weight/Power":3.97310513,
+  "default_color":"Vert Arsenic",
+  "default_color_3":"Rouge Feu"
+}

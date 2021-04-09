@@ -1,0 +1,45 @@
+{
+  "0-100 km/h":6.6,
+  "0-100 mph":12.4,
+  "0-120 mph":0,
+  "0-200 km/h":18.7,
+  "0-60 mph":6.4,
+  "100-0 km/h":34.6,
+  "100-200 km/h":12.1,
+  "60-0 mph":105.6,
+  "60-100 mph":6,
+  "60-120 mph":0,
+  "BoundingBox":[
+    [
+      -0.85,
+      -1.858,
+      -0.243
+    ],
+    [
+      1.17,
+      2.489,
+      1.197
+    ]
+  ],
+  "Braking G":1.137,
+  "Config Type":"Factory",
+  "Configuration":"Vivace S 310 Arsenic w/ ADAS (DCT)",
+  "Description":"Special edition sport model with a powerful 4-cylinder engine, sport suspension, and Advanced Driver Assistance Systems",
+  "Drivetrain":"FWD",
+  "Fuel Type":"Gasoline",
+  "Induction Type":"Turbo",
+  "Off-Road Score":27,
+  "Performance Class":"0",
+  "Population":8000,
+  "Power":310,
+  "PowerPeakRPM":"5550 - 6300",
+  "Propulsion":"ICE",
+  "Top Speed":74.0237936,
+  "Torque":405,
+  "TorquePeakRPM":"2200 - 5500",
+  "Transmission":"DCT",
+  "Value":40600,
+  "Weight":1500,
+  "Weight/Power":4.83870968,
+  "default_color":"Orange Sanguine"
+}

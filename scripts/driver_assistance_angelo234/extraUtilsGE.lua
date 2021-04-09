@@ -408,9 +408,9 @@ local function getWhichSideOfWaypointsCarIsOn(veh_props, start_pos, end_pos)
 
   local wp_mid_pos = (end_pos - start_pos) * 0.5 + start_pos
 
-  debugDrawer:drawSphere(start_pos:toPoint3F(), 0.5, ColorF(1,0,0,1))
-  debugDrawer:drawSphere(wp_mid_pos:toPoint3F(), 0.5, ColorF(0,1,0,1))
-  debugDrawer:drawSphere(end_pos:toPoint3F(), 0.5, ColorF(0,0,1,1))
+  --debugDrawer:drawSphere(start_pos:toPoint3F(), 0.5, ColorF(1,0,0,1))
+  --debugDrawer:drawSphere(wp_mid_pos:toPoint3F(), 0.5, ColorF(0,1,0,1))
+  --debugDrawer:drawSphere(end_pos:toPoint3F(), 0.5, ColorF(0,0,1,1))
 
   --debugDrawer:setSolidTriCulling(false)
   --debugDrawer:drawQuadSolid((start_pos):toPoint3F(), (start_pos + vec3(0,0,1)):toPoint3F(),
@@ -633,22 +633,22 @@ local function getStraightDistance(my_veh_props, other_veh_props, min_distance_f
       shoot_ray_dir = -my_veh_props.dir
     end  
     
-    --Now get exact distance
-    local min_distance, max_distance = intersectsRay_OBB(ray_pos + my_veh_props.dir_right * other_bb:getHalfExtents().x, shoot_ray_dir, other_veh_props.center_pos, other_x, other_y, other_z)
+    local min_distance1, max_distance1 = intersectsRay_OBB(ray_pos + my_veh_props.dir_right * other_bb:getHalfExtents().x, shoot_ray_dir, other_veh_props.center_pos, other_x, other_y, other_z)
     
-    --Now get exact distance
-    local min_distance, max_distance = intersectsRay_OBB(ray_pos - my_veh_props.dir_right * other_bb:getHalfExtents().x, shoot_ray_dir, other_veh_props.center_pos, other_x, other_y, other_z)
+    local min_distance2, max_distance2 = intersectsRay_OBB(ray_pos - my_veh_props.dir_right * other_bb:getHalfExtents().x, shoot_ray_dir, other_veh_props.center_pos, other_x, other_y, other_z)
+
+    local min_distance3, max_distance3 = intersectsRay_OBB(ray_pos, shoot_ray_dir, other_veh_props.center_pos, other_x, other_y, other_z)
+
+    min_distance = math.min(min_distance1, min_distance2, min_distance3)
   else
     shoot_ray_dir = (other_veh_props.center_pos - ray_pos):normalized()
 
-    --Now get exact distance
-    local min_distance, max_distance = intersectsRay_OBB(ray_pos, shoot_ray_dir, other_veh_props.center_pos, other_x, other_y, other_z)
+    local min_distance1, max_distance1 = intersectsRay_OBB(ray_pos, shoot_ray_dir, other_veh_props.center_pos, other_x, other_y, other_z)
   
-    --For some reason, distance is negative
-    min_distance = min_distance - min_distance_from_car
+    min_distance = min_distance1
   end
 
-  
+  min_distance = min_distance - min_distance_from_car
 
   if min_distance < 0 then
     min_distance = 0
@@ -689,7 +689,7 @@ local function getNearbyVehicles(my_veh_props, max_dist, min_distance_from_car, 
         --If front distance is larger than rear distance, then vehicle is in rear
       elseif rear_dist < max_dist and front_dist > rear_dist and not in_front then
         local dist = getStraightDistance(my_veh_props, other_veh_props, min_distance_from_car, false, true)
-        
+
         local other_veh_data = 
         {
           other_veh = other_veh, 
@@ -717,15 +717,15 @@ local function getNearbyVehiclesInSameLane(my_veh_props, max_dist, min_distance_
   local perp_vec = vec3(-wp_dir.y, wp_dir.x)
   
   for i = 0, my_veh_wps_props.num_of_lanes do
-    debugDrawer:drawLine((my_veh_wps_props.start_wp_pos + (perp_vec * (my_veh_wps_props.wp_radius - my_veh_wps_props.lane_width * i))):toPoint3F(),
-    (my_veh_wps_props.end_wp_pos + (perp_vec * (my_veh_wps_props.wp_radius - my_veh_wps_props.lane_width * i))):toPoint3F(),
-    ColorF(1,0,0,1))
+    --debugDrawer:drawLine((my_veh_wps_props.start_wp_pos + (perp_vec * (my_veh_wps_props.wp_radius - my_veh_wps_props.lane_width * i))):toPoint3F(),
+    --(my_veh_wps_props.end_wp_pos + (perp_vec * (my_veh_wps_props.wp_radius - my_veh_wps_props.lane_width * i))):toPoint3F(),
+    --ColorF(1,0,0,1))
   end
   
   local my_veh_side_of_wp, my_in_wp_middle = getWhichSideOfWaypointsCarIsOn(my_veh_props, my_veh_wps_props.start_wp_pos, my_veh_wps_props.end_wp_pos)
   local my_veh_lane_nums = getLaneNum(my_veh_props, my_veh_wps_props, my_veh_side_of_wp)
   
-  debugDrawer:drawTextAdvanced((my_veh_props.front_pos):toPoint3F(), String("Lane Num: " .. jsonEncode(my_veh_lane_nums)),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
+  --debugDrawer:drawTextAdvanced((my_veh_props.front_pos):toPoint3F(), String("Lane Num: " .. jsonEncode(my_veh_lane_nums)),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
 
   my_veh_wps_props.side_of_wp = my_veh_side_of_wp
   my_veh_wps_props.in_wp_middle = my_in_wp_middle
@@ -742,7 +742,7 @@ local function getNearbyVehiclesInSameLane(my_veh_props, max_dist, min_distance_
     local other_veh_side_of_wp, other_in_wp_middle = getWhichSideOfWaypointsCarIsOn(other_veh_props, other_veh_wps_props.start_wp_pos, other_veh_wps_props.end_wp_pos)
     local other_veh_lane_nums = getLaneNum(other_veh_props, other_veh_wps_props, other_veh_side_of_wp)
 
-    debugDrawer:drawTextAdvanced((other_veh_props.front_pos):toPoint3F(), String("Lane Num: " .. jsonEncode(other_veh_lane_nums)),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
+    --debugDrawer:drawTextAdvanced((other_veh_props.front_pos):toPoint3F(), String("Lane Num: " .. jsonEncode(other_veh_lane_nums)),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
 
     other_veh_wps_props.side_of_wp = other_veh_side_of_wp
     other_veh_wps_props.in_wp_middle = other_in_wp_middle

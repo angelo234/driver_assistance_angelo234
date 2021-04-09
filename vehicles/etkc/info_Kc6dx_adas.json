@@ -1,0 +1,46 @@
+{
+  "0-100 km/h":5.4,
+  "0-100 mph":13.3,
+  "0-120 mph":13.6,
+  "0-200 km/h":20.5,
+  "0-60 mph":5.2,
+  "100-0 km/h":36.8,
+  "100-200 km/h":15.1,
+  "60-0 mph":113,
+  "60-100 mph":8.1,
+  "60-120 mph":9.7,
+  "Body Style":"Coupe",
+  "BoundingBox":[
+    [
+      -0.73,
+      -1.42,
+      -0.175
+    ],
+    [
+      1.39,
+      3.03,
+      1.16
+    ]
+  ],
+  "Braking G":1.068,
+  "Config Type":"Factory",
+  "Configuration":"Kc6dx Driving Experience w/ ADAS (M)",
+  "Description":"Equipped with a turbocharged 6-cylinder engine, 19 inch wheels, sport suspension, all-wheel drive, and Advanced Driver Assistance Systems",
+  "Drivetrain":"AWD",
+  "Fuel Type":"Diesel",
+  "Induction Type":"Turbo",
+  "Off-Road Score":27,
+  "Performance Class":"8",
+  "Population":200,
+  "Power":260,
+  "PowerPeakRPM":"3450 - 4300",
+  "Propulsion":"ICE",
+  "Top Speed":68.8939736,
+  "Torque":580,
+  "TorquePeakRPM":"1650 - 3000",
+  "Transmission":"Manual",
+  "Value":108000,
+  "Weight":1580,
+  "Weight/Power":6.07692308,
+  "default_color":"Pearl White"
+}
