@@ -6,8 +6,6 @@ local static_sensor_id = -1
 local prev_min_dist = 9999
 local min_dist = 9999
 
-local system_active = false
-
 local function staticCastRay(veh_props, sensorPos, same_ray, parking_sensor_params)
   local hit = nil
 
@@ -56,8 +54,8 @@ local function processRayCasts(veh_props, static_hit, vehicle_hit)
     local angle = math.acos(dir_xy:dot(norm_xy))
     --print(angle * 180.0 / math.pi)
     
-    --If surface is < 60 degrees then count it as obstacle
-    if angle < 60 * math.pi / 180.0 then
+    --If surface is < 70 degrees then count it as obstacle
+    if angle < 70 * math.pi / 180.0 then
       static_dist = static_hit[2]
     end
   end
@@ -114,17 +112,22 @@ local function pollReverseSensors(dt, my_veh_props, parking_sensor_params)
 
   local other_veh, min_dist = processRayCasts(my_veh_props, static_hit, vehicle_hit)
 
-  min_dist = min_dist - parking_sensor_params.sensor_offset_forward - 0.1
+  min_dist = min_dist - parking_sensor_params.sensor_offset_forward - 0.2
 
   return other_veh, min_dist
 end
 
-
+--Global variables as IO between Vehicle and GameEngine Lua
 ve_rev_json_params_angelo234 = nil
 ge_rev_aeb_data_angelo234 = "'[9999]'"
 
 local function pollReverseSensorsForVELua(dt)
-  if ve_rev_json_params_angelo234 == nil or ve_rev_json_params_angelo234 == 'nil' then return end
+  if ve_rev_json_params_angelo234 == nil or ve_rev_json_params_angelo234 == 'nil' then 
+    ge_rev_aeb_data_angelo234 = "'[9999]'" 
+    prev_min_dist = 9999
+    min_dist = 9999
+    return 
+  end
   
   local params = jsonDecode(ve_rev_json_params_angelo234)
 
@@ -148,7 +151,7 @@ local function pollReverseSensorsForVELua(dt)
      
     min_dist = math.min(dist, min_dist)
   end
-
+  
   ge_rev_aeb_data_angelo234 = "'" .. jsonEncode({min_dist}) .. "'"
 end
 

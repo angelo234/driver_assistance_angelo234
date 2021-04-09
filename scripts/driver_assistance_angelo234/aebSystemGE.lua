@@ -143,8 +143,8 @@ local function checkIfCarsIntersectAtTTC(my_veh_props, other_veh_props, data, la
   my_veh_pos_future.z = my_veh_props.center_pos.z
   other_veh_pos_future.z = other_veh_props.center_pos.z
 
-  debugDrawer:drawSphere((my_veh_pos_future):toPoint3F(), 1, ColorF(0,1,0,1))
-  debugDrawer:drawSphere((other_veh_pos_future):toPoint3F(), 1, ColorF(1,0,0,1))
+  --debugDrawer:drawSphere((my_veh_pos_future):toPoint3F(), 1, ColorF(0,1,0,1))
+  --debugDrawer:drawSphere((other_veh_pos_future):toPoint3F(), 1, ColorF(1,0,0,1))
   
   my_veh_pos_future.z = 0
   other_veh_pos_future.z = 0
@@ -190,8 +190,8 @@ local function checkIfCarsIntersectAtTTC(my_veh_props, other_veh_props, data, la
       my_veh_pos_future_turning.z = my_veh_props.center_pos.z
       other_veh_pos_future.z = my_veh_props.center_pos.z
 
-      debugDrawer:drawSphere((my_veh_pos_future_turning):toPoint3F(), 0.5, ColorF(1,0,1,1))
-      debugDrawer:drawSphere((other_veh_pos_future):toPoint3F(), 0.5, ColorF(1,0,1,1))
+      --debugDrawer:drawSphere((my_veh_pos_future_turning):toPoint3F(), 0.5, ColorF(1,0,1,1))
+      --debugDrawer:drawSphere((other_veh_pos_future):toPoint3F(), 0.5, ColorF(1,0,1,1))
 
       return overlap2
     end
@@ -200,7 +200,7 @@ local function checkIfCarsIntersectAtTTC(my_veh_props, other_veh_props, data, la
   return overlap
 end
 
-local function getNearestVehicleInPath(my_veh_props, data_table, lateral_acc_to_avoid_collision)
+local function getNearestVehicleInPath(dt, my_veh_props, data_table, lateral_acc_to_avoid_collision)
   local distance = 9999
   local rel_vel = 0
   local curr_veh_in_path = nil
@@ -224,26 +224,44 @@ local function getNearestVehicleInPath(my_veh_props, data_table, lateral_acc_to_
 
     local overlap_at_ttc = false
     
+    --Calculate TTC
+    local vel_rel = (my_veh_props.velocity - other_veh_props.velocity):length()
+    local speed_rel = my_veh_props.speed - other_veh_props.speed
+  
+    --Deactivate system if this car is slower than other car
+    if vel_rel <= 0 then
+      return false
+    end
+  
+    --Capping to 5 seconds to prevent too much error in predicting position
+    local ttc = math.min(data.distance / vel_rel, 5)
+    
+    
+    local my_wp_dir = (data.my_veh_wps_props.end_wp_pos - data.my_veh_wps_props.start_wp_pos):normalized()
+    local my_wp_perp_dir_right = vec3(my_wp_dir.y, -my_wp_dir.x)
+    
     local my_lat_dist_from_wp = data.my_veh_wps_props.lat_dist_from_wp
     local other_lat_dist_from_wp = data.other_veh_wps_props.lat_dist_from_wp
     
-    
+    local my_speed_in_wp_perp_dir = my_veh_props.velocity:dot(my_wp_perp_dir_right)
+
     if my_veh_side == "right" then
+       my_lat_dist_from_wp = my_lat_dist_from_wp + my_speed_in_wp_perp_dir * ttc
+    
       if my_lat_dist_from_wp - my_veh_props.bb:getHalfExtents().x < other_lat_dist_from_wp + other_veh_props.bb:getHalfExtents().x
       or my_lat_dist_from_wp + my_veh_props.bb:getHalfExtents().x > other_lat_dist_from_wp - other_veh_props.bb:getHalfExtents().x
       then
         overlap_at_ttc = true
       end    
     else
+       my_lat_dist_from_wp = my_lat_dist_from_wp - my_speed_in_wp_perp_dir * ttc
+    
       if my_lat_dist_from_wp + my_veh_props.bb:getHalfExtents().x > other_lat_dist_from_wp - other_veh_props.bb:getHalfExtents().x
       or my_lat_dist_from_wp - my_veh_props.bb:getHalfExtents().x < other_lat_dist_from_wp + other_veh_props.bb:getHalfExtents().x
       then
         overlap_at_ttc = true
       end  
     end
-    
-
-    --print(overlap_at_ttc)
 
     --Collision may be possible
     if overlap_at_ttc then
@@ -263,13 +281,17 @@ local function getNearestVehicleInPath(my_veh_props, data_table, lateral_acc_to_
   return distance, rel_vel
 end
 
+--Global variables as IO between Vehicle and GameEngine Lua
 ve_json_params_angelo234 = nil
 ge_aeb_data_angelo234 = "'[9999,0]'"
 
 --Executing functions here because you get extreme lag for some reason
 --executing them in Vehicle Lua. Will then send results back
 local function getNearestVehicleInPathForVELua(dt)
-  if ve_json_params_angelo234 == nil or ve_json_params_angelo234 == 'nil' then return end
+  if ve_json_params_angelo234 == nil or ve_json_params_angelo234 == 'nil' then 
+    ge_aeb_data_angelo234 = "'[9999,0]'"
+    return 
+  end
   
   local params = jsonDecode(ve_json_params_angelo234)
 
@@ -287,7 +309,7 @@ local function getNearestVehicleInPathForVELua(dt)
 
   --Determine if a collision will actually occur and return the distance and relative velocity 
   --to the vehicle that I'm planning to collide with
-  local distance, vel_rel = getNearestVehicleInPath(veh_props, data, aeb_params.lateral_acc_to_avoid_collision)
+  local distance, vel_rel = getNearestVehicleInPath(dt, veh_props, data, aeb_params.lateral_acc_to_avoid_collision)
 
   --Takes 1 frame to actually send data so account for that
   distance = distance - vel_rel * dt 

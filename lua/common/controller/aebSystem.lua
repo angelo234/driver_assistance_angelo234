@@ -19,10 +19,10 @@ local function soundBeepers(dt, time_before_braking, vel_rel)
   beeper_timer = beeper_timer + dt
 
   --Sound warning tone if 1.0 * (0.5 + vel_rel / 40.0) seconds away from braking
-  if time_before_braking <= 1.0 * (math.min(0.5 + vel_rel / 30.0, 1.5)) then
+  if time_before_braking <= 1.0 * (math.min(0.5 + vel_rel / 30.0, 1.0)) then
     --
     if beeper_timer >= 1.0 / beeper_params.fwd_warning_tone_hertz then
-      obj:queueGameEngineLua("Engine.Audio.playOnce('AudioGui','art/sound/proximity_tone_50ms.wav')")
+      obj:queueGameEngineLua("Engine.Audio.playOnce('AudioGui','art/sound/proximity_tone_50ms_loud.wav')")
       beeper_timer = 0
     end
   end
@@ -31,8 +31,19 @@ end
 local release_brake_confidence_level = 0
 
 local function performEmergencyBraking(dt, time_before_braking)
+  --If throttle pedal is about half pressed then perform braking
+  --But if throttle is highly requested then override braking
+  if electrics.values.throttle > 0.4 then
+    if system_active then
+      input.event('brake', 0, 2)
+      system_active = false 
+    end
+    return
+  end
+  
+  --Stop car completely if below certain speed regardless of sensor information
   if system_active and speed < aeb_params.brake_till_stop_speed then
-    input.event('brake', 1, -1)
+    input.event('brake', 1, 2)
     return
   end
 
@@ -40,7 +51,8 @@ local function performEmergencyBraking(dt, time_before_braking)
 
   --Maximum Braking
   if time_before_braking <= 0 then
-    input.event('brake', 1, -1)
+    input.event('throttle', 0, 2)
+    input.event('brake', 1, 2)
     system_active = true
 
     release_brake_confidence_level = 0
@@ -50,7 +62,7 @@ local function performEmergencyBraking(dt, time_before_braking)
     --Only release brakes if confident
     if release_brake_confidence_level >= 15 then
       if system_active then
-        input.event('brake', 0, -1)
+        input.event('brake', 0, 2)
         system_active = false
       end
     end
@@ -96,6 +108,7 @@ local function init(jbeamData)
 end
 
 local function updateGFX(dt)
+  --Don't update if player not in vehicle  
   if mapmgr.objects[obj:getID()] then
     if not mapmgr.objects[obj:getID()].active then
       return
@@ -122,6 +135,8 @@ local function updateGFX(dt)
         input.event('brake', 0, 2)   
         system_active = false 
       end
+      obj:queueGameEngineLua("ve_json_params_angelo234 = 'nil'")
+      
       return
     end
         
@@ -133,6 +148,9 @@ local function updateGFX(dt)
         input.event('parkingbrake', 1, 2)
         system_active = false        
       end
+      
+      obj:queueGameEngineLua("ve_json_params_angelo234 = 'nil'")
+      
       return   
     end
 
@@ -140,11 +158,13 @@ local function updateGFX(dt)
     {
       obj:getID(), 
       aeb_params, 
-      (speed / 30.0 + 1) * aeb_params.min_distance_from_car
+      (speed / 20.0 + 0.1) --* aeb_params.min_distance_from_car
     }
    
     --Set params for AEB system
     obj:queueGameEngineLua("ve_json_params_angelo234 = '" .. jsonEncode(param_arr) .. "'")
+    
+    --Get AEB system data
     obj:queueGameEngineLua("be:getPlayerVehicle(0):queueLuaCommand('aeb_data_angelo234 = ' .. ge_aeb_data_angelo234)")
 
     if aeb_data_angelo234 == nil then return end
@@ -156,18 +176,11 @@ local function updateGFX(dt)
 
     local time_before_braking = calculateTimeBeforeBraking(distance, vel_rel)
 
-    soundBeepers(dt, time_before_braking, vel_rel)
-
-    --If throttle pedal is about half pressed then perform braking
-    --But if throttle is highly requested then override braking
-    if electrics.values.throttle > 0.4 then
-      if system_active then
-        input.event('brake', 0, 2)
-        system_active = false 
-      end
-      return
+    --At low speeds don't sound beepers
+    if speed > 5 then
+      soundBeepers(dt, time_before_braking, vel_rel)
     end
-
+    
     --Use distance, relative velocity, and max acceleration to determine when to apply emergency braking
     performEmergencyBraking(dt, time_before_braking)
 

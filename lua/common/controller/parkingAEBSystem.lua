@@ -23,14 +23,14 @@ local function soundBeepers(dt, dist)
     --If object is within red line distance, play constant tone
     if dist <= parking_lines_params.parking_line_red_len + parking_lines_params.parking_line_offset_long then
       if beeper_timer >= 1.0 / beeper_params.parking_warning_tone_hertz then
-        obj:queueGameEngineLua("Engine.Audio.playOnce('AudioGui','art/sound/proximity_tone_50ms.wav')")
+        obj:queueGameEngineLua("Engine.Audio.playOnce('AudioGui','art/sound/proximity_tone_50ms_moderate.wav')")
         beeper_timer = 0
       end
       
     --Else tone depends on distance
     else
       if beeper_timer >= dist / beeper_params.parking_warning_tone_dist_per_hertz then
-        obj:queueGameEngineLua("Engine.Audio.playOnce('AudioGui','art/sound/proximity_tone_50ms.wav')")
+        obj:queueGameEngineLua("Engine.Audio.playOnce('AudioGui','art/sound/proximity_tone_50ms_moderate.wav')")
         beeper_timer = 0
       end
     end
@@ -105,9 +105,10 @@ local function init(jbeamData)
   beeper_params = system_params.beeper_params
 end
 
+local prev_in_reverse_counter = 0
+
 local function updateGFX(dt)
-  --Don't update if player not in vehicle
-  
+  --Don't update if player not in vehicle  
   if mapmgr.objects[obj:getID()] then
     if not mapmgr.objects[obj:getID()].active then
       return
@@ -121,9 +122,11 @@ local function updateGFX(dt)
   local gear_selected = electrics.values.gear
 
   if in_reverse == nil or gear_selected == nil or in_reverse == 0 then 
+    obj:queueGameEngineLua("ve_rev_json_params_angelo234 = 'nil'")
+    prev_in_reverse_counter = 0
     return 
   end
-  
+
   local param_arr = 
   {
     obj:getID(), 
@@ -132,9 +135,18 @@ local function updateGFX(dt)
    
   --Set params for AEB system
   obj:queueGameEngineLua("ve_rev_json_params_angelo234 = '" .. jsonEncode(param_arr) .. "'")
+  
+  --Get reverse AEB system data
   obj:queueGameEngineLua("be:getPlayerVehicle(0):queueLuaCommand('rev_aeb_data_angelo234 = ' .. ge_rev_aeb_data_angelo234)")
 
   if rev_aeb_data_angelo234 == nil then return end
+  
+  --Sanitize rev_aeb_data_angelo234 first before continuing
+  --because data recieved may be outdated
+  if prev_in_reverse_counter < 5 then
+    prev_in_reverse_counter = prev_in_reverse_counter + 1
+    return
+  end
   
   local aeb_data = jsonDecode(rev_aeb_data_angelo234)
   
@@ -142,28 +154,6 @@ local function updateGFX(dt)
   
   --Play beeping sound based on min distance of prev sensor detections to obstacle
   soundBeepers(dt, distance)
-  
-  --[[
-
-  for i = 1, rev_aeb_params.sensors_polled_per_iteration do
-    if static_sensor_id == rev_aeb_params.num_of_sensors - 1 then
-      prev_min_dist = min_dist
-      min_dist = 9999
-    end
-  
-    --Get distance and other data of nearest obstacle 
-    local other_veh, dist = pollReverseSensors(dt)
-     
-    min_dist = math.min(dist, min_dist)
-  end
-  ]]--
-
-  
-
-
-  --if not aeb_enabled then return end 
-
-  --print(min_dist)
   
   performEmergencyBraking(dt, distance)
 end
