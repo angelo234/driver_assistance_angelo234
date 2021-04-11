@@ -13,6 +13,29 @@ local system_active = false
 
 local beeper_timer = 0
 
+local function init(jbeamData)
+  if v.config.model then
+    veh_name = v.config.model
+  else
+    veh_name = v.config.partConfigFilename:match("/(%S+)/")
+  end 
+  
+  local default_param_file_dir = 'vehicles/common/parameters'
+  local param_file_dir = 'vehicles/' .. veh_name .. '/parameters'
+  
+  if FS:fileExists(param_file_dir .. ".lua") then
+    --load parameter lua file dependent on vehicle
+    system_params = require(param_file_dir)
+  else
+    --use default parameters if they don't exist for current vehicle
+    system_params = require(default_param_file_dir)
+  end
+  
+  parking_lines_params = system_params.rev_cam_params.parking_lines_params
+  rev_aeb_params = system_params.rev_aeb_params
+  beeper_params = system_params.beeper_params
+end
+
 local function soundBeepers(dt, dist)
   beeper_timer = beeper_timer + dt
 
@@ -82,27 +105,19 @@ local function performEmergencyBraking(dt, distance)
   end
 end
 
-local function init(jbeamData)
-  if v.config.model then
-    veh_name = v.config.model
-  else
-    veh_name = v.config.partConfigFilename:match("/(%S+)/")
-  end 
+--Called with key binding
+local function toggleSystem()
+  electrics.values.rev_aeb_on = 1 - (electrics.values.rev_aeb_on or 0)
   
-  local default_param_file_dir = 'vehicles/common/parameters'
-  local param_file_dir = 'vehicles/' .. veh_name .. '/parameters'
+  local msg = nil
   
-  if FS:fileExists(param_file_dir .. ".lua") then
-    --load parameter lua file dependent on vehicle
-    system_params = require(param_file_dir)
+  if electrics.values.rev_aeb_on == 1 then
+    msg = "ON"
   else
-    --use default parameters if they don't exist for current vehicle
-    system_params = require(default_param_file_dir)
+    msg = "OFF"
   end
   
-  parking_lines_params = system_params.rev_cam_params.parking_lines_params
-  rev_aeb_params = system_params.rev_aeb_params
-  beeper_params = system_params.beeper_params
+  gui.message("Reverse AEB switched " .. msg, 5, "")
 end
 
 local prev_in_reverse_counter = 0
@@ -121,7 +136,7 @@ local function updateGFX(dt)
   local in_reverse = electrics.values.reverse
   local gear_selected = electrics.values.gear
 
-  if in_reverse == nil or gear_selected == nil or in_reverse == 0 then 
+  if in_reverse == nil or gear_selected == nil or in_reverse == 0 or electrics.values.rev_aeb_on == 0 then 
     obj:queueGameEngineLua("ve_rev_json_params_angelo234 = 'nil'")
     prev_in_reverse_counter = 0
     return 
@@ -159,6 +174,7 @@ local function updateGFX(dt)
 end
 
 M.init = init
+M.toggleSystem = toggleSystem
 M.updateGFX = updateGFX
 
 return M

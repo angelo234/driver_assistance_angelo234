@@ -1,0 +1,4 @@
+{
+	"toggle_fwd_aeb" : { "title":"Toggle Forward AEB", "desc":"Turns on or off forward AEB", "order": 200, "cat":"vehicle", "ctx": "vlua", "onDown":"if controller.getController('aebSystem') then controller.getController('aebSystem').toggleSystem() end" },
+	"toggle_rev_aeb" : { "title":"Toggle Reverse AEB", "desc":"Turns on or off reverse AEB", "order": 201, "cat":"vehicle", "ctx": "vlua", "onDown":"if controller.getController('parkingAEBSystem') then controller.getController('parkingAEBSystem').toggleSystem() end" },
+}

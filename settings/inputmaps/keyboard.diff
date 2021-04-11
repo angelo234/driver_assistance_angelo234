@@ -1,0 +1,17 @@
+{
+  "bindings":[
+    {
+      "action":"toggle_fwd_aeb",
+      "control":";"
+    },
+    {
+      "action":"toggle_rev_aeb",
+      "control":"apostrophe"
+    }
+  ],
+  "devicetype":"keyboard",
+  "guid":"{6F1D2B61-D5A0-11CF-BFC7-444553540000}",
+  "name":"Keyboard",
+  "version":1,
+  "vidpid":"6F1D2B61"
+}

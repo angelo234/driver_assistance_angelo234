@@ -15,6 +15,28 @@ local system_active = false
 
 local beeper_timer = 0
 
+local function init(jbeamData)
+  if v.config.model then
+    veh_name = v.config.model
+  else
+    veh_name = v.config.partConfigFilename:match("/(%S+)/")
+  end 
+  
+  local default_param_file_dir = 'vehicles/common/parameters'
+  local param_file_dir = 'vehicles/' .. veh_name .. '/parameters'
+  
+  if FS:fileExists(param_file_dir .. ".lua") then
+    --load parameter lua file dependent on vehicle
+    system_params = require(param_file_dir)
+  else
+    --use default parameters if they don't exist for current vehicle
+    system_params = require(default_param_file_dir)
+  end
+  
+  aeb_params = system_params.fwd_aeb_params
+  beeper_params = system_params.beeper_params
+end
+
 local function soundBeepers(dt, time_before_braking, vel_rel)
   beeper_timer = beeper_timer + dt
 
@@ -85,26 +107,19 @@ local function calculateTimeBeforeBraking(distance, vel_rel)
   return time_before_braking
 end
 
-local function init(jbeamData)
-  if v.config.model then
-    veh_name = v.config.model
-  else
-    veh_name = v.config.partConfigFilename:match("/(%S+)/")
-  end 
+--Called with key binding
+local function toggleSystem()
+  electrics.values.fwd_aeb_on = 1 - (electrics.values.fwd_aeb_on or 0)
   
-  local default_param_file_dir = 'vehicles/common/parameters'
-  local param_file_dir = 'vehicles/' .. veh_name .. '/parameters'
+  local msg = nil
   
-  if FS:fileExists(param_file_dir .. ".lua") then
-    --load parameter lua file dependent on vehicle
-    system_params = require(param_file_dir)
+  if electrics.values.fwd_aeb_on == 1 then
+    msg = "ON"
   else
-    --use default parameters if they don't exist for current vehicle
-    system_params = require(default_param_file_dir)
+    msg = "OFF"
   end
   
-  aeb_params = system_params.fwd_aeb_params
-  beeper_params = system_params.beeper_params
+  gui.message("Forward AEB switched " .. msg, 5, "")
 end
 
 local function updateGFX(dt)
@@ -131,7 +146,7 @@ local function updateGFX(dt)
   
   --Deactivate system based on any of these variables
   if in_reverse == nil or in_reverse == 1 or gear_selected == nil
-    or gear_selected == 'P' or gear_selected == 0 then
+    or gear_selected == 'P' or gear_selected == 0 or electrics.values.fwd_aeb_on == 0 then
     if system_active then
       input.event('brake', 0, 2)   
       system_active = false 
@@ -187,6 +202,7 @@ local function updateGFX(dt)
 end
 
 M.init = init
+M.toggleSystem = toggleSystem
 M.update = updateGFX
 
 return M
