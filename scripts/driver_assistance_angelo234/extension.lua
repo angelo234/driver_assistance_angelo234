@@ -32,12 +32,12 @@ local function getAllVehiclesPropertiesFromVELua()
   end
 
   --Get properties of my vehicle
-  my_veh:queueLuaCommand("obj:queueGameEngineLua('throttle_pos_angelo234 = ' .. input.throttle )")
+  my_veh:queueLuaCommand("if input.throttle ~= nil then obj:queueGameEngineLua('throttle_pos_angelo234 = ' .. input.throttle ) end")
   my_veh:queueLuaCommand('obj:queueGameEngineLua("electrics_values_angelo234 = (\'" .. jsonEncode(electrics.values) .. "\')")')
   my_veh:queueLuaCommand("obj:queueGameEngineLua('angular_speed_angelo234 = ' .. obj:getYawAngularVelocity() )")
   
   --Gets whether gearbox is in arcade or realistic mode
-  my_veh:queueLuaCommand('obj:queueGameEngineLua("gearbox_mode_angelo234 = (\'" .. jsonEncode(controller.mainController.onSerialize()) .. "\')")')
+  my_veh:queueLuaCommand('if controller.mainController.onSerialize ~= nil then obj:queueGameEngineLua("gearbox_mode_angelo234 = (\'" .. jsonEncode(controller.mainController.onSerialize()) .. "\')") end')
 
   if electrics_values_angelo234 == nil then
     return false
@@ -47,7 +47,7 @@ local function getAllVehiclesPropertiesFromVELua()
     and #electrics_values_angelo234 ~= 0
     and angular_speed_angelo234 ~= nil
     and throttle_pos_angelo234 ~= nil
-    and gearbox_mode_angelo234 ~= nil
+    and gearbox_mode_angelo234 ~= nil and gearbox_mode_angelo234 ~= "null" and type(gearbox_mode_angelo234) ~= "table"
 end
 
 local yawSmooth = newExponentialSmoothing(10) --exponential smoothing for yaw rate
