@@ -21,8 +21,6 @@ M.rev_aeb_params = {
     min_speed = 0.75,
 
     parking_sensor_rel_height = -0.5,
-    safety_offset_width_sensor = 0.25,
-
     num_of_sensors = 9,
     sensors_polled_per_iteration = 2,
     sensor_offset_forward = 0.2,
@@ -41,13 +39,10 @@ M.rev_cam_params = {
     cam_down_angle = 35,
     rel_cam_height = 0.25,
     cam_to_wheel_len = -1,
-    veh_half_width = 0.6,
-    line_height_rel_cam = -0.3,
-    veh_half_width_line_width = 0.6 + 0.05,
-    
+
     parking_lines_params = {
         num_of_lines = 10,
-        line_width = 0.05,
+        line_width = 0.06,
         line_length = 2.95,
         perp_line_length = 0.2,
       

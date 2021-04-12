@@ -9,7 +9,7 @@ local min_dist = 9999
 local function staticCastRay(veh_props, sensorPos, same_ray, parking_sensor_params)
   local hit = nil
 
-  local car_half_width = parking_sensor_params.safety_offset_width_sensor + veh_props.bb:getHalfExtents().x
+  local car_half_width = veh_props.bb:getHalfExtents().x
 
   if not same_ray then
     if static_sensor_id >= parking_sensor_params.num_of_sensors - 1 then static_sensor_id = -1 end
@@ -21,7 +21,7 @@ local function staticCastRay(veh_props, sensorPos, same_ray, parking_sensor_para
   local dest = -veh_props.dir * parking_sensor_params.sensor_max_distance + pos
 
   --use castRayDebug to show lines
-  hit = castRay(pos, dest, true, true)
+  hit = castRayDebug(pos, dest, true, true)
 
   if hit == nil then return nil end
 

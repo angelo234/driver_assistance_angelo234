@@ -69,13 +69,13 @@ function C:reset()
 end
 
 --camDir is just negative dir of car
-local function drawLeftTrajectoryLine(camPos, camDir, camLeft, camRight, camUp, line_start, line_end, line_start_width, line_end_width)
-	local offset_height_vec = camUp * rev_cam_params.line_height_rel_cam --line offset height
+local function drawLeftTrajectoryLine(camPos, camDir, camLeft, camRight, camUp, veh_half_width, line_height_rel_cam, line_start, line_end, line_start_width, line_end_width)
+	local offset_height_vec = camUp * line_height_rel_cam --line offset height
 
-	local vec_offset_center = camLeft * rev_cam_params.veh_half_width --line offset lat
+	local vec_offset_center = camLeft * veh_half_width --line offset lat
 		+ offset_height_vec + camDir * rev_cam_params.cam_to_wheel_len --line offset long
 
-	local vec_offset_center_width = camLeft * rev_cam_params.veh_half_width_line_width --line offset lat + width
+	local vec_offset_center_width = camLeft * (veh_half_width + parking_lines_params.line_width)  --line offset lat + width
 		+ offset_height_vec + camDir * rev_cam_params.cam_to_wheel_len --line offset long
 
 	debugDrawer:drawQuadSolid(
@@ -87,13 +87,13 @@ local function drawLeftTrajectoryLine(camPos, camDir, camLeft, camRight, camUp, 
 end
 
 --camDir is just negative dir of car
-local function drawRightTrajectoryLine(camPos, camDir, camLeft, camRight, camUp, line_start, line_end, line_start_width, line_end_width)
-	local offset_height_vec = camUp * rev_cam_params.line_height_rel_cam --line offset height
+local function drawRightTrajectoryLine(camPos, camDir, camLeft, camRight, camUp, veh_half_width, line_height_rel_cam, line_start, line_end, line_start_width, line_end_width)
+	local offset_height_vec = camUp * line_height_rel_cam --line offset height
 
-	local vec_offset_center = camRight * rev_cam_params.veh_half_width --line offset lat
+	local vec_offset_center = camRight * veh_half_width --line offset lat
 		+ offset_height_vec + camDir * rev_cam_params.cam_to_wheel_len --line offset long
 	
-	local vec_offset_center_width = camRight * rev_cam_params.veh_half_width_line_width --line offset lat + width
+	local vec_offset_center_width = camRight * (veh_half_width + parking_lines_params.line_width)  --line offset lat + width
 		+ offset_height_vec + camDir * rev_cam_params.cam_to_wheel_len --line offset long
 
 	--debugDrawer:drawSphere((camPos + vec_offset_center + line_start):toPoint3F(), 0.05, ColorF(1,0,0,1))
@@ -107,7 +107,7 @@ local function drawRightTrajectoryLine(camPos, camDir, camLeft, camRight, camUp,
 	ColorF(1,1,1,1))
 end
 
-local function drawTrajectoryLines(camPos, dir, camLeft, camRight, camUp, left_turning_radius, right_turning_radius)
+local function drawTrajectoryLines(camPos, dir, camLeft, camRight, camUp, left_turning_radius, right_turning_radius, veh_half_width, line_height_rel_cam)
 	
 	local is_turning_left = left_turning_radius > 0
 	
@@ -172,8 +172,8 @@ local function drawTrajectoryLines(camPos, dir, camLeft, camRight, camUp, left_t
 			local offset_pos7 = right_vec1 * (right_turning_radius - the_line_width) + offset_all_pos_width_small
 			local offset_pos8 = right_vec2 * (right_turning_radius - the_line_width) + offset_all_pos_width_small
 
-			drawLeftTrajectoryLine(camPos, dir, camLeft, camRight, camUp, offset_pos1, offset_pos2, offset_pos5, offset_pos6)
-			drawRightTrajectoryLine(camPos, dir, camLeft, camRight, camUp, offset_pos3, offset_pos4, offset_pos7, offset_pos8)
+			drawLeftTrajectoryLine(camPos, dir, camLeft, camRight, camUp, veh_half_width, line_height_rel_cam, offset_pos1, offset_pos2, offset_pos5, offset_pos6)
+			drawRightTrajectoryLine(camPos, dir, camLeft, camRight, camUp, veh_half_width, line_height_rel_cam, offset_pos3, offset_pos4, offset_pos7, offset_pos8)
 		
 		--Turning back to left
 		else
@@ -185,25 +185,27 @@ local function drawTrajectoryLines(camPos, dir, camLeft, camRight, camUp, left_t
 			local offset_pos7 = left_vec1 * (left_turning_radius - the_line_width) + offset_all_pos_width_small
 			local offset_pos8 = left_vec2 * (left_turning_radius - the_line_width) + offset_all_pos_width_small
 
-			drawLeftTrajectoryLine(camPos, dir, camLeft, camRight, camUp, offset_pos1, offset_pos2, offset_pos7, offset_pos8)
-			drawRightTrajectoryLine(camPos, dir, camLeft, camRight, camUp, offset_pos3, offset_pos4, offset_pos5, offset_pos6)
+			drawLeftTrajectoryLine(camPos, dir, camLeft, camRight, camUp, veh_half_width, line_height_rel_cam, offset_pos1, offset_pos2, offset_pos7, offset_pos8)
+			drawRightTrajectoryLine(camPos, dir, camLeft, camRight, camUp, veh_half_width, line_height_rel_cam, offset_pos3, offset_pos4, offset_pos5, offset_pos6)
 		end	
 	end
 end
 
-local function drawParkingLines(camPos, camDir, camLeft, camRight, camUp)
-	local offset_height_vec = camUp * rev_cam_params.line_height_rel_cam
+local function drawParkingLines(camPos, camDir, camLeft, camRight, camUp, veh_half_width, line_height_rel_cam)
+
+	local offset_height_vec = camUp * line_height_rel_cam
   
-	local vec_offset_center_left = camLeft * rev_cam_params.veh_half_width
+  
+	local vec_offset_center_left = camLeft * veh_half_width
 		+ offset_height_vec + camDir * parking_lines_params.parking_line_offset_long
 
-	local vec_offset_center_width_left = camLeft * rev_cam_params.veh_half_width_line_width
+	local vec_offset_center_width_left = camLeft * (veh_half_width + parking_lines_params.line_width) 
 		+ offset_height_vec + camDir * parking_lines_params.parking_line_offset_long
 
-	local vec_offset_center_right = camRight * rev_cam_params.veh_half_width
+	local vec_offset_center_right = camRight * veh_half_width
 		+ offset_height_vec + camDir * parking_lines_params.parking_line_offset_long
 	
-	local vec_offset_center_width_right = camRight * rev_cam_params.veh_half_width_line_width
+	local vec_offset_center_width_right = camRight * (veh_half_width + parking_lines_params.line_width) 
 		+ offset_height_vec + camDir * parking_lines_params.parking_line_offset_long
 
   --Vectors to draw perpendicular/interval lines
@@ -397,7 +399,17 @@ function C:update(data)
 	local rotatedUp = qdir * vec3(0, 0, 1)
 
 	qdir = rotateEuler(math.rad(180), math.rad(rev_cam_params.cam_down_angle), math.atan2(rotatedUp:dot(camLeft), rotatedUp:dot(camUp)), qdir)
+	
 	local camPos = vec3(data.veh:getSpawnWorldOOBBRearPoint()) + camUp * rev_cam_params.rel_cam_height
+
+  local bb = data.veh:getSpawnWorldOOBB()
+
+  local dist_from_cam_pos_to_center = (vec3(bb:getCenter()) - camPos):length()
+
+  local cam_height_from_vehicle_bottom = math.sqrt(dist_from_cam_pos_to_center * dist_from_cam_pos_to_center - bb:getHalfExtents().y * bb:getHalfExtents().y)
+  + bb:getHalfExtents().z
+
+  --print(cam_height_from_vehicle_bottom)
 
 	--Get turning radius of both rear wheels (they are different)
 	local radii = calculateTurningRadii(data.veh)
@@ -405,17 +417,23 @@ function C:update(data)
 	local left_turning_radius = radii[1]
 	local right_turning_radius = radii[2]
 
+  local line_height_rel_cam = -0.65
+
+  local line_height_from_vehicle_bottom = cam_height_from_vehicle_bottom + line_height_rel_cam
+
+  local veh_half_width = data.veh:getSpawnWorldOOBB():getHalfExtents().x - line_height_from_vehicle_bottom / 2.0 - 0.25
+
 	--debugDrawer:drawSphere((vec3(data.veh:getSpawnWorldOOBBRearPoint()) + camUp * rev_cam_params.rel_cam_height):toPoint3F(), 0.05, ColorF(1,0,0,1))
   debugDrawer:setSolidTriCulling(true)
 
   --Draw trajectory lines
   if cam_traj_lines_on then
-    drawTrajectoryLines(vec3(data.veh:getSpawnWorldOOBBRearPoint()), -dir, camLeft, -camLeft, camUp, -left_turning_radius, -right_turning_radius)
+    drawTrajectoryLines(camPos, -dir, camLeft, -camLeft, camUp, -left_turning_radius, -right_turning_radius, veh_half_width, line_height_rel_cam)
   end
 
 	--Draw parking lines
 	if cam_park_lines_on then
-		drawParkingLines(vec3(data.veh:getSpawnWorldOOBBRearPoint()), -dir, camLeft, -camLeft, camUp)
+		drawParkingLines(camPos, -dir, camLeft, -camLeft, camUp, veh_half_width, line_height_rel_cam)
 	end
 	
 	-- application
