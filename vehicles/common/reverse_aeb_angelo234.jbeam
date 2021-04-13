@@ -6,11 +6,5 @@
             "value":250,
         },
         "slotType" : "reverse_aeb_angelo234",
-
-        "controller": [
-            ["fileName"],
-			["parkingAEBSystem",],
-        ],
-
     },
 }

@@ -7,10 +7,5 @@
         },
         "slotType" : "forward_aeb_angelo234",
 
-        "controller": [
-            ["fileName"],
-			["aebSystem",],
-        ],
-
     },
 }

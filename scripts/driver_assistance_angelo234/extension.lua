@@ -5,13 +5,82 @@
 --global table of all vehicles acceleration vectors
 veh_accs_angelo234 = {}
 
-local aeb_system_ge = require('scripts/driver_assistance_angelo234/aebSystemGE')
-local parking_aeb_system_ge = require('scripts/driver_assistance_angelo234/parkingAEBSystemGE')
-
 local M = {}
+
+local aeb_system_ge = require('scripts/driver_assistance_angelo234/aebSystem')
+local parking_aeb_system_ge = require('scripts/driver_assistance_angelo234/parkingAEBSystem')
+
+local system_params = nil
+local aeb_params = nil
+local rev_aeb_params = nil
+local parking_lines_params = nil
+local beeper_params = nil
 
 M.curr_camera_mode = "orbit"
 M.prev_camera_mode = "orbit"
+
+local fwd_aeb_on = true
+local rev_aeb_on = true
+
+local function init(player)
+  local veh = be:getPlayerVehicle(player)
+  
+  local veh_name = veh:getJBeamFilename()
+  
+  local default_param_file_dir = 'vehicles/common/parameters'
+  local param_file_dir = 'vehicles/' .. veh_name .. '/parameters'
+  
+  if FS:fileExists(param_file_dir .. ".lua") then
+    --load parameter lua file dependent on vehicle
+    system_params = require(param_file_dir)
+  else
+    --use default parameters if they don't exist for current vehicle
+    system_params = require(default_param_file_dir)
+  end
+  
+  aeb_params = system_params.fwd_aeb_params
+  beeper_params = system_params.beeper_params
+  rev_aeb_params = system_params.rev_aeb_params
+  parking_lines_params = system_params.rev_cam_params.parking_lines_params
+end
+
+local function onExtensionLoaded()
+  init(0)
+end
+
+local function onVehicleSwitched(oid, nid, player)
+  init(player)
+end
+
+--Called with key binding
+local function toggleFWDAEBSystem()
+  fwd_aeb_on = not fwd_aeb_on
+  
+  local msg = nil
+  
+  if fwd_aeb_on then
+    msg = "ON"
+  else
+    msg = "OFF"
+  end
+  
+  ui_message("Forward AEB switched " .. msg)
+end
+
+--Called with key binding
+local function toggleREVAEBSystem()
+  rev_aeb_on = not rev_aeb_on
+  
+  local msg = nil
+  
+  if rev_aeb_on then
+    msg = "ON"
+  else
+    msg = "OFF"
+  end
+  
+  ui_message("Reverse AEB switched " .. msg)
+end
 
 --Used for what camera to switch the player to when the player gets out of reverse gear using reverse camera
 local function onCameraModeChanged(new_camera_mode)
@@ -111,10 +180,23 @@ local function onUpdate(dt)
   --Process data gathered from Vehicle Lua to be usable in our context
   processVELuaData()
   
-  aeb_system_ge.update(dt)
-  parking_aeb_system_ge.update(dt)
+  if not be:getEnabled() or not system_params then return end
+  
+  local parts = extensions.core_vehicle_manager.getPlayerVehicleData().chosenParts
+
+  if parts.forward_aeb_angelo234 == "forward_aeb_angelo234" and fwd_aeb_on then
+    aeb_system_ge.update(dt, my_veh, system_params, aeb_params, beeper_params) 
+  end
+  
+  if parts.reverse_aeb_angelo234 == "reverse_aeb_angelo234" and rev_aeb_on then
+    parking_aeb_system_ge.update(dt, my_veh, system_params, parking_lines_params, rev_aeb_params, beeper_params)
+  end
 end
 
+M.onExtensionLoaded = onExtensionLoaded
+M.onVehicleSwitched = onVehicleSwitched
+M.toggleFWDAEBSystem = toggleFWDAEBSystem
+M.toggleREVAEBSystem = toggleREVAEBSystem
 M.onCameraModeChanged = onCameraModeChanged
 M.onUpdate = onUpdate
 

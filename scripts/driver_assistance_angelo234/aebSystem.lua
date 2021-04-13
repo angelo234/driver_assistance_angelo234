@@ -2,7 +2,12 @@ require("lua/common/luaProfiler")
 
 local M = {}
 
-local extra_utils = require('scripts/driver_assistance_angelo234/extraUtilsGE')
+local extra_utils = require('scripts/driver_assistance_angelo234/extraUtils')
+local system_params = nil
+local aeb_params = nil
+local beeper_params = nil
+
+local system_active = false
 
 --Uses predicted future pos and places it relative to the future waypoint
 --based on relative position to the current waypoint
@@ -285,31 +290,123 @@ local function getNearestVehicleInPath(dt, my_veh_props, data_table, lateral_acc
   return distance, rel_vel
 end
 
---Global variables as IO between Vehicle and GameEngine Lua
-ve_json_params_angelo234 = nil
-ge_aeb_data_angelo234 = "'[9999,0]'"
+local beeper_timer = 0
 
---Executing functions here because you get extreme lag for some reason
---executing them in Vehicle Lua. Will then send results back
-local function getNearestVehicleInPathForVELua(dt)
-  if ve_json_params_angelo234 == nil or ve_json_params_angelo234 == 'nil' then 
-    ge_aeb_data_angelo234 = "'[9999,0]'"
-    return 
+local function soundBeepers(dt, time_before_braking, vel_rel)
+  beeper_timer = beeper_timer + dt
+
+  --Sound warning tone if 1.0 * (0.5 + vel_rel / 40.0) seconds away from braking
+  if time_before_braking <= 1.0 * (math.min(0.5 + vel_rel / 30.0, 1.0)) then
+    --
+    if beeper_timer >= 1.0 / beeper_params.fwd_warning_tone_hertz then
+      Engine.Audio.playOnce('AudioGui','art/sound/proximity_tone_50ms_loud.wav')
+      beeper_timer = 0
+    end
+  end
+end
+
+local release_brake_confidence_level = 0
+
+local function performEmergencyBraking(dt, veh, time_before_braking, speed)
+  --If throttle pedal is about half pressed then perform braking
+  --But if throttle is highly requested then override braking
+  if electrics_values_angelo234["throttle"] > 0.4 then
+    if system_active then
+      veh:queueLuaCommand("input.event('brake', 0, 2)")
+      system_active = false 
+    end
+    return
   end
   
-  local params = jsonDecode(ve_json_params_angelo234)
+  --Stop car completely if below certain speed regardless of sensor information
+  if system_active and speed < aeb_params.brake_till_stop_speed then
+    veh:queueLuaCommand("input.event('brake', 1, 2)")
+    return
+  end
 
-  local my_veh_id = params[1]
-  local aeb_params = params[2]
-  local min_distance_from_car = params[3]
+  --debugDrawer:drawTextAdvanced((my_veh_props.front_pos + my_veh_props.dir * 2):toPoint3F(), String("Time till braking: " .. tostring(time_before_braking)),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
 
-  local veh = be:getObjectByID(my_veh_id)
+  --Maximum Braking
+  if time_before_braking <= 0 then
+    veh:queueLuaCommand("input.event('throttle', 0, 2)")
+    veh:queueLuaCommand("input.event('brake', 1, 2)")
+    system_active = true
+
+    release_brake_confidence_level = 0
+  else    
+    release_brake_confidence_level = release_brake_confidence_level + 1
+
+    --Only release brakes if confident
+    if release_brake_confidence_level >= 15 then
+      if system_active then
+        veh:queueLuaCommand("input.event('brake', 0, 2)")
+        system_active = false
+      end
+    end
+  end
+end
+
+local function calculateTimeBeforeBraking(distance, vel_rel)
+  --Max braking acceleration = gravity * coefficient of static friction
+  --local acc = math.min(-veh_accs_angelo234[veh_props.id][3], system_params.gravity) * params_per_veh[veh_props.name].fwd_friction_coeff
+
+  local acc = math.min(10, system_params.gravity) * system_params.fwd_friction_coeff
+
+  --Calculate TTC
+  local ttc = distance / vel_rel
+  local time_to_brake = vel_rel / (2 * acc)
+
+  --leeway time depending on speed
+  local time_before_braking = ttc - time_to_brake - aeb_params.braking_time_leeway
   
-  if veh == nil then return end
-  
+  return time_before_braking
+end
+
+local function update(dt, veh, the_system_params, the_fwd_aeb_params, the_beeper_params)
+  system_params = the_system_params
+  aeb_params = the_fwd_aeb_params
+  beeper_params = the_beeper_params
+
   local veh_props = extra_utils.getVehicleProperties(veh)
   
-  local data = extra_utils.getNearbyVehiclesInSameLane(veh_props, aeb_params.vehicle_search_radius, min_distance_from_car, true)
+  local in_reverse = electrics_values_angelo234["reverse"]
+  local gear_selected = electrics_values_angelo234["gear"]
+  local esc_color = electrics_values_angelo234["dseColor"]
+
+  --ESC must be in comfort mode, otherwise it is deactivated
+  --sunburst uses different color for comfort mode
+  --if (veh_name == "sunburst" and esc_color == "98FB00")
+   --or (veh_name ~= "sunburst" and esc_color == "238BE6")
+  --then
+  
+  --Deactivate system based on any of these variables
+  if in_reverse == nil or in_reverse == 1 or gear_selected == nil
+    or gear_selected == 'P' or gear_selected == 0 then
+    if system_active then
+      veh:queueLuaCommand("input.event('brake', 0, 2)")  
+      system_active = false 
+    end
+
+    return
+  end
+      
+  if veh_props.speed <= aeb_params.min_speed then    
+    if system_active then
+      --When coming to a stop with system activated, release brakes but apply parking brake in arcade mode :P
+      if gearbox_mode_angelo234.previousGearboxBehavior == "realistic" then
+        veh:queueLuaCommand("input.event('brake', 1, 2)")
+      else
+        --Release brake and apply parking brake
+        veh:queueLuaCommand("input.event('brake', 0, 2)")
+        veh:queueLuaCommand("input.event('parkingbrake', 1, 2)")   
+      end
+      system_active = false     
+    end
+    
+    return   
+  end
+
+  local data = extra_utils.getNearbyVehiclesInSameLane(veh_props, aeb_params.vehicle_search_radius, aeb_params.min_distance_from_car, true)
 
   --Determine if a collision will actually occur and return the distance and relative velocity 
   --to the vehicle that I'm planning to collide with
@@ -318,13 +415,16 @@ local function getNearestVehicleInPathForVELua(dt)
   --Takes 1 frame to actually send data so account for that
   distance = distance - vel_rel * dt 
 
-  ge_aeb_data_angelo234 = "'" .. jsonEncode({distance, vel_rel}) .. "'"
-end
 
-local function update(dt)
-  if be:getEnabled() then
-    getNearestVehicleInPathForVELua(dt)
+  local time_before_braking = calculateTimeBeforeBraking(distance, vel_rel)
+
+  --At low speeds don't sound beepers
+  if veh_props.speed > 5 then
+    soundBeepers(dt, time_before_braking, vel_rel)
   end
+  
+  --Use distance, relative velocity, and max acceleration to determine when to apply emergency braking
+  performEmergencyBraking(dt, veh, time_before_braking, veh_props.speed)
 end
 
 M.update = update
