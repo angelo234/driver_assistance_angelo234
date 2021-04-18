@@ -14,7 +14,13 @@ M.fwd_aeb_params = {
     vehicle_search_radius = 200,
     min_distance_from_car = 0.5,
   
-    lateral_acc_to_avoid_collision = 0.15
+    lateral_acc_to_avoid_collision = 0.15,
+    
+    parking_sensor_rel_height = -0.4,
+    num_of_sensors = 5,
+    sensors_polled_per_iteration = 1,
+    sensor_offset_forward = -0.3,
+    sensor_max_distance = 30 
 }
 
 M.rev_aeb_params = {

@@ -25,6 +25,8 @@ local rev_aeb_on = true
 local function init(player)
   local veh = be:getPlayerVehicle(player)
   
+  if not veh then return end
+  
   local veh_name = veh:getJBeamFilename()
   
   local default_param_file_dir = 'vehicles/common/parameters'
@@ -54,6 +56,10 @@ end
 
 --Called with key binding
 local function toggleFWDAEBSystem()
+  --Only change status if part actually installed
+  local parts = extensions.core_vehicle_manager.getPlayerVehicleData().chosenParts
+  if parts.forward_aeb_angelo234 ~= "forward_aeb_angelo234" then return end
+  
   fwd_aeb_on = not fwd_aeb_on
   
   local msg = nil
@@ -69,6 +75,10 @@ end
 
 --Called with key binding
 local function toggleREVAEBSystem()
+  --Only change status if part actually installed
+  local parts = extensions.core_vehicle_manager.getPlayerVehicleData().chosenParts
+  if parts.reverse_aeb_angelo234 ~= "reverse_aeb_angelo234" then return end
+
   rev_aeb_on = not rev_aeb_on
   
   local msg = nil
@@ -183,7 +193,7 @@ local function onUpdate(dt)
   if not be:getEnabled() or not system_params then return end
   
   local parts = extensions.core_vehicle_manager.getPlayerVehicleData().chosenParts
-
+  
   if parts.forward_aeb_angelo234 == "forward_aeb_angelo234" and fwd_aeb_on then
     aeb_system_ge.update(dt, my_veh, system_params, aeb_params, beeper_params) 
   end

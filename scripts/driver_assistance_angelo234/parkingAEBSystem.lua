@@ -2,21 +2,18 @@ local M = {}
 
 local extra_utils = require('scripts/driver_assistance_angelo234/extraUtils')
 
-local system_params = nil
-local parking_lines_params = nil
-local rev_aeb_params = nil
-local beeper_params = nil
-
 local system_active = false
 
 local static_sensor_id = -1
 local prev_min_dist = 9999
 local min_dist = 9999
 
+local enable_fix = false
+
 local function staticCastRay(veh_props, sensorPos, same_ray, parking_sensor_params)
   local hit = nil
 
-  local car_half_width = veh_props.bb:getHalfExtents().x
+  local car_half_width = veh_props.bb:getHalfExtents().x - 0.3
 
   if not same_ray then
     if static_sensor_id >= parking_sensor_params.num_of_sensors - 1 then static_sensor_id = -1 end
@@ -103,7 +100,7 @@ local function getClosestVehicle(other_vehs_data)
 end
 
 
-local function pollReverseSensors(dt, my_veh_props)
+local function pollReverseSensors(dt, my_veh_props, rev_aeb_params)
   local parking_sensor_height = rev_aeb_params.parking_sensor_rel_height
 
   --Fixes lag of sensorPos
@@ -127,7 +124,7 @@ end
 
 local beeper_timer = 0
 
-local function soundBeepers(dt, dist)
+local function soundBeepers(dt, dist, parking_lines_params, beeper_params)
   beeper_timer = beeper_timer + dt
 
   dist = dist + 0.2
@@ -151,13 +148,26 @@ local function soundBeepers(dt, dist)
   end
 end
 
-local function performEmergencyBraking(dt, veh, distance, speed)
+local function performEmergencyBraking(dt, veh, distance, speed, system_params, rev_aeb_params)
+  --Max braking acceleration = gravity * coefficient of static friction
+  local acc = system_params.gravity * system_params.rev_friction_coeff
+
+  --Calculate time to collision (TTC)
+  local ttc = distance / speed
+  local time_to_brake = speed / (2 * acc)
+
+  local time_before_braking = ttc - time_to_brake
+
+  if time_before_braking <= 0 then
+    system_active = true
+  end
+  
   --If vehicle is below certain speed then deactivate system
   if speed <= rev_aeb_params.min_speed then
     --But if system activated before, then release brakes and apply parking brake
     if system_active then
       --When coming to a stop with system activated, release brakes but apply parking brake in arcade mode :P
-      if gearbox_mode_angelo234.previousGearboxBehavior == "realistic" then
+      if gearbox_mode_angelo234.previousGearboxBehavior == "realistic" then       
         veh:queueLuaCommand("input.event('brake', 1, 2)")
       else
         --Release brake and apply parking brake
@@ -173,34 +183,17 @@ local function performEmergencyBraking(dt, veh, distance, speed)
   if system_active then
     --Must do differently depending on gearbox mode :/
     if gearbox_mode_angelo234.previousGearboxBehavior == "realistic" then
+      veh:queueLuaCommand("input.event('throttle', 0, 2)")
       veh:queueLuaCommand("input.event('brake', 1, 2)")
     else
+      veh:queueLuaCommand("input.event('brake', 0, 2)")
       veh:queueLuaCommand("input.event('throttle', 1, 2)")
     end
     return
   end
-  
-  --Max braking acceleration = gravity * coefficient of static friction
-  local acc = system_params.gravity * system_params.rev_friction_coeff
-
-  --Calculate time to collision (TTC)
-  local ttc = distance / speed
-  local time_to_brake = speed / (2 * acc)
-
-  --leeway time depending on speed
-  local time_before_braking = ttc - time_to_brake
-
-  if time_before_braking <= 0 then
-    system_active = true
-  end
 end
 
-local function update(dt, veh, the_system_params, the_parking_lines_params, the_rev_aeb_params, the_beeper_params)
-  system_params = the_system_params
-  parking_lines_params = the_parking_lines_params
-  rev_aeb_params = the_rev_aeb_params
-  beeper_params = the_beeper_params
-
+local function update(dt, veh, system_params, parking_lines_params, rev_aeb_params, beeper_params)
   local veh_props = extra_utils.getVehicleProperties(veh)
   
   local in_reverse = electrics_values_angelo234["reverse"]
@@ -219,15 +212,15 @@ local function update(dt, veh, the_system_params, the_parking_lines_params, the_
     end
   
     --Get distance and other data of nearest obstacle 
-    local other_veh, dist = pollReverseSensors(dt, veh_props)
+    local other_veh, dist = pollReverseSensors(dt, veh_props, rev_aeb_params)
      
     min_dist = math.min(dist, min_dist)
   end
 
   --Play beeping sound based on min distance of prev sensor detections to obstacle
-  soundBeepers(dt, min_dist)
+  soundBeepers(dt, min_dist, parking_lines_params, beeper_params)
   
-  performEmergencyBraking(dt, veh, min_dist, veh_props.speed)
+  performEmergencyBraking(dt, veh, min_dist, veh_props.speed, system_params, rev_aeb_params)
 end
 
 M.update = update
