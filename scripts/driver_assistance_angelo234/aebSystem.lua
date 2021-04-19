@@ -329,31 +329,25 @@ local function getVehicleCollidingWithInLane(dt, my_veh_props, data_table, later
 
     local this_rel_vel = (my_veh_props.velocity - other_veh_props.velocity):length()
 
-    --local overlap_at_ttc = checkIfCarsIntersectAtTTC(my_veh_props, other_veh_props, data, lateral_acc_to_avoid_collision)
-
-    local overlap_at_ttc = false
-    
-    --Calculate TTC
-    local vel_rel = (my_veh_props.velocity - other_veh_props.velocity):length()
-    local speed_rel = my_veh_props.speed - other_veh_props.speed
-  
     --Deactivate system if this car is slower than other car
-    if vel_rel <= 0 then
-      return false
+    if this_rel_vel <= 0 then
+      return distance, rel_vel
     end
   
     --Capping to 5 seconds to prevent too much error in predicting position
-    local ttc = math.min(data.distance / vel_rel, 5)
-    
-    
+    local ttc = math.min(data.distance / this_rel_vel, 5)
+       
     local my_wp_dir = (data.my_veh_wps_props.end_wp_pos - data.my_veh_wps_props.start_wp_pos):normalized()
     local my_wp_perp_dir_right = vec3(my_wp_dir.y, -my_wp_dir.x)
+    
+    local other_wp_dir = (data.other_veh_wps_props.end_wp_pos - data.other_veh_wps_props.start_wp_pos):normalized()
+    local other_wp_perp_dir_right = vec3(other_wp_dir.y, -other_wp_dir.x)
     
     local my_lat_dist_from_wp = data.my_veh_wps_props.lat_dist_from_wp
     local other_lat_dist_from_wp = data.other_veh_wps_props.lat_dist_from_wp
     
     local my_speed_in_wp_perp_dir = my_veh_props.velocity:dot(my_wp_perp_dir_right)
-    local other_speed_in_wp_perp_dir = other_veh_props.velocity:dot(my_wp_perp_dir_right)
+    local other_speed_in_wp_perp_dir = other_veh_props.velocity:dot(other_wp_perp_dir_right)
 
     if my_veh_side == "right" then
       my_lat_dist_from_wp = my_lat_dist_from_wp + my_speed_in_wp_perp_dir * ttc
@@ -367,41 +361,13 @@ local function getVehicleCollidingWithInLane(dt, my_veh_props, data_table, later
       other_lat_dist_from_wp = -other_lat_dist_from_wp + other_speed_in_wp_perp_dir * ttc
     end
         
-    print("my_lat_dist_from_wp: " .. my_lat_dist_from_wp)
-    print("other_lat_dist_from_wp: " .. other_lat_dist_from_wp) 
+    --print("my_lat_dist_from_wp: " .. my_lat_dist_from_wp)
+    --print("other_lat_dist_from_wp: " .. other_lat_dist_from_wp) 
         
     if my_lat_dist_from_wp - my_veh_props.bb:getHalfExtents().x < other_lat_dist_from_wp + other_veh_props.bb:getHalfExtents().x
     and my_lat_dist_from_wp + my_veh_props.bb:getHalfExtents().x > other_lat_dist_from_wp - other_veh_props.bb:getHalfExtents().x
     then
-      overlap_at_ttc = true
-    end   
-
-    --[[
-    if my_veh_side == "right" then
-      my_lat_dist_from_wp = my_lat_dist_from_wp + my_speed_in_wp_perp_dir * ttc
-      other_lat_dist_from_wp = other_lat_dist_from_wp + other_speed_in_wp_perp_dir * ttc
-        
-      if my_lat_dist_from_wp - my_veh_props.bb:getHalfExtents().x < other_lat_dist_from_wp + other_veh_props.bb:getHalfExtents().x
-      or my_lat_dist_from_wp + my_veh_props.bb:getHalfExtents().x > other_lat_dist_from_wp - other_veh_props.bb:getHalfExtents().x
-      then
-        overlap_at_ttc = true
-      end    
-    else
-      my_lat_dist_from_wp = my_lat_dist_from_wp - my_speed_in_wp_perp_dir * ttc
-      other_lat_dist_from_wp = other_lat_dist_from_wp + other_speed_in_wp_perp_dir * ttc
-       
-      if my_lat_dist_from_wp + my_veh_props.bb:getHalfExtents().x > other_lat_dist_from_wp - other_veh_props.bb:getHalfExtents().x
-      or my_lat_dist_from_wp - my_veh_props.bb:getHalfExtents().x < other_lat_dist_from_wp + other_veh_props.bb:getHalfExtents().x
-      then
-        overlap_at_ttc = true
-      end  
-    end
-    ]]--
-    
-
-    --Collision may be possible
-    if overlap_at_ttc then
-      --debugDrawer:drawSphere((other_veh_props.center_pos):toPoint3F(), 1, ColorF(1,0,0,1))
+      --Collision may be possible
     
       --If this distance is less than current min distance
       --then this is new min distance
@@ -410,8 +376,10 @@ local function getVehicleCollidingWithInLane(dt, my_veh_props, data_table, later
         rel_vel = this_rel_vel
 
         curr_veh_in_path = data.other_veh
+        
+        debugDrawer:drawSphere((other_veh_props.center_pos):toPoint3F(), 1, ColorF(1,0,0,1))      
       end
-    end
+    end   
   end
 
   return distance, rel_vel
@@ -455,7 +423,7 @@ local function performEmergencyBraking(dt, veh, time_before_braking, speed, aeb_
 
   --If throttle pedal is about half pressed then perform braking
   --But if throttle is highly requested then override braking
-  if throttle > 0.4 then
+  if throttle > 0.5 then
     if system_active then
       veh:queueLuaCommand("input.event('brake', 0, 2)")
       system_active = false 
@@ -509,9 +477,7 @@ local function calculateTimeBeforeBraking(distance, vel_rel, system_params, aeb_
   return time_before_braking
 end
 
-local past_wps_props = nil
-
-local function update(dt, veh, system_params, aeb_params, beeper_params)
+local function update(dt, veh, vehs_in_same_lane_table, system_params, aeb_params, beeper_params)
   local veh_props = extra_utils.getVehicleProperties(veh)
   
   local in_reverse = electrics_values_angelo234["reverse"]
@@ -582,17 +548,11 @@ local function update(dt, veh, system_params, aeb_params, beeper_params)
     distance, vel_rel = getVehicleCollidingWith(dt, veh_props, data)
   else
     --Else at higher speeds, use lane lines 
-    local data_table, my_veh_wps_props = extra_utils.getNearbyVehiclesInSameLane(veh_props, aeb_params.vehicle_search_radius, aeb_params.min_distance_from_car, true, past_wps_props)
-    
-    if my_veh_wps_props then
-      past_wps_props = my_veh_wps_props
-    end
-
     --If table is empty then return
-    if next(data_table) ~= nil then
+    if next(vehs_in_same_lane_table) ~= nil then
       --Determine if a collision will actually occur and return the distance and relative velocity 
       --to the vehicle that I'm planning to collide with
-      distance, vel_rel = getVehicleCollidingWithInLane(dt, veh_props, data_table, aeb_params.lateral_acc_to_avoid_collision)
+      distance, vel_rel = getVehicleCollidingWithInLane(dt, veh_props, vehs_in_same_lane_table, aeb_params.lateral_acc_to_avoid_collision)
     end 
   end
 

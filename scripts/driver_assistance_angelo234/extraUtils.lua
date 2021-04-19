@@ -18,6 +18,8 @@ local ceil = math.ceil
 local map_nodes = map.getMap().nodes
 local findClosestRoad = map.findClosestRoad
 
+local past_wps_props_table = {}
+
 local function toNormXYVec(dir)
   return dir:z0():normalized()
 end
@@ -790,9 +792,11 @@ local function getNearbyVehicles(my_veh_props, max_dist, min_distance_from_car, 
 end
 
 --Returns a table of vehicles and distance to them within a max_dist radius and in the same lane
-local function getNearbyVehiclesInSameLane(my_veh_props, max_dist, min_distance_from_car, in_front, past_wps_props)
+local function getNearbyVehiclesInSameLane(my_veh_props, max_dist, min_distance_from_car, in_front, only_pos_rel_vel)
   
-  local my_veh_wps_props = getWaypointStartEndAdvanced(my_veh_props, my_veh_props, my_veh_props.front_pos, past_wps_props)
+  local my_veh_wps_props = getWaypointStartEndAdvanced(my_veh_props, my_veh_props, my_veh_props.front_pos, past_wps_props_table[my_veh_props.id])
+  
+  past_wps_props_table[my_veh_props.id] = my_veh_wps_props
   
   if my_veh_wps_props == nil then
     return {}, nil
@@ -822,8 +826,9 @@ local function getNearbyVehiclesInSameLane(my_veh_props, max_dist, min_distance_
     local other_veh_props = getVehicleProperties(other_veh_data.other_veh)
     local speed_rel = my_veh_props.speed - other_veh_props.speed
     
-    --needs past_wp_props!!!
-    local other_veh_wps_props = getWaypointStartEndAdvanced(my_veh_props, other_veh_props, other_veh_props.front_pos)
+    local other_veh_wps_props = getWaypointStartEndAdvanced(my_veh_props, other_veh_props, other_veh_props.front_pos, past_wps_props_table[other_veh_props.id])
+    
+    past_wps_props_table[other_veh_props.id] = other_veh_wps_props
     
     local other_veh_side_of_wp, other_in_wp_middle = getWhichSideOfWaypointsCarIsOn(other_veh_props, other_veh_wps_props.start_wp_pos, other_veh_wps_props.end_wp_pos)
     local other_veh_lane_nums = getLaneNum(other_veh_props, other_veh_wps_props, other_veh_side_of_wp)
@@ -887,14 +892,19 @@ local function getNearbyVehiclesInSameLane(my_veh_props, max_dist, min_distance_
       end
 
       --In same lane or either vehicle in middle of road and my vehicle speed is >= to other
-      if (my_in_wp_middle or other_in_wp_middle or (same_lane and on_same_road)) and speed_rel >= 0 then
-
-        table.insert(other_vehs_in_my_lane, other_veh_data)
+      if (my_in_wp_middle or other_in_wp_middle or (same_lane and on_same_road)) then
+        if only_pos_rel_vel then
+          if speed_rel >= 0 then
+            table.insert(other_vehs_in_my_lane, other_veh_data)
+          end
+        else
+          table.insert(other_vehs_in_my_lane, other_veh_data)
+        end
       end
     end
   end
 
-  return other_vehs_in_my_lane, my_veh_wps_props
+  return other_vehs_in_my_lane
 end
 
 local function onClientPostStartMission(levelpath)

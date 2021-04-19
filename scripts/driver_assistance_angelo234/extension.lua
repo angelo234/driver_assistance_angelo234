@@ -7,8 +7,11 @@ veh_accs_angelo234 = {}
 
 local M = {}
 
-local aeb_system_ge = require('scripts/driver_assistance_angelo234/aebSystem')
-local parking_aeb_system_ge = require('scripts/driver_assistance_angelo234/parkingAEBSystem')
+local extra_utils = require('scripts/driver_assistance_angelo234/extraUtils')
+
+local aeb_system = require('scripts/driver_assistance_angelo234/aebSystem')
+local parking_aeb_system = require('scripts/driver_assistance_angelo234/parkingAEBSystem')
+local acc_system = require('scripts/driver_assistance_angelo234/accSystem')
 
 local system_params = nil
 local aeb_params = nil
@@ -21,6 +24,7 @@ M.prev_camera_mode = "orbit"
 
 local fwd_aeb_on = true
 local rev_aeb_on = true
+local acc_on = false
 
 local function init(player)
   local veh = be:getPlayerVehicle(player)
@@ -56,6 +60,8 @@ end
 
 --Called with key binding
 local function toggleFWDAEBSystem()
+  if not extensions.core_vehicle_manager.getPlayerVehicleData() then return end
+  
   --Only change status if part actually installed
   local parts = extensions.core_vehicle_manager.getPlayerVehicleData().chosenParts
   if parts.forward_aeb_angelo234 ~= "forward_aeb_angelo234" then return end
@@ -75,6 +81,8 @@ end
 
 --Called with key binding
 local function toggleREVAEBSystem()
+  if not extensions.core_vehicle_manager.getPlayerVehicleData() then return end
+  
   --Only change status if part actually installed
   local parts = extensions.core_vehicle_manager.getPlayerVehicleData().chosenParts
   if parts.reverse_aeb_angelo234 ~= "reverse_aeb_angelo234" then return end
@@ -90,6 +98,27 @@ local function toggleREVAEBSystem()
   end
   
   ui_message("Reverse AEB switched " .. msg)
+end
+
+--Called with key binding
+local function toggleACCSystem()
+  if not extensions.core_vehicle_manager.getPlayerVehicleData() then return end
+
+  --Only change status if part actually installed
+  local parts = extensions.core_vehicle_manager.getPlayerVehicleData().chosenParts
+  if parts.acc_angelo234 ~= "acc_angelo234" then return end
+
+  acc_on = not acc_on
+  
+  local msg = nil
+  
+  if acc_on then
+    msg = "ON"
+  else
+    msg = "OFF"
+  end
+  
+  ui_message("Adaptive Cruise Control switched " .. msg)
 end
 
 --Used for what camera to switch the player to when the player gets out of reverse gear using reverse camera
@@ -190,16 +219,24 @@ local function onUpdate(dt)
   --Process data gathered from Vehicle Lua to be usable in our context
   processVELuaData()
   
-  if not be:getEnabled() or not system_params then return end
+  if not be:getEnabled() or not system_params or not extensions.core_vehicle_manager.getPlayerVehicleData() then return end
   
   local parts = extensions.core_vehicle_manager.getPlayerVehicleData().chosenParts
   
+  local veh_props = extra_utils.getVehicleProperties(my_veh)
+  
+  local vehs_in_same_lane_in_front_table = extra_utils.getNearbyVehiclesInSameLane(veh_props, aeb_params.vehicle_search_radius, aeb_params.min_distance_from_car, true, false)
+
+  if parts.acc_angelo234 == "acc_angelo234" and acc_on then
+    acc_system.update(dt, my_veh, vehs_in_same_lane_in_front_table, system_params, aeb_params)
+  end
+
   if parts.forward_aeb_angelo234 == "forward_aeb_angelo234" and fwd_aeb_on then
-    aeb_system_ge.update(dt, my_veh, system_params, aeb_params, beeper_params) 
+    aeb_system.update(dt, my_veh, vehs_in_same_lane_in_front_table, system_params, aeb_params, beeper_params) 
   end
   
   if parts.reverse_aeb_angelo234 == "reverse_aeb_angelo234" and rev_aeb_on then
-    parking_aeb_system_ge.update(dt, my_veh, system_params, parking_lines_params, rev_aeb_params, beeper_params)
+    parking_aeb_system.update(dt, my_veh, system_params, parking_lines_params, rev_aeb_params, beeper_params)
   end
 end
 
@@ -207,6 +244,7 @@ M.onExtensionLoaded = onExtensionLoaded
 M.onVehicleSwitched = onVehicleSwitched
 M.toggleFWDAEBSystem = toggleFWDAEBSystem
 M.toggleREVAEBSystem = toggleREVAEBSystem
+M.toggleACCSystem = toggleACCSystem
 M.onCameraModeChanged = onCameraModeChanged
 M.onUpdate = onUpdate
 

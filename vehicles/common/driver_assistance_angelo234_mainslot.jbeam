@@ -11,6 +11,7 @@
 		["forward_aeb_angelo234",	"", 					"Forward AEB"],
 		["reverse_aeb_angelo234",	"", 					"Reverse AEB"],
 		["backup_cam_angelo234",    "backup_cam_angelo234",	"Back-up Camera"],
+		["acc_angelo234",    		"",						"Adaptive Cruise Control"],
 	],
 },
 

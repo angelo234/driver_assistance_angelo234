@@ -1,4 +1,5 @@
 {
-	"toggle_fwd_aeb" : { "title":"Toggle Forward AEB", "desc":"Turns on or off forward AEB", "order": 200, "cat":"vehicle", "ctx": "tlua", "onDown":"scripts_driver__assistance__angelo234_extension.toggleFWDAEBSystem()" },
-	"toggle_rev_aeb" : { "title":"Toggle Reverse AEB", "desc":"Turns on or off reverse AEB", "order": 201, "cat":"vehicle", "ctx": "tlua", "onDown":"scripts_driver__assistance__angelo234_extension.toggleREVAEBSystem()" },
+	"toggle_fwd_aeb" : { "title":"Toggle Forward AEB", 				"desc":"Turns on or off forward AEB", 				"order": 200, "cat":"vehicle", "ctx": "tlua", "onDown":"scripts_driver__assistance__angelo234_extension.toggleFWDAEBSystem()" },
+	"toggle_rev_aeb" : { "title":"Toggle Reverse AEB", 				"desc":"Turns on or off reverse AEB", 				"order": 201, "cat":"vehicle", "ctx": "tlua", "onDown":"scripts_driver__assistance__angelo234_extension.toggleREVAEBSystem()" },
+	"toggle_acc"	 : { "title":"Toggle Adaptive Cruise Control", 	"desc":"Turns on or off Adaptive Cruise Control", 	"order": 202, "cat":"vehicle", "ctx": "tlua", "onDown":"scripts_driver__assistance__angelo234_extension.toggleACCSystem()" }
 }

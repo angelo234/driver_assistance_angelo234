@@ -1,12 +1,16 @@
 {
   "bindings":[
     {
-      "action":"toggle_fwd_aeb",
-      "control":";"
+      "action":"toggle_rev_aeb",
+      "control":"*"
     },
     {
-      "action":"toggle_rev_aeb",
-      "control":"apostrophe"
+      "action":"toggle_fwd_aeb",
+      "control":"numpaddivide"
+    },
+    {
+      "action":"toggle_acc",
+      "control":";"
     }
   ],
   "devicetype":"keyboard",

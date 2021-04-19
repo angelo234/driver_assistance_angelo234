@@ -8,8 +8,6 @@ local static_sensor_id = -1
 local prev_min_dist = 9999
 local min_dist = 9999
 
-local enable_fix = false
-
 local function staticCastRay(veh_props, sensorPos, same_ray, parking_sensor_params)
   local hit = nil
 
