@@ -1,0 +1,17 @@
+{
+  "domElement": "<driver-assistance-angelo234></driver-assistance-angelo234>",
+  "name": "Graph Debug",
+  "types": [
+    "ui.apps.categories.vehicle_profiling"
+  ],
+  "description": "This app shows a graphical representation of the wheels' Brake Torque at any time",
+  "css": {
+    "left": "0px",
+    "height": "80px",
+    "top": "0px",
+    "width": "400px"
+  },
+  "author": "Diamondback",
+  "version": "0.1",
+  "directive": "driverAssistanceAngelo234"
+}

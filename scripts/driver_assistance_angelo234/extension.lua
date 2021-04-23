@@ -3,6 +3,9 @@
 -- file, You can obtain one at http://beamng.com/bCDDL-1.1.txt
 
 --global table of all vehicles acceleration vectors
+--veh_accs_angelo234[id][1] = lateral (-x = right, +x = left) 
+--veh_accs_angelo234[id][2] = longitudinal (-x = accelerating, +x = braking) 
+--veh_accs_angelo234[id][3] = up/down direction (-x = down, +x = up) 
 veh_accs_angelo234 = {}
 
 local M = {}
@@ -25,6 +28,8 @@ M.prev_camera_mode = "orbit"
 local fwd_aeb_on = true
 local rev_aeb_on = true
 local acc_on = false
+
+local last_acc_on = false
 
 local function init(player)
   local veh = be:getPlayerVehicle(player)
@@ -58,7 +63,7 @@ local function onVehicleSwitched(oid, nid, player)
   init(player)
 end
 
---Called with key binding
+--Functions called with key binding
 local function toggleFWDAEBSystem()
   if not extensions.core_vehicle_manager.getPlayerVehicleData() then return end
   
@@ -79,7 +84,6 @@ local function toggleFWDAEBSystem()
   ui_message("Forward AEB switched " .. msg)
 end
 
---Called with key binding
 local function toggleREVAEBSystem()
   if not extensions.core_vehicle_manager.getPlayerVehicleData() then return end
   
@@ -100,13 +104,17 @@ local function toggleREVAEBSystem()
   ui_message("Reverse AEB switched " .. msg)
 end
 
---Called with key binding
-local function toggleACCSystem()
-  if not extensions.core_vehicle_manager.getPlayerVehicleData() then return end
+local function checkACCSystemPartExists()
+  if not extensions.core_vehicle_manager.getPlayerVehicleData() then return false end
 
   --Only change status if part actually installed
   local parts = extensions.core_vehicle_manager.getPlayerVehicleData().chosenParts
-  if parts.acc_angelo234 ~= "acc_angelo234" then return end
+  
+  return parts.acc_angelo234 == "acc_angelo234"
+end
+
+local function toggleACCSystem()
+  if not checkACCSystemPartExists() then return end
 
   acc_on = not acc_on
   
@@ -119,6 +127,24 @@ local function toggleACCSystem()
   end
   
   ui_message("Adaptive Cruise Control switched " .. msg)
+end
+
+local function setACCSpeed()
+  if not checkACCSystemPartExists() then return end
+
+  acc_system.setACCSpeed()
+end
+
+local function changeACCSpeed(amt)
+  if not checkACCSystemPartExists() then return end
+
+  acc_system.changeACCSpeed(amt)
+end
+
+local function changeACCFollowingDistance(amt)
+  if not checkACCSystemPartExists() then return end
+
+  acc_system.changeACCFollowingDistance(amt)
 end
 
 --Used for what camera to switch the player to when the player gets out of reverse gear using reverse camera
@@ -140,7 +166,7 @@ local function getAllVehiclesPropertiesFromVELua()
   end
 
   --Get properties of my vehicle
-  my_veh:queueLuaCommand("if input.throttle ~= nil then obj:queueGameEngineLua('throttle_pos_angelo234 = ' .. input.throttle ) end")
+  my_veh:queueLuaCommand("if input.throttle ~= nil then obj:queueGameEngineLua('input_throttle_angelo234 = ' .. input.throttle ) end")
   my_veh:queueLuaCommand('obj:queueGameEngineLua("electrics_values_angelo234 = (\'" .. jsonEncode(electrics.values) .. "\')")')
   my_veh:queueLuaCommand("obj:queueGameEngineLua('angular_speed_angelo234 = ' .. obj:getYawAngularVelocity() )")
   
@@ -154,7 +180,7 @@ local function getAllVehiclesPropertiesFromVELua()
   return veh_accs_angelo234 ~= nil
     and #electrics_values_angelo234 ~= 0
     and angular_speed_angelo234 ~= nil
-    and throttle_pos_angelo234 ~= nil
+    and input_throttle_angelo234 ~= nil
     and gearbox_mode_angelo234 ~= nil and gearbox_mode_angelo234 ~= "null" and type(gearbox_mode_angelo234) ~= "table"
 end
 
@@ -225,19 +251,35 @@ local function onUpdate(dt)
   
   local veh_props = extra_utils.getVehicleProperties(my_veh)
   
-  local vehs_in_same_lane_in_front_table = extra_utils.getNearbyVehiclesInSameLane(veh_props, aeb_params.vehicle_search_radius, aeb_params.min_distance_from_car, true, false)
-
-  if parts.acc_angelo234 == "acc_angelo234" and acc_on then
-    acc_system.update(dt, my_veh, vehs_in_same_lane_in_front_table, system_params, aeb_params)
-  end
-
-  if parts.forward_aeb_angelo234 == "forward_aeb_angelo234" and fwd_aeb_on then
-    aeb_system.update(dt, my_veh, vehs_in_same_lane_in_front_table, system_params, aeb_params, beeper_params) 
+  local vehs_in_same_lane_in_front_table = nil 
+  
+  --If either part exists then get nearby vehicles
+  if parts.acc_angelo234 == "acc_angelo234" or parts.forward_aeb_angelo234 == "forward_aeb_angelo234" then
+    vehs_in_same_lane_in_front_table = extra_utils.getNearbyVehiclesInSameLane(veh_props, aeb_params.vehicle_search_radius, aeb_params.min_distance_from_car, true, false)
   end
   
+  --Update Adaptive Cruise Control
+  if parts.acc_angelo234 == "acc_angelo234" then
+    if acc_on then
+      acc_system.update(dt, my_veh, system_params, aeb_params, vehs_in_same_lane_in_front_table)
+    else
+      if last_acc_on then
+        acc_system.update(nil, my_veh)
+      end
+    end   
+  end
+
+  --Update Forward AEB
+  if parts.forward_aeb_angelo234 == "forward_aeb_angelo234" and fwd_aeb_on then
+    aeb_system.update(dt, my_veh, system_params, aeb_params, beeper_params, vehs_in_same_lane_in_front_table, acc_on) 
+  end
+  
+  --Update Reverse AEB
   if parts.reverse_aeb_angelo234 == "reverse_aeb_angelo234" and rev_aeb_on then
     parking_aeb_system.update(dt, my_veh, system_params, parking_lines_params, rev_aeb_params, beeper_params)
   end
+  
+  last_acc_on = acc_on
 end
 
 M.onExtensionLoaded = onExtensionLoaded
@@ -245,6 +287,9 @@ M.onVehicleSwitched = onVehicleSwitched
 M.toggleFWDAEBSystem = toggleFWDAEBSystem
 M.toggleREVAEBSystem = toggleREVAEBSystem
 M.toggleACCSystem = toggleACCSystem
+M.setACCSpeed = setACCSpeed
+M.changeACCSpeed = changeACCSpeed
+M.changeACCFollowingDistance = changeACCFollowingDistance 
 M.onCameraModeChanged = onCameraModeChanged
 M.onUpdate = onUpdate
 

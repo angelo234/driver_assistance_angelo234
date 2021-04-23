@@ -330,56 +330,30 @@ local function getVehicleCollidingWithInLane(dt, my_veh_props, data_table, later
     local this_rel_vel = (my_veh_props.velocity - other_veh_props.velocity):length()
 
     --Deactivate system if this car is slower than other car
-    if this_rel_vel <= 0 then
-      return distance, rel_vel
-    end
+    if this_rel_vel > 0 then
+      --Capping to 5 seconds to prevent too much error in predicting position
+      local ttc = math.min(data.distance / this_rel_vel, 5)
+
+      local my_lat_dist_from_wp = data.my_veh_wps_props.lat_dist_from_wp
+      local other_lat_dist_from_wp = data.other_veh_wps_props.lat_dist_from_wp
+
+      if my_lat_dist_from_wp - my_veh_props.bb:getHalfExtents().x < other_lat_dist_from_wp + other_veh_props.bb:getHalfExtents().x
+      and my_lat_dist_from_wp + my_veh_props.bb:getHalfExtents().x > other_lat_dist_from_wp - other_veh_props.bb:getHalfExtents().x
+      then
+        --Collision may be possible
+      
+        --If this distance is less than current min distance
+        --then this is new min distance
+        if data.distance <= distance then
+          distance = data.distance
+          rel_vel = this_rel_vel
   
-    --Capping to 5 seconds to prevent too much error in predicting position
-    local ttc = math.min(data.distance / this_rel_vel, 5)
-       
-    local my_wp_dir = (data.my_veh_wps_props.end_wp_pos - data.my_veh_wps_props.start_wp_pos):normalized()
-    local my_wp_perp_dir_right = vec3(my_wp_dir.y, -my_wp_dir.x)
-    
-    local other_wp_dir = (data.other_veh_wps_props.end_wp_pos - data.other_veh_wps_props.start_wp_pos):normalized()
-    local other_wp_perp_dir_right = vec3(other_wp_dir.y, -other_wp_dir.x)
-    
-    local my_lat_dist_from_wp = data.my_veh_wps_props.lat_dist_from_wp
-    local other_lat_dist_from_wp = data.other_veh_wps_props.lat_dist_from_wp
-    
-    local my_speed_in_wp_perp_dir = my_veh_props.velocity:dot(my_wp_perp_dir_right)
-    local other_speed_in_wp_perp_dir = other_veh_props.velocity:dot(other_wp_perp_dir_right)
-
-    if my_veh_side == "right" then
-      my_lat_dist_from_wp = my_lat_dist_from_wp + my_speed_in_wp_perp_dir * ttc
-    else
-      my_lat_dist_from_wp = -my_lat_dist_from_wp + my_speed_in_wp_perp_dir * ttc
-    end
-    
-    if other_veh_side == "right" then
-      other_lat_dist_from_wp = other_lat_dist_from_wp + other_speed_in_wp_perp_dir * ttc
-    else
-      other_lat_dist_from_wp = -other_lat_dist_from_wp + other_speed_in_wp_perp_dir * ttc
-    end
-        
-    --print("my_lat_dist_from_wp: " .. my_lat_dist_from_wp)
-    --print("other_lat_dist_from_wp: " .. other_lat_dist_from_wp) 
-        
-    if my_lat_dist_from_wp - my_veh_props.bb:getHalfExtents().x < other_lat_dist_from_wp + other_veh_props.bb:getHalfExtents().x
-    and my_lat_dist_from_wp + my_veh_props.bb:getHalfExtents().x > other_lat_dist_from_wp - other_veh_props.bb:getHalfExtents().x
-    then
-      --Collision may be possible
-    
-      --If this distance is less than current min distance
-      --then this is new min distance
-      if data.distance <= distance then
-        distance = data.distance
-        rel_vel = this_rel_vel
-
-        curr_veh_in_path = data.other_veh
-        
-        debugDrawer:drawSphere((other_veh_props.center_pos):toPoint3F(), 1, ColorF(1,0,0,1))      
+          curr_veh_in_path = data.other_veh
+          
+          --debugDrawer:drawSphere((other_veh_props.center_pos):toPoint3F(), 1, ColorF(1,0,0,1))      
+        end
       end
-    end   
+    end
   end
 
   return distance, rel_vel
@@ -396,7 +370,7 @@ local function pollFrontSensors(dt, my_veh_props, system_params, aeb_params)
 
   local static_min_dist = processRayCasts(my_veh_props, static_hit)
 
-  static_min_dist = static_min_dist - aeb_params.sensor_offset_forward
+  static_min_dist = static_min_dist - aeb_params.sensor_offset_forward - 0.2
 
   return static_min_dist
 end
@@ -418,14 +392,13 @@ end
 
 local release_brake_confidence_level = 0
 
-local function performEmergencyBraking(dt, veh, time_before_braking, speed, aeb_params)
-  local throttle = electrics_values_angelo234["throttle"]
-
+local function performEmergencyBraking(dt, veh, aeb_params, time_before_braking, speed, acc_on)
   --If throttle pedal is about half pressed then perform braking
   --But if throttle is highly requested then override braking
-  if throttle > 0.5 then
+  if input_throttle_angelo234 > 0.5 then
     if system_active then
       veh:queueLuaCommand("input.event('brake', 0, 2)")
+      veh:queueLuaCommand("electrics.values.throttleOverride = " .. input_throttle_angelo234)
       system_active = false 
     end
     return
@@ -441,18 +414,26 @@ local function performEmergencyBraking(dt, veh, time_before_braking, speed, aeb_
 
   --Maximum Braking
   if time_before_braking <= 0 then
-    if throttle > 0.1 then
-      veh:queueLuaCommand("input.event('throttle', 0, 2)")
+    if input_throttle_angelo234 > 0.1 then
+      veh:queueLuaCommand("electrics.values.throttleOverride = 0")
     end   
     veh:queueLuaCommand("input.event('brake', 1, 2)")
+    
+    --Turn off Adaptive Cruise Control if active
+    if acc_on then
+      scripts_driver__assistance__angelo234_extension.toggleACCSystem()
+    end
+
     system_active = true
 
     release_brake_confidence_level = 0
-  else    
+  else
+    --veh:queueLuaCommand("electrics.values.throttleOverride = nil")
+      
     release_brake_confidence_level = release_brake_confidence_level + 1
 
     --Only release brakes if confident
-    if release_brake_confidence_level >= 15 then
+    if release_brake_confidence_level >= 5 then
       if system_active then
         veh:queueLuaCommand("input.event('brake', 0, 2)")
         system_active = false
@@ -477,7 +458,7 @@ local function calculateTimeBeforeBraking(distance, vel_rel, system_params, aeb_
   return time_before_braking
 end
 
-local function update(dt, veh, vehs_in_same_lane_table, system_params, aeb_params, beeper_params)
+local function update(dt, veh, system_params, aeb_params, beeper_params, vehs_in_same_lane_table, acc_on)
   local veh_props = extra_utils.getVehicleProperties(veh)
   
   local in_reverse = electrics_values_angelo234["reverse"]
@@ -521,7 +502,7 @@ local function update(dt, veh, vehs_in_same_lane_table, system_params, aeb_param
   local vel_rel = 0
 
   --Do static object detection up to certain speed
-  if veh_props.speed < 14 then
+  if veh_props.speed < 11.11 then
     --Do static object raycasting
     for i = 1, aeb_params.sensors_polled_per_iteration do
       if static_sensor_id == aeb_params.num_of_sensors - 1 then
@@ -571,9 +552,9 @@ local function update(dt, veh, vehs_in_same_lane_table, system_params, aeb_param
   if veh_props.speed > 11.11 then
     soundBeepers(dt, time_before_braking, vel_rel, beeper_params)
   end
-  
+
   --Use distance, relative velocity, and max acceleration to determine when to apply emergency braking
-  performEmergencyBraking(dt, veh, time_before_braking, veh_props.speed, aeb_params)
+  performEmergencyBraking(dt, veh, aeb_params, time_before_braking, veh_props.speed, acc_on)
 end
 
 M.update = update
