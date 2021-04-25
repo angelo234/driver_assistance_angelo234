@@ -5,6 +5,8 @@ local M = {}
 local control_systems = require("controlSystems") -- for newPIDStandard
 local extra_utils = require('scripts/driver_assistance_angelo234/extraUtils')
 
+local acc_on = false
+
 --PID for getting vehicle up to desired speed when no car in front
 --Input = desired velocity, Output = acceleration
 local speed_pid = newPIDStandard(0.3, 2, 0.0, 0, 1, 1, 1, 0, 2)
@@ -12,14 +14,46 @@ local speed_smooth = newTemporalSmoothing(200, 200)
 
 --PID for setting car to following distance
 --Input = desired distance, Output = acceleration
-local dist_pid = newPIDStandard(0.1, 2, 0, -9.81 * 0.3, 9.81 * 0.3)
+local dist_pid = newPIDStandard(0.06, 2, 1, -0.3, 0.3)
 local dist_smooth = newTemporalSmoothing(200, 200)
+
+local target_acceleration = 2.5
 
 local target_speed = 16.67
 local ramped_target_speed = 0
 
 local following_time = 1
 
+local function switchOnOffSystem(on)
+  if on == acc_on then return end
+  
+  acc_on = on
+
+  local msg = nil
+  
+  if acc_on then
+    msg = "ON"
+  else
+    msg = "OFF"
+    
+    speed_pid:reset()
+    speed_smooth:reset()
+    dist_pid:reset()
+    dist_smooth:reset()
+    
+    local veh = be:getPlayerVehicle(0)
+    veh:queueLuaCommand("electrics.values.throttleOverride = nil")
+    veh:queueLuaCommand("electrics.values.brakeOverride = nil")
+    
+    ramped_target_speed = 0
+  end
+  
+  ui_message("Adaptive Cruise Control switched " .. msg)
+end
+
+local function toggleSystem()
+  switchOnOffSystem(not acc_on)
+end
 
 local function setACCSpeed()
   local my_veh = be:getPlayerVehicle(0)
@@ -112,36 +146,41 @@ local function getVehicleAheadInLane(dt, my_veh_props, data_table)
     
     --Other vehicle properties
     local other_veh_props = extra_utils.getVehicleProperties(data.other_veh)
-
-    local this_rel_vel = (my_veh_props.velocity - other_veh_props.velocity):length()
-
-    --Capping to 5 seconds to prevent too much error in predicting position
-    local ttc = math.min(data.distance / this_rel_vel, 5)
-
-    local my_lat_dist_from_wp = data.my_veh_wps_props.lat_dist_from_wp
-    local other_lat_dist_from_wp = data.other_veh_wps_props.lat_dist_from_wp
-
-    if my_lat_dist_from_wp - my_veh_props.bb:getHalfExtents().x < other_lat_dist_from_wp + other_veh_props.bb:getHalfExtents().x
-    and my_lat_dist_from_wp + my_veh_props.bb:getHalfExtents().x > other_lat_dist_from_wp - other_veh_props.bb:getHalfExtents().x
-    then
-      --This may be the car to adapt to
     
-      --If this distance is less than current min distance
-      --then this is new min distance
-      if data.distance <= distance then
-        distance = data.distance
-        rel_vel = this_rel_vel
-
-        curr_veh_in_path = data.other_veh
-        
-        debugDrawer:drawSphere((other_veh_props.center_pos):toPoint3F(), 1, ColorF(1,0,0,1))      
-      end
-    else
-      debugDrawer:drawTextAdvanced((other_veh_props.front_pos):toPoint3F(), String("Delta distance: " .. math.abs(my_lat_dist_from_wp - other_lat_dist_from_wp)),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
+    --Vehicle must be facing in same dir as my vehicle
+    if math.acos(my_veh_props.dir:dot(other_veh_props.dir)) < math.pi / 2.0 then
+    
+      local this_rel_vel = (my_veh_props.velocity - other_veh_props.velocity):length()
   
-    end   
+      --Capping to 5 seconds to prevent too much error in predicting position
+      local ttc = math.min(data.distance / this_rel_vel, 5)
+  
+      local my_lat_dist_from_wp = data.my_veh_wps_props.lat_dist_from_wp
+      local other_lat_dist_from_wp = data.other_veh_wps_props.lat_dist_from_wp
+  
+      if my_lat_dist_from_wp - my_veh_props.bb:getHalfExtents().x < other_lat_dist_from_wp + other_veh_props.bb:getHalfExtents().x
+      and my_lat_dist_from_wp + my_veh_props.bb:getHalfExtents().x > other_lat_dist_from_wp - other_veh_props.bb:getHalfExtents().x
+      then
+        --This may be the car to adapt to
+      
+        --If this distance is less than current min distance
+        --then this is new min distance
+        if data.distance <= distance then
+          distance = data.distance
+          rel_vel = this_rel_vel
+  
+          curr_veh_in_path = data.other_veh    
+        end
+      else
+        debugDrawer:drawTextAdvanced((other_veh_props.front_pos):toPoint3F(), String("Delta distance: " .. math.abs(my_lat_dist_from_wp - other_lat_dist_from_wp)),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
+      end
+    end
   end
-
+  
+  if curr_veh_in_path then
+    debugDrawer:drawSphere((vec3(curr_veh_in_path:getPosition())):toPoint3F(), 1, ColorF(1,0,0,1))   
+  end
+  
   return distance, rel_vel
 end
 
@@ -149,34 +188,25 @@ local function accelerateVehicle(dt, veh, output)
   if output > 0 then
     --Accelerate
     veh:queueLuaCommand("electrics.values.throttleOverride = " .. output)
-
-    veh:queueLuaCommand("input.event('brake', 0, 2)")   
+    veh:queueLuaCommand("electrics.values.brakeOverride = 0")     
   else
     --Brake
-    veh:queueLuaCommand("input.event('brake'," .. -output .. ", 2)")
+    veh:queueLuaCommand("electrics.values.brakeOverride = " .. -output)
     veh:queueLuaCommand("electrics.values.throttleOverride = 0")   
   end
 end
 
 --Maintaining distance to vehicle using PID controller
-local function maintainDistanceFromVehicleAhead(dt, veh, veh_props, aeb_params, distance, vel_rel, following_distance)
-  --minimum of 5 meter following distance
-  --local output = -1.0 / acc_following_time * (0 + (following_distance - distance) - vel_rel)
-  
-  --return output
-
-  --print(distance)
-
-  --minimum of 5 meter following distance
-  --local following_distance = math.max(veh_props.speed * acc_following_time, 5)
-
-  --print(following_distance)
-
+local function maintainDistanceFromVehicleAhead(dt, veh, veh_props, aeb_params, distance, vel_rel, following_distance, only_braking)
   local output = dist_pid:get(-(distance), -following_distance, dt)
 
   output = dist_smooth:getUncapped(output, dt)
 
-  accelerateVehicle(dt, veh, output)
+  if (only_braking and output < 0) or not only_braking then
+    accelerateVehicle(dt, veh, output)
+  end
+  
+  return output
 end
 
 local function maintainSetSpeed(dt, veh, veh_props, aeb_params)
@@ -184,9 +214,9 @@ local function maintainSetSpeed(dt, veh, veh_props, aeb_params)
 
   --ramp up/down our target speed with our desired target acceleration to avoid integral wind-up
   if ramped_target_speed ~= target_speed then
-    local upperLimit = target_speed > ramped_target_speed and target_speed or ramped_target_speed
-    local lowerLimit = target_speed < ramped_target_speed and target_speed or ramped_target_speed
-    ramped_target_speed = clamp(ramped_target_speed + fsign(target_speed - ramped_target_speed) * 3 * dt, lowerLimit, upperLimit)
+    local upper_limit = target_speed > ramped_target_speed and target_speed or ramped_target_speed
+    local lower_limit = target_speed < ramped_target_speed and target_speed or ramped_target_speed
+    ramped_target_speed = clamp(ramped_target_speed + fsign(target_speed - ramped_target_speed) * target_acceleration * dt, lower_limit, upper_limit)
   end
 
   local currentSpeed = veh_props.speed
@@ -196,22 +226,10 @@ local function maintainSetSpeed(dt, veh, veh_props, aeb_params)
   accelerateVehicle(dt, veh, output)
 
   --print("Desired Acceleration: " .. output)
-
 end
 
-local x = 1
-
 local function update(dt, veh, system_params, aeb_params, vehs_in_same_lane_table)
-  if not dt then
-    speed_pid:reset()
-    speed_smooth:reset()
-    dist_pid:reset()
-    dist_smooth:reset()
-    veh:queueLuaCommand("electrics.values.throttleOverride = nil") 
-    
-    ramped_target_speed = 0
-    return
-  end
+  if not acc_on then return end
   
   local veh_props = extra_utils.getVehicleProperties(veh)
   
@@ -227,11 +245,23 @@ local function update(dt, veh, system_params, aeb_params, vehs_in_same_lane_tabl
   
   --Deactivate system based on any of these variables
   if in_reverse == nil or in_reverse == 1 or gear_selected == nil
-    or gear_selected == 'P' or gear_selected == 0 or input_throttle_angelo234 > 0 then
-    
-    veh:queueLuaCommand("electrics.values.throttleOverride = " .. input_throttle_angelo234)
+    or gear_selected == 'P' or gear_selected == 0 then
     return
   end
+
+  --If user presses any pedals, then deactivate system
+  
+  if input_throttle_angelo234 > 0 then
+    veh:queueLuaCommand("electrics.values.throttleOverride = " .. input_throttle_angelo234)
+  end
+  
+  --Turn off ACC system if braking
+  if input_brake_angelo234 > 0 then
+    veh:queueLuaCommand("electrics.values.brakeOverride = " .. input_brake_angelo234)  
+    scripts_driver__assistance__angelo234_extension.toggleACCSystem()    
+  end
+  
+  if input_throttle_angelo234 > 0 or input_brake_angelo234 > 0 then return end
 
   local distance = 9999
   local vel_rel = 0
@@ -243,34 +273,42 @@ local function update(dt, veh, system_params, aeb_params, vehs_in_same_lane_tabl
     distance, vel_rel = getVehicleAheadInLane(dt, veh_props, vehs_in_same_lane_table)
   end
   
+  --5 meter of leeway
+  local following_distance = math.max(veh_props.speed * following_time, 5)
   
-  local following_distance = veh_props.speed * following_time
+  local output = maintainDistanceFromVehicleAhead(dt, veh, veh_props, aeb_params, distance, vel_rel, following_distance, true)
   
-  --If distance less than following distance to maintain and still hasn't reached target speed
-  --use distance PID controller
-  if distance < following_distance * x and veh_props.speed < target_speed then
-    --Use distance, relative velocity, and max acceleration to determine when to apply emergency braking
-    maintainDistanceFromVehicleAhead(dt, veh, veh_props, aeb_params, distance, vel_rel, following_distance)
-
+  print(output)
+  
+  --Don't do other things if braking already
+  if output < 0 then 
     ramped_target_speed = veh_props.speed
     speed_pid:reset()
     speed_smooth:reset()
     
-    x = 1.35
+    return 
+  end
+  
+  --If distance less than following distance to maintain and still hasn't reached target speed
+  --use distance PID controller
+  if distance < following_distance * 1.5 then
+    if veh_props.speed < target_speed then
+      --Use distance, relative velocity, and max acceleration to determine when to apply emergency braking
+      maintainDistanceFromVehicleAhead(dt, veh, veh_props, aeb_params, distance, vel_rel, following_distance, false)
+  
+      ramped_target_speed = veh_props.speed
+      speed_pid:reset()
+      speed_smooth:reset()   
+    end
   else
     --Else use speed PID controller
   
-    maintainSetSpeed(dt, veh, veh_props, aeb_params)
-  
-    --print(distance)
-    dist_pid:reset()
-    dist_smooth:reset()
-    --veh:queueLuaCommand("electrics.values.throttleOverride = nil") 
-    
-    x = 1   
+    maintainSetSpeed(dt, veh, veh_props, aeb_params) 
   end
 end
 
+M.switchOnOffSystem = switchOnOffSystem
+M.toggleSystem = toggleSystem
 M.setACCSpeed = setACCSpeed
 M.changeACCSpeed = changeACCSpeed
 M.changeACCFollowingDistance = changeACCFollowingDistance 

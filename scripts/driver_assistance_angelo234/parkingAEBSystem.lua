@@ -2,11 +2,27 @@ local M = {}
 
 local extra_utils = require('scripts/driver_assistance_angelo234/extraUtils')
 
+local rev_aeb_on = true
+
 local system_active = false
 
 local static_sensor_id = -1
 local prev_min_dist = 9999
 local min_dist = 9999
+
+local function toggleSystem()
+  rev_aeb_on = not rev_aeb_on
+  
+  local msg = nil
+  
+  if rev_aeb_on then
+    msg = "ON"
+  else
+    msg = "OFF"
+  end
+  
+  ui_message("Reverse AEB switched " .. msg)
+end
 
 local function staticCastRay(veh_props, sensorPos, same_ray, parking_sensor_params)
   local hit = nil
@@ -192,6 +208,8 @@ local function performEmergencyBraking(dt, veh, distance, speed, system_params, 
 end
 
 local function update(dt, veh, system_params, parking_lines_params, rev_aeb_params, beeper_params)
+  if not rev_aeb_on then return end
+  
   local veh_props = extra_utils.getVehicleProperties(veh)
   
   local in_reverse = electrics_values_angelo234["reverse"]
@@ -221,6 +239,7 @@ local function update(dt, veh, system_params, parking_lines_params, rev_aeb_para
   performEmergencyBraking(dt, veh, min_dist, veh_props.speed, system_params, rev_aeb_params)
 end
 
+M.toggleSystem = toggleSystem
 M.update = update
 
 return M

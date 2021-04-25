@@ -4,11 +4,30 @@ local M = {}
 
 local extra_utils = require('scripts/driver_assistance_angelo234/extraUtils')
 
-local system_active = false
+local fwd_aeb_on = true
+
+--ready = system not doing anything 
+--braking = AEB active
+--holding = car is stopped and system is holding the brakes 
+local system_state = "ready"
 
 local static_sensor_id = -1
 local prev_static_min_dist = 9999
 local static_min_dist = 9999
+
+local function toggleSystem()
+  fwd_aeb_on = not fwd_aeb_on
+  
+  local msg = nil
+  
+  if fwd_aeb_on then
+    msg = "ON"
+  else
+    msg = "OFF"
+  end
+  
+  ui_message("Forward AEB switched " .. msg)
+end
 
 local function dirToPointSensor(veh_props, init_dir, system_params)
   --Sagitta
@@ -241,44 +260,6 @@ local function checkIfCarsIntersectAtTTC(my_veh_props, other_veh_props, data, la
   --Check for overlap between both bounding boxess
   local overlap = overlapsOBB_OBB(my_veh_pos_future, my_x, my_y, my_z, other_veh_pos_future, other_x, other_y, other_z)
 
-  --[[
-
-  if overlap then
-    --At low speeds, predict if light steering input (0.1 g's laterally) can avoid collision
-    --then deactivate system
-    if my_veh_props.speed < 20 or true then
-      local free_path = getFreePathInLane(my_veh_side, in_wp_middle, lane_width, other_lat_dist_from_wp, 
-      my_veh_props.bb:getHalfExtents().x * 2, other_veh_props.bb:getHalfExtents().x * 2)
-            
-      local turning_acc_vec = nil
-    
-      --print(free_path)
-    
-      if free_path == "left" then
-        turning_acc_vec = vec3(lateral_acc_to_avoid_collision * 9.81 + my_veh_props.acceleration.x, 0, 0)
-      elseif free_path == "right" then
-        turning_acc_vec = vec3(-lateral_acc_to_avoid_collision * 9.81 + my_veh_props.acceleration.x, 0, 0)
-      else
-        return overlap
-      end
-
-      local my_veh_pos_future_turning = extra_utils.getFuturePositionXYWithAcc(my_veh_props, ttc, turning_acc_vec, "front")
-  
-      local my_x, my_y, my_z = getMyVehBoundingBox(my_veh_props, nil)
-  
-      local overlap2 = overlapsOBB_OBB(my_veh_pos_future_turning, my_x, my_y, my_z, other_veh_pos_future, other_x, other_y, other_z)
-
-      my_veh_pos_future_turning.z = my_veh_props.center_pos.z
-      other_veh_pos_future.z = my_veh_props.center_pos.z
-
-      --debugDrawer:drawSphere((my_veh_pos_future_turning):toPoint3F(), 0.5, ColorF(1,0,1,1))
-      --debugDrawer:drawSphere((other_veh_pos_future):toPoint3F(), 0.5, ColorF(1,0,1,1))
-
-      return overlap2
-    end
-  end
-  ]]--
-
   return overlap
 end
 
@@ -337,6 +318,8 @@ local function getVehicleCollidingWithInLane(dt, my_veh_props, data_table, later
       local my_lat_dist_from_wp = data.my_veh_wps_props.lat_dist_from_wp
       local other_lat_dist_from_wp = data.other_veh_wps_props.lat_dist_from_wp
 
+      debugDrawer:drawTextAdvanced((other_veh_props.front_pos):toPoint3F(), String(other_lat_dist_from_wp),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
+
       if my_lat_dist_from_wp - my_veh_props.bb:getHalfExtents().x < other_lat_dist_from_wp + other_veh_props.bb:getHalfExtents().x
       and my_lat_dist_from_wp + my_veh_props.bb:getHalfExtents().x > other_lat_dist_from_wp - other_veh_props.bb:getHalfExtents().x
       then
@@ -392,21 +375,21 @@ end
 
 local release_brake_confidence_level = 0
 
-local function performEmergencyBraking(dt, veh, aeb_params, time_before_braking, speed, acc_on)
+local function performEmergencyBraking(dt, veh, aeb_params, time_before_braking, speed)
   --If throttle pedal is about half pressed then perform braking
   --But if throttle is highly requested then override braking
   if input_throttle_angelo234 > 0.5 then
-    if system_active then
-      veh:queueLuaCommand("input.event('brake', 0, 2)")
-      veh:queueLuaCommand("electrics.values.throttleOverride = " .. input_throttle_angelo234)
-      system_active = false 
+    if system_state == "braking" then
+      veh:queueLuaCommand("electrics.values.brakeOverride = nil")
+      veh:queueLuaCommand("electrics.values.throttleOverride = nil")
+      system_state = "ready" 
     end
     return
   end
   
   --Stop car completely if below certain speed regardless of sensor information
-  if system_active and speed < aeb_params.brake_till_stop_speed then
-    veh:queueLuaCommand("input.event('brake', 1, 2)")
+  if system_state == "braking" and speed < aeb_params.brake_till_stop_speed then
+    veh:queueLuaCommand("electrics.values.brakeOverride = 1")
     return
   end
 
@@ -417,26 +400,24 @@ local function performEmergencyBraking(dt, veh, aeb_params, time_before_braking,
     if input_throttle_angelo234 > 0.1 then
       veh:queueLuaCommand("electrics.values.throttleOverride = 0")
     end   
-    veh:queueLuaCommand("input.event('brake', 1, 2)")
+    veh:queueLuaCommand("electrics.values.brakeOverride = 1")
     
-    --Turn off Adaptive Cruise Control if active
-    if acc_on then
-      scripts_driver__assistance__angelo234_extension.toggleACCSystem()
-    end
+    --Turn off Adaptive Cruise Control
+    scripts_driver__assistance__angelo234_extension.switchOnOffACCSystem(false)
 
-    system_active = true
+    system_state = "braking"
 
     release_brake_confidence_level = 0
   else
-    --veh:queueLuaCommand("electrics.values.throttleOverride = nil")
-      
     release_brake_confidence_level = release_brake_confidence_level + 1
 
     --Only release brakes if confident
     if release_brake_confidence_level >= 5 then
-      if system_active then
-        veh:queueLuaCommand("input.event('brake', 0, 2)")
-        system_active = false
+      if system_state == "braking" then
+        veh:queueLuaCommand("electrics.values.brakeOverride = nil")
+        veh:queueLuaCommand("electrics.values.throttleOverride = nil")
+        
+        system_state = "ready"
       end
     end
   end
@@ -458,7 +439,36 @@ local function calculateTimeBeforeBraking(distance, vel_rel, system_params, aeb_
   return time_before_braking
 end
 
-local function update(dt, veh, system_params, aeb_params, beeper_params, vehs_in_same_lane_table, acc_on)
+local function holdBrakes(veh, veh_props, aeb_params)
+  if veh_props.speed <= aeb_params.min_speed then    
+    if system_state == "braking" then
+      --When coming to a stop with system activated, release brakes but apply parking brake in arcade mode :P
+      if gearbox_mode_angelo234.previousGearboxBehavior == "realistic" then
+        veh:queueLuaCommand("electrics.values.brakeOverride = 1")
+      else
+        --Release brake and apply parking brake
+        veh:queueLuaCommand("electrics.values.brakeOverride = 0")
+        veh:queueLuaCommand("input.event('parkingbrake', 1, 2)")   
+      end
+      veh:queueLuaCommand("electrics.values.throttleOverride = nil")
+      
+      system_state = "holding"    
+    end
+  end
+  
+  --If vehicle held by brake after AEB and user modulates throttle or brake pedal then release brakes
+  if system_state == "holding" and (input_throttle_angelo234 > 0 or input_brake_angelo234 > 0) then
+    veh:queueLuaCommand("electrics.values.brakeOverride = nil")
+    
+    system_state = "ready"
+  end
+
+  return system_state == "holding"
+end
+
+local function update(dt, veh, system_params, aeb_params, beeper_params, vehs_in_same_lane_table)
+  if not fwd_aeb_on then return end
+
   local veh_props = extra_utils.getVehicleProperties(veh)
   
   local in_reverse = electrics_values_angelo234["reverse"]
@@ -473,30 +483,16 @@ local function update(dt, veh, system_params, aeb_params, beeper_params, vehs_in
   
   --Deactivate system based on any of these variables
   if in_reverse == nil or in_reverse == 1 or gear_selected == nil
-    or gear_selected == 'P' or gear_selected == 0 then
-    if system_active then
-      veh:queueLuaCommand("input.event('brake', 0, 2)")  
-      system_active = false 
+    or gear_selected == 'P' or gear_selected == 0 then   
+    if system_state ~= "ready" then
+      veh:queueLuaCommand("electrics.values.brakeOverride = nil")     
+      veh:queueLuaCommand("electrics.values.throttleOverride = nil")  
+      system_state = "ready" 
     end
-
     return
   end
-      
-  if veh_props.speed <= aeb_params.min_speed then    
-    if system_active then
-      --When coming to a stop with system activated, release brakes but apply parking brake in arcade mode :P
-      if gearbox_mode_angelo234.previousGearboxBehavior == "realistic" then
-        veh:queueLuaCommand("input.event('brake', 1, 2)")
-      else
-        --Release brake and apply parking brake
-        veh:queueLuaCommand("input.event('brake', 0, 2)")
-        veh:queueLuaCommand("input.event('parkingbrake', 1, 2)")   
-      end
-      system_active = false     
-    end
-    
-    return   
-  end
+  
+  if holdBrakes(veh, veh_props, aeb_params) then return end
 
   local distance = 9999
   local vel_rel = 0
@@ -554,9 +550,10 @@ local function update(dt, veh, system_params, aeb_params, beeper_params, vehs_in
   end
 
   --Use distance, relative velocity, and max acceleration to determine when to apply emergency braking
-  performEmergencyBraking(dt, veh, aeb_params, time_before_braking, veh_props.speed, acc_on)
+  performEmergencyBraking(dt, veh, aeb_params, time_before_braking, veh_props.speed)
 end
 
+M.toggleSystem = toggleSystem
 M.update = update
 
 return M

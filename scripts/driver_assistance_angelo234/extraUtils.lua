@@ -350,8 +350,6 @@ local function getWaypointStartEndAdvanced(my_veh_props, veh_props, position, pa
     --debugDrawer:drawTextAdvanced((wp2_pos + vec3(0,0,3)):toPoint3F(), String("ID: " .. tostring(i + 1)),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
   end
   
-  
-  
   local angle_between_vehs = acos(my_veh_props.dir:dot(veh_props.dir))
 
   if angle_between_vehs > pi / 2.0 then
@@ -624,9 +622,9 @@ local function getNearbyVehiclesInSameLane(my_veh_props, max_dist, min_distance_
     ColorF(1,0,0,1))
   end
   
-  local my_veh_lane_nums = getLaneNum(my_veh_props, my_veh_wps_props)
+  --local my_veh_lane_nums = getLaneNum(my_veh_props, my_veh_wps_props)
   
-  debugDrawer:drawTextAdvanced((my_veh_props.front_pos):toPoint3F(), String("Lane Num: " .. jsonEncode(my_veh_lane_nums)),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
+  --debugDrawer:drawTextAdvanced((my_veh_props.front_pos):toPoint3F(), String("Lane Num: " .. jsonEncode(my_veh_lane_nums)),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
 
   local other_vehs_data = getNearbyVehicles(my_veh_props, max_dist, min_distance_from_car, in_front)
   local other_vehs_in_my_lane = {}
@@ -639,9 +637,9 @@ local function getNearbyVehiclesInSameLane(my_veh_props, max_dist, min_distance_
     
     past_wps_props_table[other_veh_props.id] = other_veh_wps_props
     
-    local other_veh_lane_nums = getLaneNum(other_veh_props, other_veh_wps_props)
+    --local other_veh_lane_nums = getLaneNum(other_veh_props, other_veh_wps_props)
 
-    debugDrawer:drawTextAdvanced((other_veh_props.front_pos):toPoint3F(), String("Lane Num: " .. jsonEncode(other_veh_lane_nums)),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
+    --debugDrawer:drawTextAdvanced((other_veh_props.front_pos):toPoint3F(), String("Lane Num: " .. jsonEncode(other_veh_lane_nums)),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
 
     other_veh_data.my_veh_wps_props = my_veh_wps_props
     other_veh_data.other_veh_wps_props = other_veh_wps_props
@@ -662,42 +660,8 @@ local function getNearbyVehiclesInSameLane(my_veh_props, max_dist, min_distance_
     if free_path_to_veh and on_same_road then
       debugDrawer:drawTextAdvanced((other_veh_props.front_pos):toPoint3F(), String("On same road"),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
 
-      local same_lane = false
-
-      --If both cars are in two lanes, all lane numbers must match
-      
-      --[[
-      if #my_veh_lane_nums + #other_veh_lane_nums == 4 then
-        if my_veh_lane_nums[1] == other_veh_lane_nums[1] and
-        my_veh_lane_nums[2] == other_veh_lane_nums[2] then
-          same_lane = true
-        end
-      else
-        for i, my_num in pairs(my_veh_lane_nums) do
-          for i, other_num in pairs(other_veh_lane_nums) do
-            if my_num == other_num then
-              same_lane = true
-              break
-            end
-          end
-          if same_lane then break end
-        end
-      end
-      
-      ]]--
-      
-      for i, my_num in pairs(my_veh_lane_nums) do
-        for i, other_num in pairs(other_veh_lane_nums) do
-          if my_num == other_num then
-            same_lane = true
-            break
-          end
-        end
-        if same_lane then break end
-      end
-
-      --In same lane or either vehicle in middle of road and my vehicle speed is >= to other
-      if (my_in_wp_middle or other_in_wp_middle or (same_lane and on_same_road)) then
+      --In same road and my vehicle speed is >= to other
+      if on_same_road then
         if only_pos_rel_vel then
           if speed_rel >= 0 then
             table.insert(other_vehs_in_my_lane, other_veh_data)

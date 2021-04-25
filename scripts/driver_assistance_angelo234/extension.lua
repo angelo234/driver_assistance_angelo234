@@ -25,12 +25,6 @@ local beeper_params = nil
 M.curr_camera_mode = "orbit"
 M.prev_camera_mode = "orbit"
 
-local fwd_aeb_on = true
-local rev_aeb_on = true
-local acc_on = false
-
-local last_acc_on = false
-
 local function init(player)
   local veh = be:getPlayerVehicle(player)
   
@@ -63,86 +57,52 @@ local function onVehicleSwitched(oid, nid, player)
   init(player)
 end
 
---Functions called with key binding
-local function toggleFWDAEBSystem()
-  if not extensions.core_vehicle_manager.getPlayerVehicleData() then return end
-  
-  --Only change status if part actually installed
-  local parts = extensions.core_vehicle_manager.getPlayerVehicleData().chosenParts
-  if parts.forward_aeb_angelo234 ~= "forward_aeb_angelo234" then return end
-  
-  fwd_aeb_on = not fwd_aeb_on
-  
-  local msg = nil
-  
-  if fwd_aeb_on then
-    msg = "ON"
-  else
-    msg = "OFF"
-  end
-  
-  ui_message("Forward AEB switched " .. msg)
-end
-
-local function toggleREVAEBSystem()
-  if not extensions.core_vehicle_manager.getPlayerVehicleData() then return end
-  
-  --Only change status if part actually installed
-  local parts = extensions.core_vehicle_manager.getPlayerVehicleData().chosenParts
-  if parts.reverse_aeb_angelo234 ~= "reverse_aeb_angelo234" then return end
-
-  rev_aeb_on = not rev_aeb_on
-  
-  local msg = nil
-  
-  if rev_aeb_on then
-    msg = "ON"
-  else
-    msg = "OFF"
-  end
-  
-  ui_message("Reverse AEB switched " .. msg)
-end
-
-local function checkACCSystemPartExists()
+local function checkIfPartExists(part)
   if not extensions.core_vehicle_manager.getPlayerVehicleData() then return false end
 
   --Only change status if part actually installed
   local parts = extensions.core_vehicle_manager.getPlayerVehicleData().chosenParts
   
-  return parts.acc_angelo234 == "acc_angelo234"
+  return parts[part] == part
+end
+
+--Functions called with key binding
+local function toggleFWDAEBSystem()
+  if not checkIfPartExists("forward_aeb_angelo234") then return end
+  
+  aeb_system.toggleSystem()
+end
+
+local function toggleREVAEBSystem()
+  if not checkIfPartExists("reverse_aeb_angelo234") then return end
+
+  parking_aeb_system.toggleSystem()
+end
+
+local function switchOnOffACCSystem(on)
+  acc_system.switchOnOffSystem(on)
 end
 
 local function toggleACCSystem()
-  if not checkACCSystemPartExists() then return end
+  if not checkIfPartExists("acc_angelo234") then return end
 
-  acc_on = not acc_on
-  
-  local msg = nil
-  
-  if acc_on then
-    msg = "ON"
-  else
-    msg = "OFF"
-  end
-  
-  ui_message("Adaptive Cruise Control switched " .. msg)
+  acc_system.toggleSystem()
 end
 
 local function setACCSpeed()
-  if not checkACCSystemPartExists() then return end
+  if not checkIfPartExists("acc_angelo234") then return end
 
   acc_system.setACCSpeed()
 end
 
 local function changeACCSpeed(amt)
-  if not checkACCSystemPartExists() then return end
+  if not checkIfPartExists("acc_angelo234") then return end
 
   acc_system.changeACCSpeed(amt)
 end
 
 local function changeACCFollowingDistance(amt)
-  if not checkACCSystemPartExists() then return end
+  if not checkIfPartExists("acc_angelo234") then return end
 
   acc_system.changeACCFollowingDistance(amt)
 end
@@ -167,6 +127,7 @@ local function getAllVehiclesPropertiesFromVELua()
 
   --Get properties of my vehicle
   my_veh:queueLuaCommand("if input.throttle ~= nil then obj:queueGameEngineLua('input_throttle_angelo234 = ' .. input.throttle ) end")
+  my_veh:queueLuaCommand("if input.brake ~= nil then obj:queueGameEngineLua('input_brake_angelo234 = ' .. input.brake ) end")
   my_veh:queueLuaCommand('obj:queueGameEngineLua("electrics_values_angelo234 = (\'" .. jsonEncode(electrics.values) .. "\')")')
   my_veh:queueLuaCommand("obj:queueGameEngineLua('angular_speed_angelo234 = ' .. obj:getYawAngularVelocity() )")
   
@@ -181,6 +142,7 @@ local function getAllVehiclesPropertiesFromVELua()
     and #electrics_values_angelo234 ~= 0
     and angular_speed_angelo234 ~= nil
     and input_throttle_angelo234 ~= nil
+    and input_brake_angelo234 ~= nil
     and gearbox_mode_angelo234 ~= nil and gearbox_mode_angelo234 ~= "null" and type(gearbox_mode_angelo234) ~= "table"
 end
 
@@ -260,32 +222,25 @@ local function onUpdate(dt)
   
   --Update Adaptive Cruise Control
   if parts.acc_angelo234 == "acc_angelo234" then
-    if acc_on then
-      acc_system.update(dt, my_veh, system_params, aeb_params, vehs_in_same_lane_in_front_table)
-    else
-      if last_acc_on then
-        acc_system.update(nil, my_veh)
-      end
-    end   
+    acc_system.update(dt, my_veh, system_params, aeb_params, vehs_in_same_lane_in_front_table) 
   end
 
   --Update Forward AEB
-  if parts.forward_aeb_angelo234 == "forward_aeb_angelo234" and fwd_aeb_on then
-    aeb_system.update(dt, my_veh, system_params, aeb_params, beeper_params, vehs_in_same_lane_in_front_table, acc_on) 
+  if parts.forward_aeb_angelo234 == "forward_aeb_angelo234" then
+    aeb_system.update(dt, my_veh, system_params, aeb_params, beeper_params, vehs_in_same_lane_in_front_table) 
   end
   
   --Update Reverse AEB
-  if parts.reverse_aeb_angelo234 == "reverse_aeb_angelo234" and rev_aeb_on then
+  if parts.reverse_aeb_angelo234 == "reverse_aeb_angelo234" then
     parking_aeb_system.update(dt, my_veh, system_params, parking_lines_params, rev_aeb_params, beeper_params)
   end
-  
-  last_acc_on = acc_on
 end
 
 M.onExtensionLoaded = onExtensionLoaded
 M.onVehicleSwitched = onVehicleSwitched
 M.toggleFWDAEBSystem = toggleFWDAEBSystem
 M.toggleREVAEBSystem = toggleREVAEBSystem
+M.switchOnOffACCSystem = switchOnOffACCSystem
 M.toggleACCSystem = toggleACCSystem
 M.setACCSpeed = setACCSpeed
 M.changeACCSpeed = changeACCSpeed
