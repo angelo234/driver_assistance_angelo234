@@ -23,6 +23,7 @@
   "licenseName":"angelo234",
   "model":"sbr",
   "parts":{
+	"acc_angelo234":"acc_angelo234",
     "backup_cam_angelo234":"backup_cam_angelo234",
     "brakepad_F":"brakepad_F_semi_race",
     "brakepad_R":"brakepad_R_semi_race",

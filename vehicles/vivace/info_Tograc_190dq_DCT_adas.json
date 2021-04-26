@@ -1,0 +1,44 @@
+{
+  "0-100 km/h":6.9,
+  "0-100 mph":19.2,
+  "0-120 mph":0,
+  "0-200 km/h":41.3,
+  "0-60 mph":6.5,
+  "100-0 km/h":36.6,
+  "100-200 km/h":34.4,
+  "60-0 mph":112.1,
+  "60-100 mph":12.7,
+  "BoundingBox":[
+    [
+      -0.85,
+      -1.798,
+      -0.263
+    ],
+    [
+      1.17,
+      2.489,
+      1.217
+    ]
+  ],
+  "Braking G":1.075,
+  "Config Type":"Factory",
+  "Configuration":"Tograc 190dq (DCT)",
+  "Description":"Sport crossover model with a more powerful 4-cylinder diesel, all-wheel drive, and advanced driver assistance systems",
+  "Drivetrain":"AWD",
+  "Fuel Type":"Diesel",
+  "Induction Type":"Turbo",
+  "Off-Road Score":32,
+  "Performance Class":"0",
+  "Population":7000,
+  "Power":192,
+  "PowerPeakRPM":"3500 - 4000",
+  "Propulsion":"ICE",
+  "Top Speed":58.9119735,
+  "Torque":405,
+  "TorquePeakRPM":"1650 - 3300",
+  "Transmission":"DCT",
+  "Value":34200,
+  "Weight":1635,
+  "Weight/Power":8.515625,
+  "default_color":"Bleu France"
+}

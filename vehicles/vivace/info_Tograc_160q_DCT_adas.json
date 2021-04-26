@@ -1,0 +1,43 @@
+{
+  "0-100 km/h":8.9,
+  "0-100 mph":25.8,
+  "0-120 mph":0,
+  "0-60 mph":8.3,
+  "100-0 km/h":36.4,
+  "60-0 mph":111.4,
+  "60-100 mph":17.5,
+  "60-120 mph":0,
+  "BoundingBox":[
+    [
+      -0.85,
+      -1.798,
+      -0.288
+    ],
+    [
+      1.17,
+      2.489,
+      1.217
+    ]
+  ],
+  "Braking G":1.081,
+  "Config Type":"Factory",
+  "Configuration":"Tograc 160Q (DCT)",
+  "Description":"Crossover variant with a 4-cylinder engine, all-wheel drive, and advanced driver assistance systems",
+  "Drivetrain":"AWD",
+  "Fuel Type":"Gasoline",
+  "Induction Type":"Turbo",
+  "Off-Road Score":38,
+  "Performance Class":"0",
+  "Population":7500,
+  "Power":163,
+  "PowerPeakRPM":"5550 - 6250",
+  "Propulsion":"ICE",
+  "Top Speed":54.2020126,
+  "Torque":265,
+  "TorquePeakRPM":"1250 - 3300",
+  "Transmission":"DCT",
+  "Value":26600,
+  "Weight":1595,
+  "Weight/Power":9.78527607,
+  "default_color":"Bronze"
+}

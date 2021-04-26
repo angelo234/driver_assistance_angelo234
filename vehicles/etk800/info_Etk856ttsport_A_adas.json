@@ -1,0 +1,46 @@
+{
+  "0-100 km/h":4.3,
+  "0-100 mph":9.5,
+  "0-120 mph":15.9,
+  "0-200 km/h":14.9,
+  "0-60 mph":4.1,
+  "100-0 km/h":35.8,
+  "100-200 km/h":10.6,
+  "60-0 mph":109.7,
+  "60-100 mph":5.4,
+  "60-120 mph":11.3,
+  "Body Style":"Wagon",
+  "BoundingBox":[
+    [
+      -0.69,
+      -2.05,
+      -0.23
+    ],
+    [
+      1.35,
+      2.62,
+      1.165
+    ]
+  ],
+  "Braking G":1.098,
+  "Config Type":"Factory",
+  "Configuration":"856 ttSport (A)",
+  "Description":"Sport touring model with turbocharged 6-cylinder engine and advanced driver assistance systems",
+  "Drivetrain":"RWD",
+  "Fuel Type":"Gasoline",
+  "Induction Type":"Turbo",
+  "Off-Road Score":27,
+  "Performance Class":"8",
+  "Population":3500,
+  "Power":338,
+  "PowerPeakRPM":"5150 - 6400",
+  "Propulsion":"ICE",
+  "Top Speed":69.3365256,
+  "Torque":480,
+  "TorquePeakRPM":"1700 - 5000",
+  "Transmission":"Automatic",
+  "Value":57000,
+  "Weight":1610,
+  "Weight/Power":4.76331361,
+  "default_color":"Electric Blue"
+}
