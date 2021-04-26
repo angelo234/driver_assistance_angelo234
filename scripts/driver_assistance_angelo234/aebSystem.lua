@@ -15,6 +15,10 @@ local static_sensor_id = -1
 local prev_static_min_dist = 9999
 local static_min_dist = 9999
 
+local function getSystemOnOff()
+  return fwd_aeb_on
+end
+
 local function toggleSystem()
   fwd_aeb_on = not fwd_aeb_on
   
@@ -95,7 +99,7 @@ local function staticCastRay(veh_props, sensor_pos, same_ray, system_params, aeb
   --local dest = veh_props.dir * aeb_params.sensor_max_distance + pos
 
   --use castRayDebug to show lines
-  hit = castRayDebug(pos, dest, true, true)
+  hit = castRay(pos, dest, true, true)
 
   if hit == nil then return nil end
 
@@ -318,7 +322,7 @@ local function getVehicleCollidingWithInLane(dt, my_veh_props, data_table, later
       local my_lat_dist_from_wp = data.my_veh_wps_props.lat_dist_from_wp
       local other_lat_dist_from_wp = data.other_veh_wps_props.lat_dist_from_wp
 
-      debugDrawer:drawTextAdvanced((other_veh_props.front_pos):toPoint3F(), String(other_lat_dist_from_wp),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
+      --debugDrawer:drawTextAdvanced((other_veh_props.front_pos):toPoint3F(), String(other_lat_dist_from_wp),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
 
       if my_lat_dist_from_wp - my_veh_props.bb:getHalfExtents().x < other_lat_dist_from_wp + other_veh_props.bb:getHalfExtents().x
       and my_lat_dist_from_wp + my_veh_props.bb:getHalfExtents().x > other_lat_dist_from_wp - other_veh_props.bb:getHalfExtents().x
@@ -447,8 +451,7 @@ local function holdBrakes(veh, veh_props, aeb_params)
         veh:queueLuaCommand("electrics.values.brakeOverride = 1")
       else
         --Release brake and apply parking brake
-        veh:queueLuaCommand("electrics.values.brakeOverride = 0")
-        veh:queueLuaCommand("input.event('parkingbrake', 1, 2)")   
+        veh:queueLuaCommand("electrics.values.brakeOverride = 0") 
       end
       veh:queueLuaCommand("electrics.values.throttleOverride = nil")
       
@@ -518,7 +521,7 @@ local function update(dt, veh, system_params, aeb_params, beeper_params, vehs_in
   end
 
   --If speed less than certain value, use different AEB system (not using lane lines)
-  if veh_props.speed < 4.2 then
+  if veh_props.speed < 8.33 then
     --Get nearby vehicles
     local data = extra_utils.getNearbyVehicles(veh_props, aeb_params.vehicle_search_radius, 0, true)
     
@@ -553,6 +556,7 @@ local function update(dt, veh, system_params, aeb_params, beeper_params, vehs_in
   performEmergencyBraking(dt, veh, aeb_params, time_before_braking, veh_props.speed)
 end
 
+M.getSystemOnOff = getSystemOnOff
 M.toggleSystem = toggleSystem
 M.update = update
 

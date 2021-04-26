@@ -19,36 +19,53 @@ local dist_smooth = newTemporalSmoothing(200, 200)
 
 local target_acceleration = 2.5
 
-local target_speed = 16.67
+local target_speed = 13.8
 local ramped_target_speed = 0
 
 local following_time = 1
+
+local function getSystemOnOff()
+  return acc_on
+end
 
 local function switchOnOffSystem(on)
   if on == acc_on then return end
   
   acc_on = on
 
-  local msg = nil
-  
   if acc_on then
-    msg = "ON"
-  else
-    msg = "OFF"
+    local display_speed = target_speed
+
+    local units = settings.getValue("uiUnitLength")
+    local the_unit = "m/s"
+  
+    if units == "metric" then
+      the_unit = "kph" 
+      display_speed = display_speed * 3.6
+    elseif units == "imperial" then
+      the_unit = "mph" 
+      display_speed = display_speed * 2.24
+    end
     
+    display_speed = math.floor(display_speed / 5 + 0.5) * 5
+    
+    ui_message("Adaptive Cruise Control switched ON (" .. display_speed .. " " .. the_unit .. ")")
+    
+  else
     speed_pid:reset()
     speed_smooth:reset()
     dist_pid:reset()
     dist_smooth:reset()
-    
+
     local veh = be:getPlayerVehicle(0)
+
     veh:queueLuaCommand("electrics.values.throttleOverride = nil")
     veh:queueLuaCommand("electrics.values.brakeOverride = nil")
     
     ramped_target_speed = 0
+    
+    ui_message("Adaptive Cruise Control switched OFF")
   end
-  
-  ui_message("Adaptive Cruise Control switched " .. msg)
 end
 
 local function toggleSystem()
@@ -58,6 +75,11 @@ end
 local function setACCSpeed()
   local my_veh = be:getPlayerVehicle(0)
   local veh_speed = vec3(my_veh:getVelocity()):length()
+
+  if veh_speed <= 8.3 then
+    ui_message("ERROR Adaptive Cruise Control must be set above 30 km/h (20 mph)")
+    return
+  end
 
   target_speed = veh_speed
   ramped_target_speed = veh_speed
@@ -75,7 +97,7 @@ local function setACCSpeed()
     veh_speed = veh_speed * 2.24
   end
   
-  veh_speed = math.floor(veh_speed)
+  veh_speed = math.floor(veh_speed / 5 + 0.5) * 5
 
   ui_message("Adaptive Cruise Control speed set to " .. tostring(veh_speed) .. " " .. the_unit)
 end
@@ -103,20 +125,22 @@ local function changeACCSpeed(amt)
     display_speed = target_speed * 2.24
   end
   
-  --Minimum of 50 km/h or 31 mph
-  if math.floor(target_speed) <= 13.8889 then
-    target_speed = 13.9
     
+  --Minimum of 30 km/h or 20 mph
+  
+  if math.floor(target_speed) < 8.34 then
+    target_speed = 8.34
     if units == "metric" then
-      display_speed = 50
+      display_speed = 30  
+    
     elseif units == "imperial" then
-      display_speed = 31
-    end
+      display_speed = 20  
+    end      
   end
   
   ramped_target_speed = veh_speed
   
-  display_speed = math.floor(display_speed)
+  display_speed = math.floor(display_speed / 5 + 0.5) * 5
 
   ui_message("Adaptive Cruise Control speed set to " .. tostring(display_speed) .. " " .. the_unit)
 end
@@ -124,10 +148,11 @@ end
 local function changeACCFollowingDistance(amt)
   following_time = following_time + amt
 
+  --0.5 ~ 3 seconds
   if following_time <= 0 then
     following_time = 0.5
-  elseif following_time > 4 then
-    following_time = 4
+  elseif following_time > 3 then
+    following_time = 3
   end
 
   ui_message("Adaptive Cruise Control following distance set to " .. tostring(following_time) .. "s")
@@ -172,13 +197,13 @@ local function getVehicleAheadInLane(dt, my_veh_props, data_table)
           curr_veh_in_path = data.other_veh    
         end
       else
-        debugDrawer:drawTextAdvanced((other_veh_props.front_pos):toPoint3F(), String("Delta distance: " .. math.abs(my_lat_dist_from_wp - other_lat_dist_from_wp)),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
+        --debugDrawer:drawTextAdvanced((other_veh_props.front_pos):toPoint3F(), String("Delta distance: " .. math.abs(my_lat_dist_from_wp - other_lat_dist_from_wp)),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
       end
     end
   end
   
   if curr_veh_in_path then
-    debugDrawer:drawSphere((vec3(curr_veh_in_path:getPosition())):toPoint3F(), 1, ColorF(1,0,0,1))   
+    --debugDrawer:drawSphere((vec3(curr_veh_in_path:getPosition())):toPoint3F(), 1, ColorF(1,0,0,1))   
   end
   
   return distance, rel_vel
@@ -246,6 +271,7 @@ local function update(dt, veh, system_params, aeb_params, vehs_in_same_lane_tabl
   --Deactivate system based on any of these variables
   if in_reverse == nil or in_reverse == 1 or gear_selected == nil
     or gear_selected == 'P' or gear_selected == 0 then
+    switchOnOffSystem(false)
     return
   end
 
@@ -278,7 +304,7 @@ local function update(dt, veh, system_params, aeb_params, vehs_in_same_lane_tabl
   
   local output = maintainDistanceFromVehicleAhead(dt, veh, veh_props, aeb_params, distance, vel_rel, following_distance, true)
   
-  print(output)
+  --print(output)
   
   --Don't do other things if braking already
   if output < 0 then 
@@ -307,6 +333,7 @@ local function update(dt, veh, system_params, aeb_params, vehs_in_same_lane_tabl
   end
 end
 
+M.getSystemOnOff = getSystemOnOff
 M.switchOnOffSystem = switchOnOffSystem
 M.toggleSystem = toggleSystem
 M.setACCSpeed = setACCSpeed

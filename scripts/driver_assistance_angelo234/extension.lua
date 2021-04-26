@@ -216,7 +216,8 @@ local function onUpdate(dt)
   local vehs_in_same_lane_in_front_table = nil 
   
   --If either part exists then get nearby vehicles
-  if parts.acc_angelo234 == "acc_angelo234" or parts.forward_aeb_angelo234 == "forward_aeb_angelo234" then
+  if (parts.acc_angelo234 == "acc_angelo234" and acc_system.getSystemOnOff()) 
+  or (parts.forward_aeb_angelo234 == "forward_aeb_angelo234" and aeb_system.getSystemOnOff()) then
     vehs_in_same_lane_in_front_table = extra_utils.getNearbyVehiclesInSameLane(veh_props, aeb_params.vehicle_search_radius, aeb_params.min_distance_from_car, true, false)
   end
   

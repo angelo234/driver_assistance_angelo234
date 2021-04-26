@@ -10,6 +10,10 @@ local static_sensor_id = -1
 local prev_min_dist = 9999
 local min_dist = 9999
 
+local function getSystemOnOff()
+  return rev_aeb_on
+end
+
 local function toggleSystem()
   rev_aeb_on = not rev_aeb_on
   
@@ -39,7 +43,7 @@ local function staticCastRay(veh_props, sensorPos, same_ray, parking_sensor_para
   local dest = -veh_props.dir * parking_sensor_params.sensor_max_distance + pos
 
   --use castRayDebug to show lines
-  hit = castRayDebug(pos, dest, true, true)
+  hit = castRay(pos, dest, true, true)
 
   if hit == nil then return nil end
 
@@ -239,6 +243,7 @@ local function update(dt, veh, system_params, parking_lines_params, rev_aeb_para
   performEmergencyBraking(dt, veh, min_dist, veh_props.speed, system_params, rev_aeb_params)
 end
 
+M.getSystemOnOff = getSystemOnOff
 M.toggleSystem = toggleSystem
 M.update = update
 
