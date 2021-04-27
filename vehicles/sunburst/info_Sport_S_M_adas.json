@@ -1,0 +1,45 @@
+{
+  "0-100 km/h":6.7,
+  "0-100 mph":16,
+  "0-120 mph":16.3,
+  "0-200 km/h":27.6,
+  "0-60 mph":6.4,
+  "100-0 km/h":32.3,
+  "100-200 km/h":21,
+  "60-0 mph":98.2,
+  "60-100 mph":9.6,
+  "60-120 mph":11.5,
+  "BoundingBox":[
+    [
+      -0.66,
+      -1.835,
+      -0.21
+    ],
+    [
+      1.28,
+      2.54,
+      1.19
+    ]
+  ],
+  "Braking G":1.216,
+  "Config Type":"Factory",
+  "Configuration":"2.0 Sport S AWD w/ ADAS (M)",
+  "Description":"AWD, sport suspension, sport wheels are accompanied by a turbocharged 2 liter engine, and advanced driver assistance systems",
+  "Drivetrain":"AWD",
+  "Fuel Type":"Gasoline",
+  "Induction Type":"Turbo",
+  "Off-Road Score":34,
+  "Performance Class":"6",
+  "Population":2000,
+  "Power":222,
+  "PowerPeakRPM":"5900 - 6500",
+  "Propulsion":"ICE",
+  "Top Speed":65.3786884,
+  "Torque":305,
+  "TorquePeakRPM":"3050 - 4400",
+  "Transmission":"Manual",
+  "Value":21000,
+  "Weight":1375,
+  "Weight/Power":6.19369369,
+  "default_color":"Silver"
+}

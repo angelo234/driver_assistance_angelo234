@@ -1,0 +1,46 @@
+{
+  "0-100 km/h":6.4,
+  "0-100 mph":13.7,
+  "0-120 mph":17.8,
+  "0-200 km/h":22,
+  "0-60 mph":6.1,
+  "100-0 km/h":37,
+  "100-200 km/h":15.7,
+  "60-0 mph":113.4,
+  "60-100 mph":7.6,
+  "60-120 mph":13.9,
+  "Body Style":"Wagon",
+  "BoundingBox":[
+    [
+      -0.69,
+      -2.05,
+      -0.225
+    ],
+    [
+      1.35,
+      2.62,
+      1.165
+    ]
+  ],
+  "Braking G":1.063,
+  "Config Type":"Factory",
+  "Configuration":"856td w/ ADAS (M)",
+  "Description":"Touring model with turbocharged 6-cylinder diesel engine and advanced driver assistance systems",
+  "Drivetrain":"RWD",
+  "Fuel Type":"Diesel",
+  "Induction Type":"Turbo",
+  "Off-Road Score":27,
+  "Performance Class":"6",
+  "Population":1000,
+  "Power":260,
+  "PowerPeakRPM":"3450 - 4300",
+  "Propulsion":"ICE",
+  "Top Speed":68.8693258,
+  "Torque":580,
+  "TorquePeakRPM":"1650 - 3000",
+  "Transmission":"Manual",
+  "Value":48250,
+  "Weight":1630,
+  "Weight/Power":6.26923077,
+  "default_color":"Shale Green"
+}

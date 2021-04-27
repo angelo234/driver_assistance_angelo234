@@ -431,7 +431,7 @@ local function checkIfOtherCarOnSameRoad(my_veh_props, other_veh_props, wps_prop
   
   --debugDrawer:drawTextAdvanced((other_veh_props.front_pos):toPoint3F(), String(path_len),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
   
-  return path_len <= (wps_props.start_wp_pos - other_wps_props_in_other_dir.start_wp_pos):length() * 1.05
+  return path_len <= (wps_props.start_wp_pos - other_wps_props_in_other_dir.start_wp_pos):length() * 1.1
 end
 
 local function getCircularDistance(my_veh_props, other_veh_props, min_distance_from_car)
@@ -560,8 +560,52 @@ local function getNearbyVehicles(my_veh_props, max_dist, min_distance_from_car, 
   return other_vehs
 end
 
---Returns a table of vehicles and distance to them within a max_dist radius and in the same lane
-local function getNearbyVehiclesInSameLane(my_veh_props, max_dist, min_distance_from_car, in_front, only_pos_rel_vel)
+local function decrementVehicleTimers(dt, last_vehs_table, other_vehs_in_my_lane)
+  local new_last_vehs_table = {}
+  
+  if last_vehs_table then
+    for _, last_veh_data in pairs(last_vehs_table) do
+      last_veh_data.timer = last_veh_data.timer - dt
+      
+      --debugDrawer:drawTextAdvanced(vec3(last_veh_data.other_veh:getPosition()):toPoint3F(), String("Timer: " .. tostring(last_veh_data.timer)),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
+      
+      if last_veh_data.timer > 0 then
+        table.insert(new_last_vehs_table, last_veh_data)
+      end
+    end
+  end
+
+  local vehs_to_add = {}
+
+  --Add previously detected vehicles to this list
+  for _, new_last_veh_data in pairs(new_last_vehs_table) do
+    local last_curr_id = new_last_veh_data.other_veh:getID()
+  
+    local match = false
+  
+    for _, new_veh_data in pairs(other_vehs_in_my_lane) do
+      local curr_id = new_veh_data.other_veh:getID()
+      
+      if curr_id == last_curr_id then
+        match = true
+        goto continue
+      end     
+    end
+    ::continue::
+    
+    if not match then
+      table.insert(vehs_to_add, new_last_veh_data)
+    end
+  end
+  
+  --Add previous vehicles to current list
+  for _, veh_data in pairs(vehs_to_add) do
+    table.insert(other_vehs_in_my_lane, veh_data)
+  end
+end
+
+--Returns a table of vehicles and distance to them within a max_dist radius and on same road
+local function getNearbyVehiclesOnSameRoad(dt, my_veh_props, max_dist, min_distance_from_car, in_front, only_pos_rel_vel, last_vehs_table)
   
   local my_veh_wps_props = getWaypointStartEndAdvanced(my_veh_props, my_veh_props, my_veh_props.front_pos, past_wps_props_table[my_veh_props.id])
   
@@ -570,8 +614,9 @@ local function getNearbyVehiclesInSameLane(my_veh_props, max_dist, min_distance_
   if my_veh_wps_props == nil then
     return {}, nil
   end
-
+  
   local other_vehs_data = getNearbyVehicles(my_veh_props, max_dist, min_distance_from_car, in_front)
+
   local other_vehs_in_my_lane = {}
 
   for _, other_veh_data in pairs(other_vehs_data) do
@@ -605,14 +650,20 @@ local function getNearbyVehiclesInSameLane(my_veh_props, max_dist, min_distance_
       if on_same_road then
         if only_pos_rel_vel then
           if speed_rel >= 0 then
+            other_veh_data.timer = 1
             table.insert(other_vehs_in_my_lane, other_veh_data)
           end
         else
+          other_veh_data.timer = 1
           table.insert(other_vehs_in_my_lane, other_veh_data)
         end
       end
     end
   end
+  
+  --Decrement all vehicle's timers and insert vehicles into vehicles in road list whose timer hasn't run out
+  
+  decrementVehicleTimers(dt, last_vehs_table, other_vehs_in_my_lane)
 
   return other_vehs_in_my_lane
 end
@@ -633,7 +684,7 @@ M.getWaypointStartEnd = getWaypointStartEnd
 M.getWaypointStartEndAdvanced = getWaypointStartEndAdvanced
 M.getWhichSideOfWaypointsCarIsOn = getWhichSideOfWaypointsCarIsOn
 M.getNearbyVehicles = getNearbyVehicles
-M.getNearbyVehiclesInSameLane = getNearbyVehiclesInSameLane
+M.getNearbyVehiclesOnSameRoad = getNearbyVehiclesOnSameRoad
 M.onClientPostStartMission = onClientPostStartMission
 
 return M

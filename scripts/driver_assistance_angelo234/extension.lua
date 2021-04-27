@@ -128,6 +128,7 @@ local function getAllVehiclesPropertiesFromVELua()
   --Get properties of my vehicle
   my_veh:queueLuaCommand("if input.throttle ~= nil then obj:queueGameEngineLua('input_throttle_angelo234 = ' .. input.throttle ) end")
   my_veh:queueLuaCommand("if input.brake ~= nil then obj:queueGameEngineLua('input_brake_angelo234 = ' .. input.brake ) end")
+  my_veh:queueLuaCommand("if input.clutch ~= nil then obj:queueGameEngineLua('input_clutch_angelo234 = ' .. input.clutch ) end")
   my_veh:queueLuaCommand('obj:queueGameEngineLua("electrics_values_angelo234 = (\'" .. jsonEncode(electrics.values) .. "\')")')
   my_veh:queueLuaCommand("obj:queueGameEngineLua('angular_speed_angelo234 = ' .. obj:getYawAngularVelocity() )")
   
@@ -189,6 +190,7 @@ local function doLuaReload()
 end
 
 local first_update = true
+local last_vehs_in_same_lane_in_front_table = nil
 
 local function onUpdate(dt)
   --Do Lua reload after first Lua initialization to load in the reverse camera
@@ -218,7 +220,8 @@ local function onUpdate(dt)
   --If either part exists then get nearby vehicles
   if (parts.acc_angelo234 == "acc_angelo234" and acc_system.getSystemOnOff()) 
   or (parts.forward_aeb_angelo234 == "forward_aeb_angelo234" and aeb_system.getSystemOnOff()) then
-    vehs_in_same_lane_in_front_table = extra_utils.getNearbyVehiclesInSameLane(veh_props, aeb_params.vehicle_search_radius, aeb_params.min_distance_from_car, true, false)
+    vehs_in_same_lane_in_front_table = extra_utils.getNearbyVehiclesOnSameRoad(dt, veh_props, aeb_params.vehicle_search_radius, 
+    aeb_params.min_distance_from_car, true, false, last_vehs_in_same_lane_in_front_table)
   end
   
   --Update Adaptive Cruise Control
@@ -235,6 +238,8 @@ local function onUpdate(dt)
   if parts.reverse_aeb_angelo234 == "reverse_aeb_angelo234" then
     parking_aeb_system.update(dt, my_veh, system_params, parking_lines_params, rev_aeb_params, beeper_params)
   end
+  
+  last_vehs_in_same_lane_in_front_table = vehs_in_same_lane_in_front_table
 end
 
 M.onExtensionLoaded = onExtensionLoaded

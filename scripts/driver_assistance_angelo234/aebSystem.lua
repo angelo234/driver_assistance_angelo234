@@ -486,7 +486,7 @@ local function update(dt, veh, system_params, aeb_params, beeper_params, vehs_in
   
   --Deactivate system based on any of these variables
   if in_reverse == nil or in_reverse == 1 or gear_selected == nil
-    or gear_selected == 'P' or gear_selected == 0 then   
+    or gear_selected == 'P' then   
     if system_state ~= "ready" then
       veh:queueLuaCommand("electrics.values.brakeOverride = nil")     
       veh:queueLuaCommand("electrics.values.throttleOverride = nil")  

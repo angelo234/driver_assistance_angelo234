@@ -1,0 +1,45 @@
+{
+  "0-100 km/h":5,
+  "0-100 mph":11.6,
+  "0-120 mph":0,
+  "0-200 km/h":18.1,
+  "0-60 mph":4.8,
+  "100-0 km/h":34.7,
+  "100-200 km/h":13.1,
+  "60-0 mph":105.9,
+  "60-100 mph":6.8,
+  "60-120 mph":0,
+  "BoundingBox":[
+    [
+      -0.85,
+      -1.858,
+      -0.243
+    ],
+    [
+      1.17,
+      2.489,
+      1.197
+    ]
+  ],
+  "Braking G":1.134,
+  "Config Type":"Factory",
+  "Configuration":"Vivace S 350Q w/ ADAS (M)",
+  "Description":"Sport model with a powerful 5-cylinder engine, sport suspension, all-wheel drive, and advanced driver assistance systems",
+  "Drivetrain":"AWD",
+  "Fuel Type":"Gasoline",
+  "Induction Type":"Turbo",
+  "Off-Road Score":27,
+  "Performance Class":"0",
+  "Population":9000,
+  "Power":350,
+  "PowerPeakRPM":"6150 - 7000",
+  "Propulsion":"ICE",
+  "Top Speed":69.3710182,
+  "Torque":445,
+  "TorquePeakRPM":"1800 - 4950",
+  "Transmission":"Manual",
+  "Value":47600,
+  "Weight":1635,
+  "Weight/Power":4.67142857,
+  "default_color":"Rouge Feu"
+}

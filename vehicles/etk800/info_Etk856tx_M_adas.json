@@ -1,0 +1,46 @@
+{
+  "0-100 km/h":6.5,
+  "0-100 mph":15.7,
+  "0-120 mph":23.8,
+  "0-200 km/h":26.4,
+  "0-60 mph":6.2,
+  "100-0 km/h":36.8,
+  "100-200 km/h":19.8,
+  "60-0 mph":112.9,
+  "60-100 mph":9.5,
+  "60-120 mph":17.8,
+  "Body Style":"Wagon",
+  "BoundingBox":[
+    [
+      -0.69,
+      -2.05,
+      -0.225
+    ],
+    [
+      1.35,
+      2.62,
+      1.165
+    ]
+  ],
+  "Braking G":1.068,
+  "Config Type":"Factory",
+  "Configuration":"856tx w/ ADAS (M)",
+  "Description":"AWD touring model with 6-cylinder engine and advanced driver assistance systems",
+  "Drivetrain":"AWD",
+  "Fuel Type":"Gasoline",
+  "Induction Type":"NA",
+  "Off-Road Score":33,
+  "Performance Class":"6",
+  "Population":800,
+  "Power":247,
+  "PowerPeakRPM":6450,
+  "Propulsion":"ICE",
+  "Top Speed":68.7928665,
+  "Torque":320,
+  "TorquePeakRPM":"2400 - 4050",
+  "Transmission":"Manual",
+  "Value":49500,
+  "Weight":1630,
+  "Weight/Power":6.59919028,
+  "default_color":"Pearl White"
+}

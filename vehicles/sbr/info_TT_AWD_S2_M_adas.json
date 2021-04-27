@@ -1,0 +1,44 @@
+{
+  "0-100 km/h":3.9,
+  "0-100 mph":8.8,
+  "0-200 km/h":13.1,
+  "0-300 km/h":47.6,
+  "0-60 mph":3.7,
+  "100-0 km/h":35,
+  "100-200 km/h":9.3,
+  "60-0 mph":107.2,
+  "60-100 mph":5.1,
+  "BoundingBox":[
+    [
+      -0.67,
+      -1.11,
+      -0.187
+    ],
+    [
+      1.33,
+      3.08,
+      1.07
+    ]
+  ],
+  "Braking G":1.122,
+  "Config Type":"Factory",
+  "Configuration":"AWD TT S2 w/ ADAS (M)",
+  "Description":"An extremely powerful twin turbo setup makes the S2 incredibly fast with advanced driver assistance systems",
+  "Drivetrain":"AWD",
+  "Fuel Type":"Gasoline",
+  "Induction Type":"Turbo",
+  "Off-Road Score":27,
+  "Performance Class":"12",
+  "Population":200,
+  "Power":454,
+  "PowerPeakRPM":"5800 - 6900",
+  "Propulsion":"ICE",
+  "Top Speed":85.2254444,
+  "Torque":575,
+  "TorquePeakRPM":"4050 - 5500",
+  "Transmission":"Manual",
+  "Value":84000,
+  "Weight":1440,
+  "Weight/Power":3.17180617,
+  "default_color":"Tropic"
+}

@@ -270,14 +270,14 @@ local function update(dt, veh, system_params, aeb_params, vehs_in_same_lane_tabl
   
   --Deactivate system based on any of these variables
   if in_reverse == nil or in_reverse == 1 or gear_selected == nil
-    or gear_selected == 'P' or gear_selected == 0 then
+    or gear_selected == 'P' then
     switchOnOffSystem(false)
     return
   end
 
   --If user presses any pedals, then deactivate system
   
-  if input_throttle_angelo234 > 0 then
+  if input_throttle_angelo234 > 0 or input_clutch_angelo234 > 0 then
     veh:queueLuaCommand("electrics.values.throttleOverride = " .. input_throttle_angelo234)
   end
   
@@ -287,7 +287,7 @@ local function update(dt, veh, system_params, aeb_params, vehs_in_same_lane_tabl
     scripts_driver__assistance__angelo234_extension.toggleACCSystem()    
   end
   
-  if input_throttle_angelo234 > 0 or input_brake_angelo234 > 0 then return end
+  if input_throttle_angelo234 > 0 or input_brake_angelo234 > 0 or input_clutch_angelo234 > 0 then return end
 
   local distance = 9999
   local vel_rel = 0

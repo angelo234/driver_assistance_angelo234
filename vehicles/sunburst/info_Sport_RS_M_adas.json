@@ -1,0 +1,45 @@
+{
+  "0-100 km/h":5.6,
+  "0-100 mph":12.3,
+  "0-120 mph":12.8,
+  "0-200 km/h":18.4,
+  "0-60 mph":5.4,
+  "100-0 km/h":33.2,
+  "100-200 km/h":12.8,
+  "60-0 mph":101.2,
+  "60-100 mph":6.9,
+  "60-120 mph":8.3,
+  "BoundingBox":[
+    [
+      -0.66,
+      -1.84,
+      -0.22
+    ],
+    [
+      1.28,
+      2.54,
+      1.19
+    ]
+  ],
+  "Braking G":1.183,
+  "Config Type":"Factory",
+  "Configuration":"2.0 Sport RS AWD w/ ADAS (M)",
+  "Description":"Sport suspension, wheels, tires, turbocharger, a large spoiler make for a street weapon, and advanced driver assistance systems",
+  "Drivetrain":"AWD",
+  "Fuel Type":"Gasoline",
+  "Induction Type":"Turbo",
+  "Off-Road Score":27,
+  "Performance Class":"8",
+  "Population":1000,
+  "Power":298,
+  "PowerPeakRPM":"6150 - 6950",
+  "Propulsion":"ICE",
+  "Top Speed":72.2613743,
+  "Torque":375,
+  "TorquePeakRPM":"3500 - 5400",
+  "Transmission":"Manual",
+  "Value":31000,
+  "Weight":1385,
+  "Weight/Power":4.64765101,
+  "default_color":"Sky Blue"
+}

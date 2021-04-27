@@ -1,0 +1,41 @@
+{
+  "bindings":[
+    {
+      "action":"toggle_fwd_aeb",
+      "control":"numpaddivide"
+    },
+    {
+      "action":"toggle_rev_aeb",
+      "control":"*"
+    },
+    {
+      "action":"toggle_acc",
+      "control":"shift backslash"
+    },
+    {
+      "action":"inc_acc_speed",
+      "control":"="
+    },
+    {
+      "action":"dec_acc_speed",
+      "control":"minus"
+    },
+    {
+      "action":"inc_acc_dist",
+      "control":"shift ="
+    },
+    {
+      "action":"dec_acc_dist",
+      "control":"shift minus"
+    },
+    {
+      "action":"set_acc_speed",
+      "control":"backslash"
+    }
+  ],
+  "devicetype":"keyboard",
+  "guid":"{6F1D2B61-D5A0-11CF-BFC7-444553540000}",
+  "name":"Keyboard",
+  "version":1,
+  "vidpid":"6F1D2B61"
+}
