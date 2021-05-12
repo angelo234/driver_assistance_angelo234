@@ -11,10 +11,6 @@ local fwd_aeb_on = true
 --holding = car is stopped and system is holding the brakes 
 local system_state = "ready"
 
-local static_sensor_id = -1
-local prev_static_min_dist = 9999
-local static_min_dist = 9999
-
 local function getSystemOnOff()
   return fwd_aeb_on
 end
@@ -212,27 +208,6 @@ local function getOtherVehBoundingBox(other_veh_props, other_veh_wp_dir, distanc
   return other_x, other_y, other_z
 end
 
-local function getFreePathInLane(my_veh_side, in_wp_middle, lane_width, other_lat_dist_from_wp, my_veh_width, other_veh_width)
-  --If we can't fit our vehicles in same lane, then no free path available
-  if my_veh_width + other_veh_width + 0.5 > lane_width or in_wp_middle then
-    return "none"
-  end
-  
-  if my_veh_side == "left" then
-    if other_lat_dist_from_wp <= lane_width / 2.0 then
-      return "left" 
-    else
-      return "right"
-    end
-  elseif my_veh_side == "right" then
-    if other_lat_dist_from_wp <= lane_width / 2.0 then
-      return "right" 
-    else
-      return "left"
-    end
-  end
-end
-
 --Check if we'll actually crash at TTC
 local function checkIfCarsIntersectAtTTC(my_veh_props, other_veh_props, data, lateral_acc_to_avoid_collision)
   --Calculate TTC
@@ -322,7 +297,7 @@ local function getVehicleCollidingWithInLane(dt, my_veh_props, data_table, later
       local my_lat_dist_from_wp = data.my_veh_wps_props.lat_dist_from_wp
       local other_lat_dist_from_wp = data.other_veh_wps_props.lat_dist_from_wp
 
-      --debugDrawer:drawTextAdvanced((other_veh_props.front_pos):toPoint3F(), String(other_lat_dist_from_wp),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
+      debugDrawer:drawTextAdvanced((other_veh_props.front_pos):toPoint3F(), String(other_lat_dist_from_wp),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
 
       if my_lat_dist_from_wp - my_veh_props.bb:getHalfExtents().x < other_lat_dist_from_wp + other_veh_props.bb:getHalfExtents().x
       and my_lat_dist_from_wp + my_veh_props.bb:getHalfExtents().x > other_lat_dist_from_wp - other_veh_props.bb:getHalfExtents().x
@@ -469,7 +444,7 @@ local function holdBrakes(veh, veh_props, aeb_params)
   return system_state == "holding"
 end
 
-local function update(dt, veh, system_params, aeb_params, beeper_params, vehs_in_same_lane_table)
+local function update(dt, veh, system_params, aeb_params, beeper_params, front_sensor_data)
   if not fwd_aeb_on then return end
 
   local veh_props = extra_utils.getVehicleProperties(veh)
@@ -497,48 +472,33 @@ local function update(dt, veh, system_params, aeb_params, beeper_params, vehs_in
   
   if holdBrakes(veh, veh_props, aeb_params) then return end
 
+  local static_distance = 9999
   local distance = 9999
   local vel_rel = 0
 
   --Do static object detection up to certain speed
   if veh_props.speed < 11.11 then
     --Do static object raycasting
-    for i = 1, aeb_params.sensors_polled_per_iteration do
-      if static_sensor_id == aeb_params.num_of_sensors - 1 then
-        prev_static_min_dist = static_min_dist
-        static_min_dist = 9999
-      end
-    
-      --Get distance of nearest static obstacle 
-      local static_dist = pollFrontSensors(dt, veh_props, system_params, aeb_params)
-       
-      static_min_dist = math.min(static_dist, static_min_dist)
-    end 
-  else
-    --Reset sensor distances
-    prev_static_min_dist = 9999
-    static_min_dist = 9999
+    static_distance = front_sensor_data[1]
   end
 
   --If speed less than certain value, use different AEB system (not using lane lines)
   if veh_props.speed < 8.33 then
     --Get nearby vehicles
-    local data = extra_utils.getNearbyVehicles(veh_props, aeb_params.vehicle_search_radius, 0, true)
-    
-    distance, vel_rel = getVehicleCollidingWith(dt, veh_props, data)
+    distance, vel_rel = getVehicleCollidingWith(dt, veh_props, front_sensor_data[2])
   else
     --Else at higher speeds, use lane lines 
     --If table is empty then return
-    if next(vehs_in_same_lane_table) ~= nil then
+    if next(front_sensor_data[3]) ~= nil then
       --Determine if a collision will actually occur and return the distance and relative velocity 
       --to the vehicle that I'm planning to collide with
-      distance, vel_rel = getVehicleCollidingWithInLane(dt, veh_props, vehs_in_same_lane_table, aeb_params.lateral_acc_to_avoid_collision)
+      distance, vel_rel = getVehicleCollidingWithInLane(dt, veh_props, front_sensor_data[3], aeb_params.lateral_acc_to_avoid_collision)
     end 
   end
 
   --If static object is closer than nearest vehicle, then use static object raycast data
-  if static_min_dist < distance then
-    distance = static_min_dist
+  if static_distance < distance then
+    distance = static_distance
     vel_rel = veh_props.speed
   end
 

@@ -20,7 +20,7 @@ end
 local function getOffsetFromCenterOfLane(veh_props)
   local veh_wps_props = extra_utils.getWaypointStartEndAdvanced(veh_props, veh_props, veh_props.center_pos)
 
-  local side_of_wp, in_wp_middle = extra_utils.getWhichSideOfWaypointsCarIsOn(veh_props, veh_wps_props.start_wp_pos, veh_wps_props.end_wp_pos)
+  local side_of_wp = extra_utils.getWhichSideOfWaypointsCarIsOn(veh_props, veh_wps_props.start_wp_pos, veh_wps_props.end_wp_pos)
 
   print(veh_wps_props.lane_width)
 

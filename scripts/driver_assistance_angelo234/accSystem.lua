@@ -253,7 +253,7 @@ local function maintainSetSpeed(dt, veh, veh_props, aeb_params)
   --print("Desired Acceleration: " .. output)
 end
 
-local function update(dt, veh, system_params, aeb_params, vehs_in_same_lane_table)
+local function update(dt, veh, system_params, aeb_params, front_sensor_data)
   if not acc_on then return end
   
   local veh_props = extra_utils.getVehicleProperties(veh)
@@ -293,10 +293,10 @@ local function update(dt, veh, system_params, aeb_params, vehs_in_same_lane_tabl
   local vel_rel = 0
 
   --If table is empty then return
-  if next(vehs_in_same_lane_table) ~= nil then
+  if next(front_sensor_data[3]) ~= nil then
     --Determine if a collision will actually occur and return the distance and relative velocity 
     --to the vehicle that I'm planning to collide with
-    distance, vel_rel = getVehicleAheadInLane(dt, veh_props, vehs_in_same_lane_table)
+    distance, vel_rel = getVehicleAheadInLane(dt, veh_props, front_sensor_data[3])
   end
   
   --5 meter of leeway

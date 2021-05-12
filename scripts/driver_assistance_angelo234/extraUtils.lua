@@ -18,8 +18,6 @@ local ceil = math.ceil
 local map_nodes = map.getMap().nodes
 local findClosestRoad = map.findClosestRoad
 
-local past_wps_props_table = {}
-
 local function toNormXYVec(dir)
   return dir:z0():normalized()
 end
@@ -201,68 +199,23 @@ end
 --Gets whether we are to the left or right of waypoints
 local function getWhichSideOfWaypointsCarIsOn(veh_props, start_pos, end_pos)
   local road_line_dir = toNormXYVec(end_pos - start_pos)
+  local road_line_dir_perp_right = vec3(road_line_dir.y, -road_line_dir.x)
   local car_dir_xy = toNormXYVec(veh_props.dir)
 
   local wp_mid_pos = (end_pos - start_pos) * 0.5 + start_pos
 
-  --debugDrawer:drawSphere(start_pos:toPoint3F(), 0.5, ColorF(1,0,0,1))
-  --debugDrawer:drawSphere(wp_mid_pos:toPoint3F(), 0.5, ColorF(0,1,0,1))
-  --debugDrawer:drawSphere(end_pos:toPoint3F(), 0.5, ColorF(0,0,1,1))
-
-  --debugDrawer:setSolidTriCulling(false)
-  --debugDrawer:drawQuadSolid((start_pos):toPoint3F(), (start_pos + vec3(0,0,1)):toPoint3F(),
-  --(end_pos + vec3(0,0,1)):toPoint3F(), (end_pos):toPoint3F(), ColorF(1,0,0,0.25))
-
-  --Get angle between car dir and road dir that is between 0 and 360 degrees
-  local line_to_left_side_dir = (veh_props.center_pos - veh_props.dir_right * veh_props.bb:getHalfExtents().x * 0.5 - wp_mid_pos):normalized()
-  local line_to_right_side_dir = (veh_props.center_pos + veh_props.dir_right * veh_props.bb:getHalfExtents().x * 0.5 - wp_mid_pos):normalized()
   local line_to_center_dir = (veh_props.center_pos - wp_mid_pos):normalized()
 
-  local left_dot = line_to_left_side_dir:dot(road_line_dir)
-  local left_det = line_to_left_side_dir.x * road_line_dir.y - line_to_left_side_dir.y * road_line_dir.x
+  local center_angle = acos(line_to_center_dir:dot(road_line_dir_perp_right))
 
-  local right_dot = line_to_right_side_dir:dot(road_line_dir)
-  local right_det = line_to_right_side_dir.x * road_line_dir.y - line_to_right_side_dir.y * road_line_dir.x
-
-  local center_dot = line_to_center_dir:dot(road_line_dir)
-  local center_det = line_to_center_dir.x * road_line_dir.y - line_to_center_dir.y * road_line_dir.x
-
-  local left_angle = atan2(left_det, left_dot) * 180.0 / pi
-  local right_angle = atan2(right_det, right_dot) * 180.0 / pi
-  local center_angle = atan2(center_det, center_dot) * 180.0 / pi
-
-  local side = nil
-  local in_wp_middle = false
-
-  --Right side
-  if left_angle > 0 and left_angle < 180 then
-    side = "right"
-    --Left side
-  else
-    side = "left"
-  end
-
-  --Right side
-  if right_angle > 0 and right_angle < 180 then
-    if side == "left" then
-      in_wp_middle = true
-    end
-    --Left side
-  else
-    if side == "right" then
-      in_wp_middle = true
-    end
-  end
-  
+  --Determine side of road car is on
    --Right side
-  if center_angle > 0 and center_angle < 180 then
-    side = "right"
+  if center_angle < pi / 2.0 then
+    return "right"
     --Left side
   else
-    side = "left"
+    return "left"
   end
-  
-  return side, in_wp_middle
 end
 
 local function getWaypointsProperties(veh_props, start_wp, end_wp, start_wp_pos, end_wp_pos, lat_dist_from_wp)
@@ -292,15 +245,14 @@ local function getWaypointsProperties(veh_props, start_wp, end_wp, start_wp_pos,
   wps_props.lane_width = lane_width
   wps_props.num_of_lanes = num_of_lanes
   
-  local my_veh_side_of_wp, my_in_wp_middle = getWhichSideOfWaypointsCarIsOn(veh_props, start_wp_pos, end_wp_pos)
+  local my_veh_side_of_wp = getWhichSideOfWaypointsCarIsOn(veh_props, start_wp_pos, end_wp_pos)
   
   if my_veh_side_of_wp == "left" then
     wps_props.lat_dist_from_wp = -wps_props.lat_dist_from_wp
   end
   
   wps_props.veh_side_of_wp = my_veh_side_of_wp
-  wps_props.veh_in_middle = my_in_wp_middle
-  
+
   return wps_props
 end
 
@@ -398,34 +350,6 @@ end
 
 --Check if other car is on the same road as me (not lane)
 local function checkIfOtherCarOnSameRoad(my_veh_props, other_veh_props, wps_props)
-  --[[
-  
-  local xnorm = other_veh_props.center_pos:xnormOnLine(wps_props.start_wp_pos, wps_props.end_wp_pos)
-  local my_wp_dir = wps_props.end_wp_pos - wps_props.start_wp_pos
-  local other_veh_pos_on_wp_line = xnorm * my_wp_dir + wps_props.start_wp_pos
-  
-  --Get waypoint on my road closest to other vehicle
-  local new_wps_props = getWaypointStartEnd(my_veh_props, other_veh_props, other_veh_pos_on_wp_line)
-  
-  if new_wps_props.start_wp == nil then
-    return true
-  end
-  
-   --Get lateral distance of other car to waypoint
-  local xnorm2 = other_veh_props.center_pos:xnormOnLine(new_wps_props.start_wp_pos, new_wps_props.end_wp_pos)
-  local new_my_wp_start_end = new_wps_props.end_wp_pos - new_wps_props.start_wp_pos
-  local new_other_veh_pos_on_wp_line = xnorm2 * new_my_wp_start_end + new_wps_props.start_wp_pos
-  
-  local lat_dist = (other_veh_props.center_pos - new_other_veh_pos_on_wp_line):length()
-
-  --print(lat_dist)
-  
-  --debugDrawer:drawTextAdvanced((other_veh_props.front_pos):toPoint3F(), String("test"),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
-  
-  if lat_dist > wps_props.wp_radius then return false end
-  
-  ]]--
-  
   --Calculate distance to get from my waypoint to other vehicle's waypoint using graphpath
   --and if that distance is equal or less than shortest distance * 1.05 between two then
   --vehicle is in path
@@ -519,161 +443,6 @@ local function getStraightDistance(my_veh_props, other_veh_props, min_distance_f
   return min_distance
 end
 
---Returns a table of vehicles and distance to them within a max_dist radius
---only in front of our vehicle, so it discards vehicles behind
-local function getNearbyVehicles(my_veh_props, max_dist, min_distance_from_car, in_front)
-  local other_vehs = {}
-
-  local vehicles = getAllVehicles()
-
-  for _, other_veh in pairs(vehicles) do
-    local other_veh_props = getVehicleProperties(other_veh)
-
-    if other_veh_props.id ~= my_veh_props.id then
-      --Get aproximate distance first between vehicles and return if less than max dist
-      local other_bb = other_veh_props.bb
-
-      local front_dist = (my_veh_props.front_pos - other_veh_props.center_pos):length()
-      local rear_dist = (my_veh_props.rear_pos - other_veh_props.center_pos):length()
-
-      --If rear distance is larger than front distance, then vehicle is in front
-      if front_dist < max_dist and front_dist < rear_dist and in_front then
-        local cir_dist = getCircularDistance(my_veh_props, other_veh_props, min_distance_from_car)
-        
-        local other_veh_data = 
-        {
-          other_veh = other_veh, 
-          distance = cir_dist
-        }
-        
-        table.insert(other_vehs, other_veh_data)
-              
-        --If front distance is larger than rear distance, then vehicle is in rear
-      elseif rear_dist < max_dist and front_dist > rear_dist and not in_front then
-        local dist = getStraightDistance(my_veh_props, other_veh_props, min_distance_from_car, false, true)
-
-        local other_veh_data = 
-        {
-          other_veh = other_veh, 
-          distance = dist
-        }
-        
-        table.insert(other_vehs, other_veh_data)
-      end
-    end
-  end
-
-  return other_vehs
-end
-
-local function decrementVehicleTimers(dt, last_vehs_table, other_vehs_in_my_lane)
-  local new_last_vehs_table = {}
-  
-  if last_vehs_table then
-    for _, last_veh_data in pairs(last_vehs_table) do
-      last_veh_data.timer = last_veh_data.timer - dt
-      
-      --debugDrawer:drawTextAdvanced(vec3(last_veh_data.other_veh:getPosition()):toPoint3F(), String("Timer: " .. tostring(last_veh_data.timer)),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
-      
-      if last_veh_data.timer > 0 then
-        table.insert(new_last_vehs_table, last_veh_data)
-      end
-    end
-  end
-
-  local vehs_to_add = {}
-
-  --Add previously detected vehicles to this list
-  for _, new_last_veh_data in pairs(new_last_vehs_table) do
-    local last_curr_id = new_last_veh_data.other_veh:getID()
-  
-    local match = false
-  
-    for _, new_veh_data in pairs(other_vehs_in_my_lane) do
-      local curr_id = new_veh_data.other_veh:getID()
-      
-      if curr_id == last_curr_id then
-        match = true
-        goto continue
-      end     
-    end
-    ::continue::
-    
-    if not match then
-      table.insert(vehs_to_add, new_last_veh_data)
-    end
-  end
-  
-  --Add previous vehicles to current list
-  for _, veh_data in pairs(vehs_to_add) do
-    table.insert(other_vehs_in_my_lane, veh_data)
-  end
-end
-
---Returns a table of vehicles and distance to them within a max_dist radius and on same road
-local function getNearbyVehiclesOnSameRoad(dt, my_veh_props, max_dist, min_distance_from_car, in_front, only_pos_rel_vel, last_vehs_table)
-  
-  local my_veh_wps_props = getWaypointStartEndAdvanced(my_veh_props, my_veh_props, my_veh_props.front_pos, past_wps_props_table[my_veh_props.id])
-  
-  past_wps_props_table[my_veh_props.id] = my_veh_wps_props
-  
-  if my_veh_wps_props == nil then
-    return {}, nil
-  end
-  
-  local other_vehs_data = getNearbyVehicles(my_veh_props, max_dist, min_distance_from_car, in_front)
-
-  local other_vehs_in_my_lane = {}
-
-  for _, other_veh_data in pairs(other_vehs_data) do
-    local other_veh_props = getVehicleProperties(other_veh_data.other_veh)
-    local speed_rel = my_veh_props.speed - other_veh_props.speed
-    
-    local other_veh_wps_props = getWaypointStartEndAdvanced(my_veh_props, other_veh_props, other_veh_props.front_pos, past_wps_props_table[other_veh_props.id])
-    
-    past_wps_props_table[other_veh_props.id] = other_veh_wps_props
-    
-    other_veh_data.my_veh_wps_props = my_veh_wps_props
-    other_veh_data.other_veh_wps_props = other_veh_wps_props
-    
-    local free_path_to_veh = false
-
-    local ray_cast_dist = castRayStatic(my_veh_props.front_pos:toPoint3F(), (other_veh_props.center_pos - my_veh_props.front_pos):normalized():toPoint3F(), max_dist)
-
-    if ray_cast_dist > other_veh_data.distance then
-      --Freepath to vehicle
-      free_path_to_veh = true
-    end
-
-    --debugDrawer:drawTextAdvanced((other_veh_props.front_pos):toPoint3F(), String("Free path? " .. tostring(free_path_to_veh)),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
-
-    local on_same_road = checkIfOtherCarOnSameRoad(my_veh_props, other_veh_props, my_veh_wps_props)
-
-    if free_path_to_veh and on_same_road then
-      --debugDrawer:drawTextAdvanced((other_veh_props.front_pos):toPoint3F(), String("On same road"),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
-
-      --In same road and my vehicle speed is >= to other
-      if on_same_road then
-        if only_pos_rel_vel then
-          if speed_rel >= 0 then
-            other_veh_data.timer = 0.1
-            table.insert(other_vehs_in_my_lane, other_veh_data)
-          end
-        else
-          other_veh_data.timer = 0.1
-          table.insert(other_vehs_in_my_lane, other_veh_data)
-        end
-      end
-    end
-  end
-  
-  --Decrement all vehicle's timers and insert vehicles into vehicles in road list whose timer hasn't run out
-  
-  decrementVehicleTimers(dt, last_vehs_table, other_vehs_in_my_lane)
-
-  return other_vehs_in_my_lane
-end
-
 local function onClientPostStartMission(levelpath)
   map_nodes = map.getMap().nodes
   findClosestRoad = map.findClosestRoad
@@ -686,11 +455,12 @@ M.getFuturePositionXY = getFuturePositionXY
 M.getFuturePositionXYWithAcc = getFuturePositionXYWithAcc
 M.getWaypointPosition = getWaypointPosition
 M.getLaneWidth = getLaneWidth
+M.getWhichSideOfWaypointsCarIsOn = getWhichSideOfWaypointsCarIsOn
 M.getWaypointStartEnd = getWaypointStartEnd
 M.getWaypointStartEndAdvanced = getWaypointStartEndAdvanced
-M.getWhichSideOfWaypointsCarIsOn = getWhichSideOfWaypointsCarIsOn
-M.getNearbyVehicles = getNearbyVehicles
-M.getNearbyVehiclesOnSameRoad = getNearbyVehiclesOnSameRoad
+M.checkIfOtherCarOnSameRoad = checkIfOtherCarOnSameRoad
+M.getCircularDistance = getCircularDistance
+M.getStraightDistance = getStraightDistance
 M.onClientPostStartMission = onClientPostStartMission
 
 return M

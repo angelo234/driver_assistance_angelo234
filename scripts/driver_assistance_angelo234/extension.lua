@@ -12,6 +12,7 @@ local M = {}
 
 local extra_utils = require('scripts/driver_assistance_angelo234/extraUtils')
 
+local sensor_system = require('scripts/driver_assistance_angelo234/sensorSystem')
 local aeb_system = require('scripts/driver_assistance_angelo234/aebSystem')
 local parking_aeb_system = require('scripts/driver_assistance_angelo234/parkingAEBSystem')
 local acc_system = require('scripts/driver_assistance_angelo234/accSystem')
@@ -190,7 +191,6 @@ local function doLuaReload()
 end
 
 local first_update = true
-local last_vehs_in_same_lane_in_front_table = nil
 
 local function onUpdate(dt)
   --Do Lua reload after first Lua initialization to load in the reverse camera
@@ -215,31 +215,32 @@ local function onUpdate(dt)
   
   local veh_props = extra_utils.getVehicleProperties(my_veh)
   
-  local vehs_in_same_lane_in_front_table = nil 
+  local front_sensor_data = sensor_system.updateFrontSensors(dt, veh_props, system_params, aeb_params)
+  local rear_sensor_data = sensor_system.updateRearSensors(dt, veh_props, system_params, rev_aeb_params)
   
   --If either part exists then get nearby vehicles
+  --[[
   if (parts.acc_angelo234 == "acc_angelo234" and acc_system.getSystemOnOff()) 
   or (parts.forward_aeb_angelo234 == "forward_aeb_angelo234" and aeb_system.getSystemOnOff()) then
     vehs_in_same_lane_in_front_table = extra_utils.getNearbyVehiclesOnSameRoad(dt, veh_props, aeb_params.vehicle_search_radius, 
     aeb_params.min_distance_from_car, true, false, last_vehs_in_same_lane_in_front_table)
   end
+  ]]--
   
   --Update Adaptive Cruise Control
   if parts.acc_angelo234 == "acc_angelo234" then
-    acc_system.update(dt, my_veh, system_params, aeb_params, vehs_in_same_lane_in_front_table) 
+    acc_system.update(dt, my_veh, system_params, aeb_params, front_sensor_data) 
   end
 
   --Update Forward AEB
   if parts.forward_aeb_angelo234 == "forward_aeb_angelo234" then
-    aeb_system.update(dt, my_veh, system_params, aeb_params, beeper_params, vehs_in_same_lane_in_front_table) 
+    aeb_system.update(dt, my_veh, system_params, aeb_params, beeper_params, front_sensor_data) 
   end
   
   --Update Reverse AEB
   if parts.reverse_aeb_angelo234 == "reverse_aeb_angelo234" then
-    parking_aeb_system.update(dt, my_veh, system_params, parking_lines_params, rev_aeb_params, beeper_params)
+    parking_aeb_system.update(dt, my_veh, system_params, parking_lines_params, rev_aeb_params, beeper_params, rear_sensor_data)
   end
-  
-  last_vehs_in_same_lane_in_front_table = vehs_in_same_lane_in_front_table
 end
 
 M.onExtensionLoaded = onExtensionLoaded
