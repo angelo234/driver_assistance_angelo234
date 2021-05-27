@@ -325,7 +325,7 @@ end
 
 local last_vehs_in_same_road_in_front_table = nil
 
-local function updateFrontSensors(dt, veh_props, system_params, aeb_params)
+local function pollFrontSensors(dt, veh_props, system_params, aeb_params)
   --Cast rays for static objects
   for i = 1, aeb_params.sensors_polled_per_iteration do
     if front_static_sensor_id == aeb_params.num_of_sensors - 1 then
@@ -349,7 +349,44 @@ local function updateFrontSensors(dt, veh_props, system_params, aeb_params)
   return {front_static_min_dist, other_vehs_data, other_vehs_same_road_data}
 end
 
-local function updateRearSensors(dt, veh_props, system_params, rev_aeb_params)
+local function getClosestVehicle(other_vehs_data)
+  local distance = 9999
+  local other_veh = nil
+
+  for _, other_veh_data in pairs(other_vehs_data) do
+    local veh = other_veh_data.other_veh
+    local this_distance = other_veh_data.distance
+
+    if this_distance <= distance then
+      distance = this_distance
+      other_veh = veh
+    end
+  end
+
+  --print(distance)
+
+  return {other_veh, distance}
+end
+
+local function processRearSensorData(rear_static_min_dist, other_vehs_data, rev_aeb_params)
+  local vehicle_hit = getClosestVehicle(other_vehs_data)
+  
+  local vehicle_dist = 9999
+  local other_veh = nil
+
+  if vehicle_hit[1] ~= nil then
+    other_veh = vehicle_hit[1]
+    vehicle_dist = vehicle_hit[2]
+  end
+
+  local min_dist = math.min(rear_static_min_dist, vehicle_dist)
+
+  min_dist = min_dist - rev_aeb_params.sensor_offset_forward - 0.15
+
+  return {other_veh, min_dist}
+end
+
+local function pollRearSensors(dt, veh_props, system_params, rev_aeb_params)
   --Cast rays for static objects
   for i = 1, rev_aeb_params.sensors_polled_per_iteration do
     if rear_static_sensor_id == rev_aeb_params.num_of_sensors - 1 then
@@ -365,10 +402,12 @@ local function updateRearSensors(dt, veh_props, system_params, rev_aeb_params)
   --Get nearby vehicles
   local other_vehs_data = getNearbyVehicles(veh_props, rev_aeb_params.sensor_max_distance, 0, false)
   
-  return {rear_static_min_dist, other_vehs_data}
+  local data = processRearSensorData(rear_static_min_dist, other_vehs_data, rev_aeb_params)
+  
+  return data
 end
 
-M.updateFrontSensors = updateFrontSensors
-M.updateRearSensors = updateRearSensors
+M.pollFrontSensors = pollFrontSensors
+M.pollRearSensors = pollRearSensors
 
 return M

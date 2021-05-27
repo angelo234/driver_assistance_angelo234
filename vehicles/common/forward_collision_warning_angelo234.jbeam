@@ -1,0 +1,10 @@
+{
+    "forward_collision_warning_angelo234": {
+        "information":{
+            "authors":"angelo234",
+            "name":"Forward Collision Warning",
+            "value":250,
+        },
+        "slotType" : "forward_collision_warning_angelo234",
+    },
+}

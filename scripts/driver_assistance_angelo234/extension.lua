@@ -13,8 +13,8 @@ local M = {}
 local extra_utils = require('scripts/driver_assistance_angelo234/extraUtils')
 
 local sensor_system = require('scripts/driver_assistance_angelo234/sensorSystem')
-local aeb_system = require('scripts/driver_assistance_angelo234/aebSystem')
-local parking_aeb_system = require('scripts/driver_assistance_angelo234/parkingAEBSystem')
+local fcm_system = require('scripts/driver_assistance_angelo234/forwardCollisionMitigationSystem')
+local rcm_system = require('scripts/driver_assistance_angelo234/reverseCollisionMitigationSystem')
 local acc_system = require('scripts/driver_assistance_angelo234/accSystem')
 
 local system_params = nil
@@ -58,26 +58,18 @@ local function onVehicleSwitched(oid, nid, player)
   init(player)
 end
 
-local function checkIfPartExists(part)
-  if not extensions.core_vehicle_manager.getPlayerVehicleData() then return false end
-
-  --Only change status if part actually installed
-  local parts = extensions.core_vehicle_manager.getPlayerVehicleData().chosenParts
-  
-  return parts[part] == part
-end
-
 --Functions called with key binding
 local function toggleFWDAEBSystem()
-  if not checkIfPartExists("forward_aeb_angelo234") then return end
+  if not extra_utils.checkIfPartExists("forward_aeb_angelo234") then return end
   
-  aeb_system.toggleSystem()
+  fcm_system.toggleSystem()
 end
 
 local function toggleREVAEBSystem()
-  if not checkIfPartExists("reverse_aeb_angelo234") then return end
-
-  parking_aeb_system.toggleSystem()
+  if extra_utils.checkIfPartExists("reverse_aeb_angelo234") or extra_utils.checkIfPartExists("rear_beepers_angelo234") then
+    rcm_system.toggleSystem()
+    --beeper_system.toggleRearBeeperSystem() 
+  end
 end
 
 local function switchOnOffACCSystem(on)
@@ -85,25 +77,25 @@ local function switchOnOffACCSystem(on)
 end
 
 local function toggleACCSystem()
-  if not checkIfPartExists("acc_angelo234") then return end
+  if not extra_utils.checkIfPartExists("acc_angelo234") then return end
 
   acc_system.toggleSystem()
 end
 
 local function setACCSpeed()
-  if not checkIfPartExists("acc_angelo234") then return end
+  if not extra_utils.checkIfPartExists("acc_angelo234") then return end
 
   acc_system.setACCSpeed()
 end
 
 local function changeACCSpeed(amt)
-  if not checkIfPartExists("acc_angelo234") then return end
+  if not extra_utils.checkIfPartExists("acc_angelo234") then return end
 
   acc_system.changeACCSpeed(amt)
 end
 
 local function changeACCFollowingDistance(amt)
-  if not checkIfPartExists("acc_angelo234") then return end
+  if not extra_utils.checkIfPartExists("acc_angelo234") then return end
 
   acc_system.changeACCFollowingDistance(amt)
 end
@@ -215,13 +207,13 @@ local function onUpdate(dt)
   
   local veh_props = extra_utils.getVehicleProperties(my_veh)
   
-  local front_sensor_data = sensor_system.updateFrontSensors(dt, veh_props, system_params, aeb_params)
-  local rear_sensor_data = sensor_system.updateRearSensors(dt, veh_props, system_params, rev_aeb_params)
+  local front_sensor_data = sensor_system.pollFrontSensors(dt, veh_props, system_params, aeb_params)
+  local rear_sensor_data = sensor_system.pollRearSensors(dt, veh_props, system_params, rev_aeb_params)
   
   --If either part exists then get nearby vehicles
   --[[
   if (parts.acc_angelo234 == "acc_angelo234" and acc_system.getSystemOnOff()) 
-  or (parts.forward_aeb_angelo234 == "forward_aeb_angelo234" and aeb_system.getSystemOnOff()) then
+  or (parts.forward_aeb_angelo234 == "forward_aeb_angelo234" and fcm_system.getSystemOnOff()) then
     vehs_in_same_lane_in_front_table = extra_utils.getNearbyVehiclesOnSameRoad(dt, veh_props, aeb_params.vehicle_search_radius, 
     aeb_params.min_distance_from_car, true, false, last_vehs_in_same_lane_in_front_table)
   end
@@ -232,14 +224,14 @@ local function onUpdate(dt)
     acc_system.update(dt, my_veh, system_params, aeb_params, front_sensor_data) 
   end
 
-  --Update Forward AEB
-  if parts.forward_aeb_angelo234 == "forward_aeb_angelo234" then
-    aeb_system.update(dt, my_veh, system_params, aeb_params, beeper_params, front_sensor_data) 
+  --Update Forward Collision Mitigation System
+  if parts.forward_collision_mitigation_angelo234 == "forward_collision_mitigation_angelo234" then
+    fcm_system.update(dt, my_veh, system_params, aeb_params, beeper_params, front_sensor_data) 
   end
   
-  --Update Reverse AEB
-  if parts.reverse_aeb_angelo234 == "reverse_aeb_angelo234" then
-    parking_aeb_system.update(dt, my_veh, system_params, parking_lines_params, rev_aeb_params, beeper_params, rear_sensor_data)
+  --Update Reverse Collision Mitigation System
+  if parts.reverse_collision_mitigation_angelo234 == "reverse_collision_mitigation_angelo234" then 
+    rcm_system.update(dt, my_veh, system_params, parking_lines_params, rev_aeb_params, beeper_params, rear_sensor_data)
   end
 end
 

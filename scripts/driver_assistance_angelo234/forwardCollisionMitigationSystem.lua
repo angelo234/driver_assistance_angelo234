@@ -1,10 +1,8 @@
-require("lua/common/luaProfiler")
-
 local M = {}
 
 local extra_utils = require('scripts/driver_assistance_angelo234/extraUtils')
 
-local fwd_aeb_on = true
+local fcm_system_on = true
 
 --ready = system not doing anything 
 --braking = AEB active
@@ -12,126 +10,21 @@ local fwd_aeb_on = true
 local system_state = "ready"
 
 local function getSystemOnOff()
-  return fwd_aeb_on
+  return fcm_system_on
 end
 
 local function toggleSystem()
-  fwd_aeb_on = not fwd_aeb_on
+  fcm_system_on = not fcm_system_on
   
   local msg = nil
   
-  if fwd_aeb_on then
+  if fcm_system_on then
     msg = "ON"
   else
     msg = "OFF"
   end
   
-  ui_message("Forward AEB switched " .. msg)
-end
-
-local function dirToPointSensor(veh_props, init_dir, system_params)
-  --Sagitta
-  local s = 0.1
-
-  --Using steering angle to point sensors
-  local avg_radius = (system_params.max_steer_radius + system_params.min_steer_radius) / 2
-
-  local r = avg_radius / electrics_values_angelo234["steering_input"]
-  
-  local turning_right = true
-  
-  if r < 0 then
-    turning_right = false
-  end
-  
-  r = math.abs(r)
-  
-  --Raycast distance
-  local d = 2 * math.sqrt(s * (-s + 2 * r))
-
-  local angle = 2 * math.asin(d / (2 * r))
-  
-  --Set angle negative if turning left
-  if not turning_right then
-    angle = -angle
-  end
-
-  local dir = init_dir * math.cos(angle) + veh_props.dir_right * math.sin(angle)
-  
-  return dir, d
-end
-
---Used to point sensors to horizontal regardless of pitch of car (e.g. accelearting and braking)
-local function pitchSensor(veh_props)
-  local height_front = castRayStatic(veh_props.front_pos:toPoint3F(), -veh_props.dir_up:toPoint3F(), 2)
-  local height_rear = castRayStatic(veh_props.rear_pos:toPoint3F(), -veh_props.dir_up:toPoint3F(), 2)
-  
-  -- +x = need to lower, -x = need to raise
-  local diff = height_front - height_rear
-  
-  local result_dir = (veh_props.front_pos - (veh_props.rear_pos + veh_props.dir_up * diff)):normalized()
-
-  return result_dir
-end
-
-local function staticCastRay(veh_props, sensor_pos, same_ray, system_params, aeb_params)
-  local hit = nil
-
-  local car_half_width = veh_props.bb:getHalfExtents().x - 0.3
-
-  if not same_ray then
-    if static_sensor_id >= aeb_params.num_of_sensors - 1 then static_sensor_id = -1 end
-    static_sensor_id = static_sensor_id + 1
-  end
-
-  local pos = sensor_pos + veh_props.dir_right * (car_half_width - car_half_width / ((aeb_params.num_of_sensors - 1) / 2.0) * static_sensor_id)
-  
-  local sensor_dir = pitchSensor(veh_props)
-
-  sensor_dir = dirToPointSensor(veh_props, sensor_dir, system_params)
-
-  local dest = sensor_dir * 10 + pos
-
-  --local dest = veh_props.dir * aeb_params.sensor_max_distance + pos
-
-  --use castRayDebug to show lines
-  hit = castRay(pos, dest, true, true)
-
-  if hit == nil then return nil end
-
-  return {hit.norm, hit.dist, hit.pt, static_sensor_id}
-end
-
-local function processRayCasts(veh_props, static_hit)
-  --static hit returns {hit.norm, hit.dist, hit.pt, static_sensor_id}
-  --vehicle hit returns {other_veh, min_distance, veh_sensor_id}
-
-  local static_dist = 9999
-  if static_hit ~= nil then
-    local norm = static_hit[1]
-    local distance = static_hit[2]
-
-    local new_dir_x = math.sqrt(veh_props.dir.x * veh_props.dir.x 
-    + veh_props.dir.y * veh_props.dir.y)
-    
-    local new_norm_x = math.sqrt(norm.x * norm.x + norm.y * norm.y)
-
-    local dir_xy = vec3(new_dir_x, veh_props.dir.z, 0)
-    local norm_xy = vec3(new_norm_x, norm.z, 0)
-
-    dir_xy = dir_xy:normalized()
-    norm_xy = norm_xy:normalized()
-     
-    local angle = math.acos(dir_xy:dot(norm_xy))
-    --print(angle * 180.0 / math.pi)
-    
-    --If surface is < 70 degrees then count it as obstacle
-    if angle < 70 * math.pi / 180.0 then
-      static_dist = static_hit[2]
-    end
-  end
-
-  return static_dist
+  ui_message("Forward Collision Mitigation System switched " .. msg)
 end
 
 --Uses predicted future pos and places it relative to the future waypoint
@@ -321,22 +214,6 @@ local function getVehicleCollidingWithInLane(dt, my_veh_props, data_table, later
   return distance, rel_vel
 end
 
-local function pollFrontSensors(dt, my_veh_props, system_params, aeb_params)
-  local parking_sensor_height = aeb_params.parking_sensor_rel_height
-
-  --Also fixes lag of sensor_pos
-  local sensor_pos = my_veh_props.front_pos + my_veh_props.dir_up * parking_sensor_height + my_veh_props.dir * aeb_params.sensor_offset_forward
-  -- + (aeb_params.num_of_sensors / aeb_params.sensors_polled_per_iteration) * my_veh_props.velocity * dt
-  
-  local static_hit = staticCastRay(my_veh_props, sensor_pos, false, system_params, aeb_params)
-
-  local static_min_dist = processRayCasts(my_veh_props, static_hit)
-
-  static_min_dist = static_min_dist - aeb_params.sensor_offset_forward - 0.2
-
-  return static_min_dist
-end
-
 local beeper_timer = 0
 
 local function soundBeepers(dt, time_before_braking, vel_rel, beeper_params)
@@ -445,10 +322,8 @@ local function holdBrakes(veh, veh_props, aeb_params)
 end
 
 local function update(dt, veh, system_params, aeb_params, beeper_params, front_sensor_data)
-  if not fwd_aeb_on then return end
+  if not fcm_system_on then return end
 
-  local veh_props = extra_utils.getVehicleProperties(veh)
-  
   local in_reverse = electrics_values_angelo234["reverse"]
   local gear_selected = electrics_values_angelo234["gear"]
   local esc_color = electrics_values_angelo234["dseColor"]
@@ -469,6 +344,8 @@ local function update(dt, veh, system_params, aeb_params, beeper_params, front_s
     end
     return
   end
+  
+  local veh_props = extra_utils.getVehicleProperties(veh)
   
   if holdBrakes(veh, veh_props, aeb_params) then return end
 
@@ -507,13 +384,17 @@ local function update(dt, veh, system_params, aeb_params, beeper_params, front_s
 
   local time_before_braking = calculateTimeBeforeBraking(distance, vel_rel, system_params, aeb_params)
 
-  --At low speeds don't sound beepers
-  if veh_props.speed > 11.11 then
-    soundBeepers(dt, time_before_braking, vel_rel, beeper_params)
+  if extra_utils.checkIfPartExists("forward_aeb_angelo234") then
+    --Use distance, relative velocity, and max acceleration to determine when to apply emergency braking
+    performEmergencyBraking(dt, veh, aeb_params, time_before_braking, veh_props.speed)
   end
-
-  --Use distance, relative velocity, and max acceleration to determine when to apply emergency braking
-  performEmergencyBraking(dt, veh, aeb_params, time_before_braking, veh_props.speed)
+   
+  if extra_utils.checkIfPartExists("forward_collision_warning_angelo234") then
+    --At low speeds don't sound beepers
+    if veh_props.speed > 11.11 then
+      soundBeepers(dt, time_before_braking, vel_rel, beeper_params)
+    end
+  end
 end
 
 M.getSystemOnOff = getSystemOnOff

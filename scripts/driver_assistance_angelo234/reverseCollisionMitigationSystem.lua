@@ -2,67 +2,26 @@ local M = {}
 
 local extra_utils = require('scripts/driver_assistance_angelo234/extraUtils')
 
-local rev_aeb_on = true
+local rcm_system_on = true
 
 local system_active = false
 
 local function getSystemOnOff()
-  return rev_aeb_on
+  return rcm_system_on
 end
 
 local function toggleSystem()
-  rev_aeb_on = not rev_aeb_on
+  rcm_system_on = not rcm_system_on
   
   local msg = nil
   
-  if rev_aeb_on then
+  if rcm_system_on then
     msg = "ON"
   else
     msg = "OFF"
   end
   
-  ui_message("Reverse AEB switched " .. msg)
-end
-
-local function staticCastRay(veh_props, sensorPos, same_ray, parking_sensor_params)
-  local hit = nil
-
-  local car_half_width = veh_props.bb:getHalfExtents().x - 0.3
-
-  if not same_ray then
-    if static_sensor_id >= parking_sensor_params.num_of_sensors - 1 then static_sensor_id = -1 end
-    static_sensor_id = static_sensor_id + 1
-  end
-
-  local pos = sensorPos + veh_props.dir_right * (car_half_width - car_half_width / ((parking_sensor_params.num_of_sensors - 1) / 2.0) * static_sensor_id)
-
-  local dest = -veh_props.dir * parking_sensor_params.sensor_max_distance + pos
-
-  --use castRayDebug to show lines
-  hit = castRay(pos, dest, true, true)
-
-  if hit == nil then return nil end
-
-  return {hit.norm, hit.dist, hit.pt, static_sensor_id}
-end
-
-local function getClosestVehicle(other_vehs_data)
-  local distance = 9999
-  local other_veh = nil
-
-  for _, other_veh_data in pairs(other_vehs_data) do
-    local veh = other_veh_data.other_veh
-    local this_distance = other_veh_data.distance
-
-    if this_distance <= distance then
-      distance = this_distance
-      other_veh = veh
-    end
-  end
-
-  --print(distance)
-
-  return {other_veh, distance}
+  ui_message("Reverse Collision Mitigation System switched " .. msg)
 end
 
 local beeper_timer = 0
@@ -136,34 +95,9 @@ local function performEmergencyBraking(dt, veh, distance, speed, system_params, 
   end
 end
 
-local function processData(rear_sensor_data, rev_aeb_params)
-  local vehicle_hit = getClosestVehicle(rear_sensor_data[2])
-  
-  local vehicle_dist = 9999
-  local other_veh = nil
-
-  if vehicle_hit[1] ~= nil then
-    other_veh = vehicle_hit[1]
-    vehicle_dist = vehicle_hit[2]
-  end
-
-  local min_dist = math.min(rear_sensor_data[1], vehicle_dist)
-
-  --Vehicle is closest
-  --if min_dist ~= 9999 and min_dist == vehicle_dist then
-
-  --end
-
-  min_dist = min_dist - rev_aeb_params.sensor_offset_forward - 0.15
-
-  return other_veh, min_dist
-end
-
 local function update(dt, veh, system_params, parking_lines_params, rev_aeb_params, beeper_params, rear_sensor_data)
-  if not rev_aeb_on then return end
-  
-  local veh_props = extra_utils.getVehicleProperties(veh)
-  
+  if not rcm_system_on then return end
+
   local in_reverse = electrics_values_angelo234["reverse"]
   local gear_selected = electrics_values_angelo234["gear"]
 
@@ -171,12 +105,20 @@ local function update(dt, veh, system_params, parking_lines_params, rev_aeb_para
     return 
   end
 
-  local other_veh, min_dist = processData(rear_sensor_data, rev_aeb_params)
+  local veh_props = extra_utils.getVehicleProperties(veh)
 
-  --Play beeping sound based on min distance of prev sensor detections to obstacle
-  soundBeepers(dt, min_dist, parking_lines_params, beeper_params)
+  local other_veh = rear_sensor_data[1]
+  local min_dist = rear_sensor_data[2]
+
+  if extra_utils.checkIfPartExists("reverse_aeb_angelo234") then
+    performEmergencyBraking(dt, veh, min_dist, veh_props.speed, system_params, rev_aeb_params)
+  end
   
-  performEmergencyBraking(dt, veh, min_dist, veh_props.speed, system_params, rev_aeb_params)
+  if extra_utils.checkIfPartExists("reverse_collision_warning_angelo234") then
+    --Play beeping sound based on min distance of prev sensor detections to obstacle
+    soundBeepers(dt, min_dist, parking_lines_params, beeper_params)
+  end
+
 end
 
 M.getSystemOnOff = getSystemOnOff

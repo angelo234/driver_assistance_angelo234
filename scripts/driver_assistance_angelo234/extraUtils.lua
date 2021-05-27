@@ -18,8 +18,13 @@ local ceil = math.ceil
 local map_nodes = map.getMap().nodes
 local findClosestRoad = map.findClosestRoad
 
-local function toNormXYVec(dir)
-  return dir:z0():normalized()
+local function checkIfPartExists(part)
+  if not extensions.core_vehicle_manager.getPlayerVehicleData() then return false end
+
+  --Only change status if part actually installed
+  local parts = extensions.core_vehicle_manager.getPlayerVehicleData().chosenParts
+  
+  return parts[part] == part
 end
 
 local function getVehicleProperties(veh)
@@ -76,6 +81,10 @@ local function checkIfWaypointsWithinMyCar(veh_props, wps_props)
   --debugDrawer:drawTextAdvanced((wps_props.end_wp_pos):toPoint3F(), String("Lateral Distance: " .. tostring(lat_dist)),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
 
   return lat_dist < wps_props.wp_radius
+end
+
+local function toNormXYVec(dir)
+  return dir:z0():normalized()
 end
 
 local function getFuturePosition(veh_props, time, rel_car_pos)
@@ -448,8 +457,9 @@ local function onClientPostStartMission(levelpath)
   findClosestRoad = map.findClosestRoad
 end
 
-M.toNormXYVec = toNormXYVec
+M.checkIfPartExists = checkIfPartExists
 M.getVehicleProperties = getVehicleProperties
+M.toNormXYVec = toNormXYVec
 M.getFuturePosition = getFuturePosition
 M.getFuturePositionXY = getFuturePositionXY
 M.getFuturePositionXYWithAcc = getFuturePositionXYWithAcc

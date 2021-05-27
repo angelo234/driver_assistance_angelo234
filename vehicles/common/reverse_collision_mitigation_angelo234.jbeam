@@ -1,0 +1,15 @@
+{
+    "reverse_collision_mitigation_angelo234": {
+        "information":{
+            "authors":"angelo234",
+            "name":"Reverse Collision Mitigation System",
+            "value":250,
+        },
+        "slotType" : "reverse_collision_mitigation_angelo234",
+		"slots": [
+			["type", "default", "description"],
+			["reverse_aeb_angelo234",				"reverse_aeb_angelo234", 				"Reverse AEB"],
+			["reverse_collision_warning_angelo234",	"reverse_collision_warning_angelo234", 	"Reverse Collision Warning"],
+		],
+    },
+}
