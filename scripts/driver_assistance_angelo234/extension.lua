@@ -154,6 +154,8 @@ local function getAllVehiclesPropertiesFromVELua()
   my_veh:queueLuaCommand("if input.throttle ~= nil then obj:queueGameEngineLua('input_throttle_angelo234 = ' .. input.throttle ) end")
   my_veh:queueLuaCommand("if input.brake ~= nil then obj:queueGameEngineLua('input_brake_angelo234 = ' .. input.brake ) end")
   my_veh:queueLuaCommand("if input.clutch ~= nil then obj:queueGameEngineLua('input_clutch_angelo234 = ' .. input.clutch ) end")
+  my_veh:queueLuaCommand("if input.parkingbrake ~= nil then obj:queueGameEngineLua('input_parkingbrake_angelo234 = ' .. input.parkingbrake ) end")
+  
   my_veh:queueLuaCommand('obj:queueGameEngineLua("electrics_values_angelo234 = (\'" .. jsonEncode(electrics.values) .. "\')")')
   my_veh:queueLuaCommand("obj:queueGameEngineLua('angular_speed_angelo234 = ' .. obj:getYawAngularVelocity() )")
   my_veh:queueLuaCommand("obj:queueGameEngineLua('rotation_angelo234 = ' .. vec3toString(vec3(obj:getRollPitchYaw())) )")
@@ -170,6 +172,8 @@ local function getAllVehiclesPropertiesFromVELua()
     and angular_speed_angelo234 ~= nil
     and input_throttle_angelo234 ~= nil
     and input_brake_angelo234 ~= nil
+    and input_clutch_angelo234 ~= nil
+    and input_parkingbrake_angelo234 ~= nil
     and gearbox_mode_angelo234 ~= nil and gearbox_mode_angelo234 ~= "null" and type(gearbox_mode_angelo234) ~= "table"
 end
 

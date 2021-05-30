@@ -8,8 +8,10 @@ local off_brake_timer = 0
 local function checkToActivateSystem(veh, gear_selected, yaw)
   if input_brake_angelo234 > 0.2 
   and vec3(veh:getVelocity()):length() < 0.05 then
-    if (yaw > hold_angle and (gear_selected == "D" or gear_selected:find('S') or gear_selected == "1")) 
-    or yaw < -hold_angle and (gear_selected == "R" or gear_selected == "-1") then
+    if ((yaw > hold_angle and (gear_selected == "D" or gear_selected:find('S') or gear_selected == "1")) 
+    or yaw < -hold_angle and (gear_selected == "R" or gear_selected == "-1")) 
+    and input_throttle_angelo234 == 0
+    and input_parkingbrake_angelo234 == 0 then
       veh:queueLuaCommand("electrics.values.brakeOverride = 1")  
       off_brake_timer = 0
       activated = true
@@ -23,13 +25,15 @@ local function checkToDeactivateSystem(dt, veh, gear_selected, yaw)
   local deactivate = false
 
   if (yaw > hold_angle and (gear_selected ~= "D" and (not gear_selected:find('S')) and gear_selected ~= "1"))
-  or yaw < -hold_angle and (gear_selected ~= "R" and gear_selected ~= "-1") then
+  or yaw < -hold_angle and (gear_selected ~= "R" and gear_selected ~= "-1") 
+  or input_throttle_angelo234 > 0
+  or input_parkingbrake_angelo234 > 0 then
     deactivate = true
   end
 
-  --Start timer only if player gets off brakes
+  --Start timer when player gets off brakes
   if input_brake_angelo234 == 0 then 
-    if off_brake_timer >= 3 or input_throttle_angelo234 > 0 then
+    if off_brake_timer >= 3 then
       deactivate = true
     end
     
