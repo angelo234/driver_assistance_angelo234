@@ -16,12 +16,17 @@ local sensor_system = require('scripts/driver_assistance_angelo234/sensorSystem'
 local fcm_system = require('scripts/driver_assistance_angelo234/forwardCollisionMitigationSystem')
 local rcm_system = require('scripts/driver_assistance_angelo234/reverseCollisionMitigationSystem')
 local acc_system = require('scripts/driver_assistance_angelo234/accSystem')
+local hsa_system = require('scripts/driver_assistance_angelo234/hillStartAssistSystem')
 
 local system_params = nil
 local aeb_params = nil
 local rev_aeb_params = nil
 local parking_lines_params = nil
 local beeper_params = nil
+
+local fcm_system_on = true
+local rcm_system_on = true
+local acc_system_on = false
 
 M.curr_camera_mode = "orbit"
 M.prev_camera_mode = "orbit"
@@ -59,27 +64,54 @@ local function onVehicleSwitched(oid, nid, player)
 end
 
 --Functions called with key binding
-local function toggleFWDAEBSystem()
-  if not extra_utils.checkIfPartExists("forward_aeb_angelo234") then return end
+local function toggleFCMSystem()
+  if not extra_utils.checkIfPartExists("forward_collision_mitigation_angelo234") then return end
   
-  fcm_system.toggleSystem()
-end
-
-local function toggleREVAEBSystem()
-  if extra_utils.checkIfPartExists("reverse_aeb_angelo234") or extra_utils.checkIfPartExists("rear_beepers_angelo234") then
-    rcm_system.toggleSystem()
-    --beeper_system.toggleRearBeeperSystem() 
+  fcm_system_on = not fcm_system_on
+  
+  local msg = nil
+  
+  if fcm_system_on then
+    msg = "ON"
+  else
+    msg = "OFF"
   end
+  
+  ui_message("Forward Collision Mitigation System switched " .. msg)
 end
 
-local function switchOnOffACCSystem(on)
-  acc_system.switchOnOffSystem(on)
+local function toggleRCMSystem()
+  if not extra_utils.checkIfPartExists("reverse_collision_mitigation_angelo234") then return end
+
+  rcm_system_on = not rcm_system_on
+  
+  local msg = nil
+  
+  if rcm_system_on then
+    msg = "ON"
+  else
+    msg = "OFF"
+  end
+  
+  ui_message("Reverse Collision Mitigation System switched " .. msg)
+end
+
+local function setACCSystemOn(on)
+  if not extra_utils.checkIfPartExists("acc_angelo234") then return end
+
+  if acc_system_on ~= on then
+    acc_system_on = on
+    
+    acc_system.onToggled(acc_system_on) 
+  end
 end
 
 local function toggleACCSystem()
   if not extra_utils.checkIfPartExists("acc_angelo234") then return end
-
-  acc_system.toggleSystem()
+  
+  acc_system_on = not acc_system_on
+  
+  acc_system.onToggled(acc_system_on) 
 end
 
 local function setACCSpeed()
@@ -124,6 +156,7 @@ local function getAllVehiclesPropertiesFromVELua()
   my_veh:queueLuaCommand("if input.clutch ~= nil then obj:queueGameEngineLua('input_clutch_angelo234 = ' .. input.clutch ) end")
   my_veh:queueLuaCommand('obj:queueGameEngineLua("electrics_values_angelo234 = (\'" .. jsonEncode(electrics.values) .. "\')")')
   my_veh:queueLuaCommand("obj:queueGameEngineLua('angular_speed_angelo234 = ' .. obj:getYawAngularVelocity() )")
+  my_veh:queueLuaCommand("obj:queueGameEngineLua('rotation_angelo234 = ' .. vec3toString(vec3(obj:getRollPitchYaw())) )")
   
   --Gets whether gearbox is in arcade or realistic mode
   my_veh:queueLuaCommand('if controller.mainController.onSerialize ~= nil then obj:queueGameEngineLua("gearbox_mode_angelo234 = (\'" .. jsonEncode(controller.mainController.onSerialize()) .. "\')") end')
@@ -207,39 +240,36 @@ local function onUpdate(dt)
   
   local veh_props = extra_utils.getVehicleProperties(my_veh)
   
+  --Get sensor data
   local front_sensor_data = sensor_system.pollFrontSensors(dt, veh_props, system_params, aeb_params)
   local rear_sensor_data = sensor_system.pollRearSensors(dt, veh_props, system_params, rev_aeb_params)
-  
-  --If either part exists then get nearby vehicles
-  --[[
-  if (parts.acc_angelo234 == "acc_angelo234" and acc_system.getSystemOnOff()) 
-  or (parts.forward_aeb_angelo234 == "forward_aeb_angelo234" and fcm_system.getSystemOnOff()) then
-    vehs_in_same_lane_in_front_table = extra_utils.getNearbyVehiclesOnSameRoad(dt, veh_props, aeb_params.vehicle_search_radius, 
-    aeb_params.min_distance_from_car, true, false, last_vehs_in_same_lane_in_front_table)
-  end
-  ]]--
-  
+
   --Update Adaptive Cruise Control
-  if parts.acc_angelo234 == "acc_angelo234" then
+  if extra_utils.checkIfPartExists("acc_angelo234") and acc_system_on then
     acc_system.update(dt, my_veh, system_params, aeb_params, front_sensor_data) 
   end
 
   --Update Forward Collision Mitigation System
-  if parts.forward_collision_mitigation_angelo234 == "forward_collision_mitigation_angelo234" then
+  if extra_utils.checkIfPartExists("forward_collision_mitigation_angelo234") and fcm_system_on then
     fcm_system.update(dt, my_veh, system_params, aeb_params, beeper_params, front_sensor_data) 
   end
   
   --Update Reverse Collision Mitigation System
-  if parts.reverse_collision_mitigation_angelo234 == "reverse_collision_mitigation_angelo234" then 
+  if extra_utils.checkIfPartExists("reverse_collision_mitigation_angelo234") and rcm_system_on then 
     rcm_system.update(dt, my_veh, system_params, parking_lines_params, rev_aeb_params, beeper_params, rear_sensor_data)
+  end
+  
+  --Update Hill Start Assist System
+  if extra_utils.checkIfPartExists("hill_start_assist_angelo234") then
+    hsa_system.update(dt, my_veh)
   end
 end
 
 M.onExtensionLoaded = onExtensionLoaded
 M.onVehicleSwitched = onVehicleSwitched
-M.toggleFWDAEBSystem = toggleFWDAEBSystem
-M.toggleREVAEBSystem = toggleREVAEBSystem
-M.switchOnOffACCSystem = switchOnOffACCSystem
+M.toggleFCMSystem = toggleFCMSystem
+M.toggleRCMSystem = toggleRCMSystem
+M.setACCSystemOn = setACCSystemOn
 M.toggleACCSystem = toggleACCSystem
 M.setACCSpeed = setACCSpeed
 M.changeACCSpeed = changeACCSpeed

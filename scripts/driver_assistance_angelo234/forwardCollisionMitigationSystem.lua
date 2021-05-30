@@ -2,30 +2,10 @@ local M = {}
 
 local extra_utils = require('scripts/driver_assistance_angelo234/extraUtils')
 
-local fcm_system_on = true
-
 --ready = system not doing anything 
 --braking = AEB active
 --holding = car is stopped and system is holding the brakes 
 local system_state = "ready"
-
-local function getSystemOnOff()
-  return fcm_system_on
-end
-
-local function toggleSystem()
-  fcm_system_on = not fcm_system_on
-  
-  local msg = nil
-  
-  if fcm_system_on then
-    msg = "ON"
-  else
-    msg = "OFF"
-  end
-  
-  ui_message("Forward Collision Mitigation System switched " .. msg)
-end
 
 --Uses predicted future pos and places it relative to the future waypoint
 --based on relative position to the current waypoint
@@ -259,7 +239,7 @@ local function performEmergencyBraking(dt, veh, aeb_params, time_before_braking,
     veh:queueLuaCommand("electrics.values.brakeOverride = 1")
     
     --Turn off Adaptive Cruise Control
-    scripts_driver__assistance__angelo234_extension.switchOnOffACCSystem(false)
+    scripts_driver__assistance__angelo234_extension.setACCSystemOn(false)
 
     system_state = "braking"
 
@@ -322,8 +302,6 @@ local function holdBrakes(veh, veh_props, aeb_params)
 end
 
 local function update(dt, veh, system_params, aeb_params, beeper_params, front_sensor_data)
-  if not fcm_system_on then return end
-
   local in_reverse = electrics_values_angelo234["reverse"]
   local gear_selected = electrics_values_angelo234["gear"]
   local esc_color = electrics_values_angelo234["dseColor"]
@@ -397,8 +375,6 @@ local function update(dt, veh, system_params, aeb_params, beeper_params, front_s
   end
 end
 
-M.getSystemOnOff = getSystemOnOff
-M.toggleSystem = toggleSystem
 M.update = update
 
 return M

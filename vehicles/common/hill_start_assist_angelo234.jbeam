@@ -1,0 +1,10 @@
+{
+    "hill_start_assist_angelo234": {
+        "information":{
+            "authors":"angelo234",
+            "name":"Hill Start Assist",
+            "value":250,
+        },
+        "slotType" : "hill_start_assist_angelo234",
+    },
+}

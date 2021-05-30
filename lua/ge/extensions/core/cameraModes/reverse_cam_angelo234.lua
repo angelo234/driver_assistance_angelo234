@@ -370,13 +370,13 @@ function C:update(data)
   if gear_selected == nil or in_reverse == nil then return end
 
   --If vehicle doesn't have a backup camera or not in reverse and neutral, set camera to previous camera mode
-  if in_reverse == nil or is_supported == false or gear_selected == nil
-    or (gear_selected ~= 'N' and gear_selected ~= 'R' and gear_selected ~= 0 and gear_selected ~= -1) then
+  if not is_supported
+  or (gear_selected ~= 'N' and gear_selected ~= 'R' and gear_selected ~= 0 and gear_selected ~= -1) then
     local prev_cam = scripts_driver__assistance__angelo234_extension.prev_camera_mode
     core_camera.setByName(0, prev_cam)
     return
   end
-
+  
   local carPos = data.pos
   local ref  = vec3(data.veh:getNodePosition(self.refNodes.ref))
   local left = vec3(data.veh:getNodePosition(self.refNodes.left))

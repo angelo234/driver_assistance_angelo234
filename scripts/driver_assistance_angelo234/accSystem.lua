@@ -5,8 +5,6 @@ local M = {}
 local control_systems = require("controlSystems") -- for newPIDStandard
 local extra_utils = require('scripts/driver_assistance_angelo234/extraUtils')
 
-local acc_on = false
-
 --PID for getting vehicle up to desired speed when no car in front
 --Input = desired velocity, Output = acceleration
 local speed_pid = newPIDStandard(0.3, 2, 0.0, 0, 1, 1, 1, 0, 2)
@@ -24,15 +22,7 @@ local ramped_target_speed = 0
 
 local following_time = 1
 
-local function getSystemOnOff()
-  return acc_on
-end
-
-local function switchOnOffSystem(on)
-  if on == acc_on then return end
-  
-  acc_on = on
-
+local function onToggled(acc_on)
   if acc_on then
     local display_speed = target_speed
 
@@ -50,7 +40,7 @@ local function switchOnOffSystem(on)
     display_speed = math.floor(display_speed / 5 + 0.5) * 5
     
     ui_message("Adaptive Cruise Control switched ON (" .. display_speed .. " " .. the_unit .. ")")
-    
+       
   else
     speed_pid:reset()
     speed_smooth:reset()
@@ -65,11 +55,7 @@ local function switchOnOffSystem(on)
     ramped_target_speed = 0
     
     ui_message("Adaptive Cruise Control switched OFF")
-  end
-end
-
-local function toggleSystem()
-  switchOnOffSystem(not acc_on)
+  end 
 end
 
 local function setACCSpeed()
@@ -254,8 +240,6 @@ local function maintainSetSpeed(dt, veh, veh_props, aeb_params)
 end
 
 local function update(dt, veh, system_params, aeb_params, front_sensor_data)
-  if not acc_on then return end
-  
   local veh_props = extra_utils.getVehicleProperties(veh)
   
   local in_reverse = electrics_values_angelo234["reverse"]
@@ -267,11 +251,11 @@ local function update(dt, veh, system_params, aeb_params, front_sensor_data)
   --if (veh_name == "sunburst" and esc_color == "98FB00")
    --or (veh_name ~= "sunburst" and esc_color == "238BE6")
   --then
-  
+
   --Deactivate system based on any of these variables
   if in_reverse == nil or in_reverse == 1 or gear_selected == nil
     or gear_selected == 'P' then
-    switchOnOffSystem(false)
+    scripts_driver__assistance__angelo234_extension.setACCSystemOn(false)
     return
   end
 
@@ -284,7 +268,7 @@ local function update(dt, veh, system_params, aeb_params, front_sensor_data)
   --Turn off ACC system if braking
   if input_brake_angelo234 > 0 then
     veh:queueLuaCommand("electrics.values.brakeOverride = " .. input_brake_angelo234)  
-    scripts_driver__assistance__angelo234_extension.toggleACCSystem()    
+    scripts_driver__assistance__angelo234_extension.setACCSystemOn(false)    
   end
   
   if input_throttle_angelo234 > 0 or input_brake_angelo234 > 0 or input_clutch_angelo234 > 0 then return end
@@ -333,9 +317,7 @@ local function update(dt, veh, system_params, aeb_params, front_sensor_data)
   end
 end
 
-M.getSystemOnOff = getSystemOnOff
-M.switchOnOffSystem = switchOnOffSystem
-M.toggleSystem = toggleSystem
+M.onToggled = onToggled
 M.setACCSpeed = setACCSpeed
 M.changeACCSpeed = changeACCSpeed
 M.changeACCFollowingDistance = changeACCFollowingDistance 

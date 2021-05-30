@@ -2,27 +2,7 @@ local M = {}
 
 local extra_utils = require('scripts/driver_assistance_angelo234/extraUtils')
 
-local rcm_system_on = true
-
 local system_active = false
-
-local function getSystemOnOff()
-  return rcm_system_on
-end
-
-local function toggleSystem()
-  rcm_system_on = not rcm_system_on
-  
-  local msg = nil
-  
-  if rcm_system_on then
-    msg = "ON"
-  else
-    msg = "OFF"
-  end
-  
-  ui_message("Reverse Collision Mitigation System switched " .. msg)
-end
 
 local beeper_timer = 0
 
@@ -96,8 +76,6 @@ local function performEmergencyBraking(dt, veh, distance, speed, system_params, 
 end
 
 local function update(dt, veh, system_params, parking_lines_params, rev_aeb_params, beeper_params, rear_sensor_data)
-  if not rcm_system_on then return end
-
   local in_reverse = electrics_values_angelo234["reverse"]
   local gear_selected = electrics_values_angelo234["gear"]
 
@@ -121,8 +99,6 @@ local function update(dt, veh, system_params, parking_lines_params, rev_aeb_para
 
 end
 
-M.getSystemOnOff = getSystemOnOff
-M.toggleSystem = toggleSystem
 M.update = update
 
 return M
