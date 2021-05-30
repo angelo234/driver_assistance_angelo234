@@ -34,38 +34,40 @@ local function getNearbyVehicles(my_veh_props, max_dist, min_distance_from_car, 
   local vehicles = getAllVehicles()
 
   for _, other_veh in pairs(vehicles) do
-    local other_veh_props = extra_utils.getVehicleProperties(other_veh)
-
-    if other_veh_props.id ~= my_veh_props.id then
-      --Get aproximate distance first between vehicles and return if less than max dist
-      local other_bb = other_veh_props.bb
-
-      local front_dist = (my_veh_props.front_pos - other_veh_props.center_pos):length()
-      local rear_dist = (my_veh_props.rear_pos - other_veh_props.center_pos):length()
-
-      --If rear distance is larger than front distance, then vehicle is in front
-      if front_dist < max_dist and front_dist < rear_dist and in_front then
-        local cir_dist = extra_utils.getCircularDistance(my_veh_props, other_veh_props, min_distance_from_car)
-        
-        local other_veh_data = 
-        {
-          other_veh = other_veh, 
-          distance = cir_dist
-        }
-        
-        table.insert(other_vehs, other_veh_data)
-              
-        --If front distance is larger than rear distance, then vehicle is in rear
-      elseif rear_dist < max_dist and front_dist > rear_dist and not in_front then
-        local dist = extra_utils.getStraightDistance(my_veh_props, other_veh_props, min_distance_from_car, false, true)
-
-        local other_veh_data = 
-        {
-          other_veh = other_veh, 
-          distance = dist
-        }
-        
-        table.insert(other_vehs, other_veh_data)
+    if other_veh:getJBeamFilename() ~= "unicycle" then
+      local other_veh_props = extra_utils.getVehicleProperties(other_veh)
+  
+      if other_veh_props.id ~= my_veh_props.id then
+        --Get aproximate distance first between vehicles and return if less than max dist
+        local other_bb = other_veh_props.bb
+  
+        local front_dist = (my_veh_props.front_pos - other_veh_props.center_pos):length()
+        local rear_dist = (my_veh_props.rear_pos - other_veh_props.center_pos):length()
+  
+        --If rear distance is larger than front distance, then vehicle is in front
+        if front_dist < max_dist and front_dist < rear_dist and in_front then
+          local cir_dist = extra_utils.getCircularDistance(my_veh_props, other_veh_props, min_distance_from_car)
+          
+          local other_veh_data = 
+          {
+            other_veh = other_veh, 
+            distance = cir_dist
+          }
+          
+          table.insert(other_vehs, other_veh_data)
+                
+          --If front distance is larger than rear distance, then vehicle is in rear
+        elseif rear_dist < max_dist and front_dist > rear_dist and not in_front then
+          local dist = extra_utils.getStraightDistance(my_veh_props, other_veh_props, min_distance_from_car, false, true)
+  
+          local other_veh_data = 
+          {
+            other_veh = other_veh, 
+            distance = dist
+          }
+          
+          table.insert(other_vehs, other_veh_data)
+        end
       end
     end
   end
