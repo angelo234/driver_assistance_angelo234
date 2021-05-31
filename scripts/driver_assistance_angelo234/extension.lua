@@ -260,35 +260,35 @@ local function onUpdate(dt)
   
   local veh_props = extra_utils.getVehicleProperties(my_veh) 
 
-  --Update at 50 Hz
-  if other_systems_timer >= 0.02 then
+  --Update at 60 Hz
+  if other_systems_timer >= 0.0167 then
     --Get sensor data
-    front_sensor_data = sensor_system.pollFrontSensors(dt, veh_props, system_params, aeb_params)
-    rear_sensor_data = sensor_system.pollRearSensors(dt, veh_props, system_params, rev_aeb_params)
+    front_sensor_data = sensor_system.pollFrontSensors(other_systems_timer, veh_props, system_params, aeb_params)
+    rear_sensor_data = sensor_system.pollRearSensors(other_systems_timer, veh_props, system_params, rev_aeb_params)
   
     --Update Adaptive Cruise Control
     if extra_utils.checkIfPartExists("acc_angelo234") and acc_system_on then
-      acc_system.update(dt, my_veh, system_params, aeb_params, front_sensor_data) 
+      acc_system.update(other_systems_timer, my_veh, system_params, aeb_params, front_sensor_data) 
     end
   
     --Update Forward Collision Mitigation System
     if extra_utils.checkIfPartExists("forward_collision_mitigation_angelo234") and fcm_system_on then
-      fcm_system.update(dt, my_veh, system_params, aeb_params, beeper_params, front_sensor_data) 
+      fcm_system.update(other_systems_timer, my_veh, system_params, aeb_params, beeper_params, front_sensor_data) 
     end
     
     --Update Reverse Collision Mitigation System
     if extra_utils.checkIfPartExists("reverse_collision_mitigation_angelo234") and rcm_system_on then 
-      rcm_system.update(dt, my_veh, system_params, parking_lines_params, rev_aeb_params, beeper_params, rear_sensor_data)
+      rcm_system.update(other_systems_timer, my_veh, system_params, parking_lines_params, rev_aeb_params, beeper_params, rear_sensor_data)
     end
     
     other_systems_timer = 0
   end
   
-  --Update at 4 Hz
-  if hsa_system_update_timer >= 0.25 then 
+  --Update at 10 Hz
+  if hsa_system_update_timer >= 0.1 then 
     --Update Hill Start Assist System
     if extra_utils.checkIfPartExists("hill_start_assist_angelo234") then
-      hsa_system.update(dt, my_veh)
+      hsa_system.update(hsa_system_update_timer, my_veh)
     end
     
     hsa_system_update_timer = 0
@@ -297,7 +297,7 @@ local function onUpdate(dt)
   --Update at 2 Hz
   if auto_headlight_system_update_timer >= 0.5 then
     if front_sensor_data ~= nil then
-      auto_headlight_system.update(dt, my_veh, front_sensor_data[2])
+      auto_headlight_system.update(auto_headlight_system_update_timer, my_veh, front_sensor_data[2])
     end
     
     auto_headlight_system_update_timer = 0

@@ -1,12 +1,13 @@
 local M = {}
 
 local hold_angle = 4
+local brake_pedal_threshold = 0.1
 
 local activated = false
 local off_brake_timer = 0
 
 local function checkToActivateSystem(veh, gear_selected, yaw)
-  if input_brake_angelo234 > 0.2 
+  if input_brake_angelo234 >= brake_pedal_threshold 
   and vec3(veh:getVelocity()):length() < 0.05 then
     if ((yaw > hold_angle and (gear_selected == "D" or gear_selected:find('S') or gear_selected == "1")) 
     or yaw < -hold_angle and (gear_selected == "R" or gear_selected == "-1")) 
