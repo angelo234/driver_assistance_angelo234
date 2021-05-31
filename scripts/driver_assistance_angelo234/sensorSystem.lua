@@ -27,7 +27,6 @@ local rear_static_min_dist = 9999
 local past_wps_props_table = {}
 
 --Returns a table of vehicles and distance to them within a max_dist radius
---only in front of our vehicle, so it discards vehicles behind
 local function getNearbyVehicles(my_veh_props, max_dist, min_distance_from_car, in_front)
   local other_vehs = {}
 
@@ -38,7 +37,7 @@ local function getNearbyVehicles(my_veh_props, max_dist, min_distance_from_car, 
       local other_veh_props = extra_utils.getVehicleProperties(other_veh)
   
       if other_veh_props.id ~= my_veh_props.id then
-        --Get aproximate distance first between vehicles and return if less than max dist
+        --Get aproximate distance first between vehicles and return if less than max dist 
         local other_bb = other_veh_props.bb
   
         local front_dist = (my_veh_props.front_pos - other_veh_props.center_pos):length()
@@ -46,27 +45,39 @@ local function getNearbyVehicles(my_veh_props, max_dist, min_distance_from_car, 
   
         --If rear distance is larger than front distance, then vehicle is in front
         if front_dist < max_dist and front_dist < rear_dist and in_front then
-          local cir_dist = extra_utils.getCircularDistance(my_veh_props, other_veh_props, min_distance_from_car)
-          
-          local other_veh_data = 
-          {
-            other_veh = other_veh, 
-            distance = cir_dist
-          }
-          
-          table.insert(other_vehs, other_veh_data)
-                
+          local ray_cast_dist = castRayStatic(my_veh_props.front_pos:toPoint3F(), (other_veh_props.center_pos - my_veh_props.front_pos):normalized():toPoint3F(), max_dist)
+      
+          --Freepath to vehicle?
+          if ray_cast_dist > front_dist then
+            local cir_dist = extra_utils.getCircularDistance(my_veh_props, other_veh_props, min_distance_from_car)
+   
+            local other_veh_data = 
+            {
+              other_veh = other_veh, 
+              distance = cir_dist,
+              shortest_dist = front_dist
+            }
+            
+            table.insert(other_vehs, other_veh_data)
+          end
+        
           --If front distance is larger than rear distance, then vehicle is in rear
         elseif rear_dist < max_dist and front_dist > rear_dist and not in_front then
-          local dist = extra_utils.getStraightDistance(my_veh_props, other_veh_props, min_distance_from_car, false, true)
-  
-          local other_veh_data = 
-          {
-            other_veh = other_veh, 
-            distance = dist
-          }
+          local ray_cast_dist = castRayStatic(my_veh_props.rear_pos:toPoint3F(), (other_veh_props.center_pos - my_veh_props.rear_pos):normalized():toPoint3F(), max_dist)
+      
+          --Freepath to vehicle?
+          if ray_cast_dist > rear_dist then
+            local dist = extra_utils.getStraightDistance(my_veh_props, other_veh_props, min_distance_from_car, false, true)
           
-          table.insert(other_vehs, other_veh_data)
+            local other_veh_data = 
+            {
+              other_veh = other_veh, 
+              distance = dist,
+              shortest_dist = rear_dist
+            }
+          
+            table.insert(other_vehs, other_veh_data)
+          end
         end
       end
     end
@@ -142,21 +153,12 @@ local function getNearbyVehiclesOnSameRoad(dt, my_veh_props, max_dist, other_veh
     
     other_veh_data.my_veh_wps_props = my_veh_wps_props
     other_veh_data.other_veh_wps_props = other_veh_wps_props
-    
-    local free_path_to_veh = false
-
-    local ray_cast_dist = castRayStatic(my_veh_props.front_pos:toPoint3F(), (other_veh_props.center_pos - my_veh_props.front_pos):normalized():toPoint3F(), max_dist)
-
-    if ray_cast_dist > other_veh_data.distance then
-      --Freepath to vehicle
-      free_path_to_veh = true
-    end
 
     --debugDrawer:drawTextAdvanced((other_veh_props.front_pos):toPoint3F(), String("Free path? " .. tostring(free_path_to_veh)),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
 
     local on_same_road = extra_utils.checkIfOtherCarOnSameRoad(my_veh_props, other_veh_props, my_veh_wps_props)
 
-    if free_path_to_veh and on_same_road then
+    if on_same_road then
       --debugDrawer:drawTextAdvanced((other_veh_props.front_pos):toPoint3F(), String("On same road"),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
 
       --In same road and my vehicle speed is >= to other

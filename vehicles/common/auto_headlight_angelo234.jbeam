@@ -1,0 +1,10 @@
+{
+    "auto_headlight_angelo234": {
+        "information":{
+            "authors":"angelo234",
+            "name":"Auto Headlight Dimming",
+            "value":250,
+        },
+        "slotType" : "auto_headlight_angelo234",
+    },
+}

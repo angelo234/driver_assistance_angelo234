@@ -17,6 +17,9 @@ local fcm_system = require('scripts/driver_assistance_angelo234/forwardCollision
 local rcm_system = require('scripts/driver_assistance_angelo234/reverseCollisionMitigationSystem')
 local acc_system = require('scripts/driver_assistance_angelo234/accSystem')
 local hsa_system = require('scripts/driver_assistance_angelo234/hillStartAssistSystem')
+local auto_headlight_system = require('scripts/driver_assistance_angelo234/autoHeadlightSystem')
+
+local first_update = true
 
 local system_params = nil
 local aeb_params = nil
@@ -27,6 +30,13 @@ local beeper_params = nil
 local fcm_system_on = true
 local rcm_system_on = true
 local acc_system_on = false
+
+local front_sensor_data = nil
+local rear_sensor_data = nil
+
+local other_systems_timer = 0
+local hsa_system_update_timer = 0
+local auto_headlight_system_update_timer = 0
 
 M.curr_camera_mode = "orbit"
 M.prev_camera_mode = "orbit"
@@ -61,6 +71,14 @@ end
 
 local function onVehicleSwitched(oid, nid, player)
   init(player)
+end
+
+local function onHeadlightsOff()
+  auto_headlight_system.onHeadlightsOff()
+end
+
+local function onHeadlightsOn()
+  auto_headlight_system.onHeadlightsOn()
 end
 
 --Functions called with key binding
@@ -219,8 +237,6 @@ local function doLuaReload()
   end
 end
 
-local first_update = true
-
 local function onUpdate(dt)
   --Do Lua reload after first Lua initialization to load in the reverse camera
   if first_update then
@@ -242,35 +258,60 @@ local function onUpdate(dt)
   
   local parts = extensions.core_vehicle_manager.getPlayerVehicleData().chosenParts
   
-  local veh_props = extra_utils.getVehicleProperties(my_veh)
-  
-  --Get sensor data
-  local front_sensor_data = sensor_system.pollFrontSensors(dt, veh_props, system_params, aeb_params)
-  local rear_sensor_data = sensor_system.pollRearSensors(dt, veh_props, system_params, rev_aeb_params)
+  local veh_props = extra_utils.getVehicleProperties(my_veh) 
 
-  --Update Adaptive Cruise Control
-  if extra_utils.checkIfPartExists("acc_angelo234") and acc_system_on then
-    acc_system.update(dt, my_veh, system_params, aeb_params, front_sensor_data) 
-  end
-
-  --Update Forward Collision Mitigation System
-  if extra_utils.checkIfPartExists("forward_collision_mitigation_angelo234") and fcm_system_on then
-    fcm_system.update(dt, my_veh, system_params, aeb_params, beeper_params, front_sensor_data) 
+  --Update at 50 Hz
+  if other_systems_timer >= 0.02 then
+    --Get sensor data
+    front_sensor_data = sensor_system.pollFrontSensors(dt, veh_props, system_params, aeb_params)
+    rear_sensor_data = sensor_system.pollRearSensors(dt, veh_props, system_params, rev_aeb_params)
+  
+    --Update Adaptive Cruise Control
+    if extra_utils.checkIfPartExists("acc_angelo234") and acc_system_on then
+      acc_system.update(dt, my_veh, system_params, aeb_params, front_sensor_data) 
+    end
+  
+    --Update Forward Collision Mitigation System
+    if extra_utils.checkIfPartExists("forward_collision_mitigation_angelo234") and fcm_system_on then
+      fcm_system.update(dt, my_veh, system_params, aeb_params, beeper_params, front_sensor_data) 
+    end
+    
+    --Update Reverse Collision Mitigation System
+    if extra_utils.checkIfPartExists("reverse_collision_mitigation_angelo234") and rcm_system_on then 
+      rcm_system.update(dt, my_veh, system_params, parking_lines_params, rev_aeb_params, beeper_params, rear_sensor_data)
+    end
+    
+    other_systems_timer = 0
   end
   
-  --Update Reverse Collision Mitigation System
-  if extra_utils.checkIfPartExists("reverse_collision_mitigation_angelo234") and rcm_system_on then 
-    rcm_system.update(dt, my_veh, system_params, parking_lines_params, rev_aeb_params, beeper_params, rear_sensor_data)
+  --Update at 4 Hz
+  if hsa_system_update_timer >= 0.25 then 
+    --Update Hill Start Assist System
+    if extra_utils.checkIfPartExists("hill_start_assist_angelo234") then
+      hsa_system.update(dt, my_veh)
+    end
+    
+    hsa_system_update_timer = 0
   end
   
-  --Update Hill Start Assist System
-  if extra_utils.checkIfPartExists("hill_start_assist_angelo234") then
-    hsa_system.update(dt, my_veh)
+  --Update at 2 Hz
+  if auto_headlight_system_update_timer >= 0.5 then
+    if front_sensor_data ~= nil then
+      auto_headlight_system.update(dt, my_veh, front_sensor_data[2])
+    end
+    
+    auto_headlight_system_update_timer = 0
   end
+  
+  other_systems_timer = other_systems_timer + dt
+  hsa_system_update_timer = hsa_system_update_timer + dt
+  auto_headlight_system_update_timer = auto_headlight_system_update_timer + dt
 end
 
 M.onExtensionLoaded = onExtensionLoaded
 M.onVehicleSwitched = onVehicleSwitched
+M.onHeadlightsOff = onHeadlightsOff
+M.onHeadlightsOn = onHeadlightsOn
 M.toggleFCMSystem = toggleFCMSystem
 M.toggleRCMSystem = toggleRCMSystem
 M.setACCSystemOn = setACCSystemOn
