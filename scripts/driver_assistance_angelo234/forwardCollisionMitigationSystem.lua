@@ -40,43 +40,22 @@ local function getFutureVehPosCorrectedWithWP(my_veh_props, veh_props, veh_pos_f
   return new_pos, wp_dir
 end
 
-local function getMyVehBoundingBox(my_veh_props, my_veh_wp_dir)
+local function getMyVehBoundingBox(my_veh_props)
   local my_bb = my_veh_props.bb
 
-  local my_x = nil -- width
-  local my_y = nil -- length
-  local my_z = nil -- height
-
-  if my_veh_wp_dir ~= nil then
-    my_x = my_bb:getHalfExtents().x * vec3(my_veh_wp_dir.y, -my_veh_wp_dir.x, 0) * 1.05
-    my_y = my_bb:getHalfExtents().y * my_veh_wp_dir * (1.25 + my_veh_props.speed * my_veh_props.speed / 200)
-    my_z = my_bb:getHalfExtents().z * vec3(0,0,1) * 2
-  else
-    my_x = my_bb:getHalfExtents().x * vec3(my_bb:getAxis(0)) * 1.05
-    my_y = my_bb:getHalfExtents().y * vec3(my_bb:getAxis(1)) * (1.25 + my_veh_props.speed * my_veh_props.speed / 200)
-    my_z = my_bb:getHalfExtents().z * vec3(my_bb:getAxis(2)) * 2
-  end
+  local my_x = my_bb:getHalfExtents().x * vec3(my_bb:getAxis(0)) * 0.8 -- width
+  local my_y = my_bb:getHalfExtents().y * vec3(my_bb:getAxis(1)) -- length
+  local my_z = my_bb:getHalfExtents().z * vec3(my_bb:getAxis(2)) * 2 -- height
 
   return my_x, my_y, my_z
 end
 
-local function getOtherVehBoundingBox(other_veh_props, other_veh_wp_dir, distance)
+local function getOtherVehBoundingBox(other_veh_props, distance)
   local other_bb = other_veh_props.bb
 
-  local other_x = nil -- width
-  local other_y = nil -- length
-  local other_z = nil -- height
-
-  if other_veh_wp_dir ~= nil then
-    other_x = other_bb:getHalfExtents().x * vec3(other_veh_wp_dir.y, -other_veh_wp_dir.x, 0)
-    other_y = other_bb:getHalfExtents().y * other_veh_wp_dir * (1 + distance / 25.0)
-    other_z = other_bb:getHalfExtents().z * vec3(0,0,1) * 2
-
-  else
-    other_x = other_bb:getHalfExtents().x * vec3(other_bb:getAxis(0)) * 1
-    other_y = other_bb:getHalfExtents().y * vec3(other_bb:getAxis(1)) * (1 + distance / 25.0)
-    other_z = other_bb:getHalfExtents().z * vec3(other_bb:getAxis(2)) * 2
-  end
+  local other_x = other_bb:getHalfExtents().x * vec3(other_bb:getAxis(0)) -- width
+  local other_y = other_bb:getHalfExtents().y * vec3(other_bb:getAxis(1)) * (1 + distance / 25.0) -- length
+  local other_z = other_bb:getHalfExtents().z * vec3(other_bb:getAxis(2)) * 2 -- height
 
   return other_x, other_y, other_z
 end
@@ -103,11 +82,11 @@ local function checkIfCarsIntersectAtTTC(my_veh_props, other_veh_props, data, la
 
   --My BB
   -- width, length, height
-  local my_x, my_y, my_z = getMyVehBoundingBox(my_veh_props, nil)
+  local my_x, my_y, my_z = getMyVehBoundingBox(my_veh_props)
 
   --Other BB
   -- width, length, height
-  local other_x, other_y, other_z = getOtherVehBoundingBox(other_veh_props, nil, data.distance)
+  local other_x, other_y, other_z = getOtherVehBoundingBox(other_veh_props, data.distance)
 
   --Check for overlap between both bounding boxess
   local overlap = overlapsOBB_OBB(my_veh_pos_future, my_x, my_y, my_z, other_veh_pos_future, other_x, other_y, other_z)
@@ -172,20 +151,31 @@ local function getVehicleCollidingWithInLane(dt, my_veh_props, data_table, later
 
       --debugDrawer:drawTextAdvanced((other_veh_props.front_pos):toPoint3F(), String(other_lat_dist_from_wp),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
 
-      if my_lat_dist_from_wp - my_veh_props.bb:getHalfExtents().x < other_lat_dist_from_wp + other_veh_props.bb:getHalfExtents().x
-      and my_lat_dist_from_wp + my_veh_props.bb:getHalfExtents().x > other_lat_dist_from_wp - other_veh_props.bb:getHalfExtents().x
+      if my_lat_dist_from_wp - my_veh_props.bb:getHalfExtents().x * 0.6 < other_lat_dist_from_wp + other_veh_props.bb:getHalfExtents().x
+      and my_lat_dist_from_wp + my_veh_props.bb:getHalfExtents().x * 0.6 > other_lat_dist_from_wp - other_veh_props.bb:getHalfExtents().x
       then
-        --Collision may be possible
+        local wp_start_end = data.my_veh_wps_props.end_wp_pos - data.my_veh_wps_props.start_wp_pos
+        local wp_dir = wp_start_end:normalized()
+
+        local perp_vec = vec3(wp_dir.y, -wp_dir.x)
       
-        --If this distance is less than current min distance
-        --then this is new min distance
-        if data.distance <= distance then
-          distance = data.distance
-          rel_vel = this_rel_vel
-  
-          curr_veh_in_path = data.other_veh
-          
-          --debugDrawer:drawSphere((other_veh_props.center_pos):toPoint3F(), 1, ColorF(1,0,0,1))      
+        local vel_comp = my_veh_props.velocity:dot(perp_vec)
+
+        --Collision may be possible
+        if (my_lat_dist_from_wp - my_veh_props.bb:getHalfExtents().x) + vel_comp * ttc < other_lat_dist_from_wp + other_veh_props.bb:getHalfExtents().x
+        and (my_lat_dist_from_wp + my_veh_props.bb:getHalfExtents().x) + vel_comp * ttc > other_lat_dist_from_wp - other_veh_props.bb:getHalfExtents().x
+        then
+        
+          --If this distance is less than current min distance
+          --then this is new min distance
+          if data.distance <= distance then
+            distance = data.distance
+            rel_vel = this_rel_vel
+    
+            curr_veh_in_path = data.other_veh
+            
+            debugDrawer:drawSphere((other_veh_props.center_pos):toPoint3F(), 1, ColorF(1,0,0,1))      
+          end
         end
       end
     end
@@ -199,8 +189,8 @@ local beeper_timer = 0
 local function soundBeepers(dt, time_before_braking, vel_rel, beeper_params)
   beeper_timer = beeper_timer + dt
 
-  --Sound warning tone if 1.0 * (0.5 + vel_rel / 40.0) seconds away from braking
-  if time_before_braking <= 1.0 * (math.min(0.5 + vel_rel / 30.0, 1.0)) then
+  --Sound warning tone before braking
+  if time_before_braking <= 0.75 then --* (math.min(0.5 + vel_rel / 30.0, 1.0)) then
     --
     if beeper_timer >= 1.0 / beeper_params.fwd_warning_tone_hertz then
       Engine.Audio.playOnce('AudioGui','art/sound/proximity_tone_50ms_loud.wav')
@@ -356,9 +346,6 @@ local function update(dt, veh, system_params, aeb_params, beeper_params, front_s
     distance = static_distance
     vel_rel = veh_props.speed
   end
-
-  --Takes 1 frame to actually brake so account for that
-  --distance = distance - vel_rel * dt 
 
   local time_before_braking = calculateTimeBeforeBraking(distance, vel_rel, system_params, aeb_params)
 
