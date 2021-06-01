@@ -29,6 +29,7 @@ local beeper_params = nil
 
 local fcm_system_on = true
 local rcm_system_on = true
+local auto_headlight_system_on = false
 local acc_system_on = false
 
 local front_sensor_data = nil
@@ -112,6 +113,22 @@ local function toggleRCMSystem()
   end
   
   ui_message("Reverse Collision Mitigation System switched " .. msg)
+end
+
+local function toggleAutoHeadlightSystem()
+  if not extra_utils.checkIfPartExists("auto_headlight_angelo234") then return end
+
+  auto_headlight_system_on = not auto_headlight_system_on
+  
+  local msg = nil
+  
+  if auto_headlight_system_on then
+    msg = "ON"
+  else
+    msg = "OFF"
+  end
+  
+  ui_message("Auto Headlight Dimming switched " .. msg)
 end
 
 local function setACCSystemOn(on)
@@ -296,13 +313,16 @@ local function onUpdate(dt)
   
   --Update at 2 Hz
   if auto_headlight_system_update_timer >= 0.5 then
-    if front_sensor_data ~= nil then
+    if extra_utils.checkIfPartExists("auto_headlight_angelo234") and auto_headlight_system_on then
+      if front_sensor_data ~= nil then
       auto_headlight_system.update(auto_headlight_system_update_timer, my_veh, front_sensor_data[2])
+      end
+      
+      auto_headlight_system_update_timer = 0  
     end
-    
-    auto_headlight_system_update_timer = 0
   end
   
+  --Update timers for updating systems
   other_systems_timer = other_systems_timer + dt
   hsa_system_update_timer = hsa_system_update_timer + dt
   auto_headlight_system_update_timer = auto_headlight_system_update_timer + dt
@@ -314,6 +334,7 @@ M.onHeadlightsOff = onHeadlightsOff
 M.onHeadlightsOn = onHeadlightsOn
 M.toggleFCMSystem = toggleFCMSystem
 M.toggleRCMSystem = toggleRCMSystem
+M.toggleAutoHeadlightSystem = toggleAutoHeadlightSystem
 M.setACCSystemOn = setACCSystemOn
 M.toggleACCSystem = toggleACCSystem
 M.setACCSpeed = setACCSpeed

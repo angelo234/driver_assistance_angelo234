@@ -9,6 +9,10 @@
       "control":"*"
     },
     {
+      "action":"toggle_auto_headlight",
+      "control":"numpaddecimal"
+    },
+    {
       "action":"toggle_acc",
       "control":"shift backslash"
     },

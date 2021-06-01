@@ -170,7 +170,7 @@ local function getVehicleCollidingWithInLane(dt, my_veh_props, data_table, later
       local my_lat_dist_from_wp = data.my_veh_wps_props.lat_dist_from_wp
       local other_lat_dist_from_wp = data.other_veh_wps_props.lat_dist_from_wp
 
-      debugDrawer:drawTextAdvanced((other_veh_props.front_pos):toPoint3F(), String(other_lat_dist_from_wp),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
+      --debugDrawer:drawTextAdvanced((other_veh_props.front_pos):toPoint3F(), String(other_lat_dist_from_wp),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
 
       if my_lat_dist_from_wp - my_veh_props.bb:getHalfExtents().x < other_lat_dist_from_wp + other_veh_props.bb:getHalfExtents().x
       and my_lat_dist_from_wp + my_veh_props.bb:getHalfExtents().x > other_lat_dist_from_wp - other_veh_props.bb:getHalfExtents().x
