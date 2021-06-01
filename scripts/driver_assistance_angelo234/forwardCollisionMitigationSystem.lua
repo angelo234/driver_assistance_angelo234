@@ -141,6 +141,10 @@ local function getVehicleCollidingWithInLane(dt, my_veh_props, data_table, later
 
     local this_rel_vel = (my_veh_props.velocity - other_veh_props.velocity):length()
 
+    if this_rel_vel > my_veh_props.velocity:length() then
+      this_rel_vel = my_veh_props.velocity:length() * (my_veh_props.velocity:length() / this_rel_vel)
+    end
+
     --Deactivate system if this car is slower than other car
     if this_rel_vel > 0 then
       --Capping to 5 seconds to prevent too much error in predicting position
@@ -154,6 +158,8 @@ local function getVehicleCollidingWithInLane(dt, my_veh_props, data_table, later
       if my_lat_dist_from_wp - my_veh_props.bb:getHalfExtents().x * 0.6 < other_lat_dist_from_wp + other_veh_props.bb:getHalfExtents().x
       and my_lat_dist_from_wp + my_veh_props.bb:getHalfExtents().x * 0.6 > other_lat_dist_from_wp - other_veh_props.bb:getHalfExtents().x
       then
+        --debugDrawer:drawSphere((other_veh_props.center_pos):toPoint3F(), 1, ColorF(0,1,0,1))  
+      
         local wp_start_end = data.my_veh_wps_props.end_wp_pos - data.my_veh_wps_props.start_wp_pos
         local wp_dir = wp_start_end:normalized()
 
@@ -174,7 +180,7 @@ local function getVehicleCollidingWithInLane(dt, my_veh_props, data_table, later
     
             curr_veh_in_path = data.other_veh
             
-            debugDrawer:drawSphere((other_veh_props.center_pos):toPoint3F(), 1, ColorF(1,0,0,1))      
+            --debugDrawer:drawSphere((other_veh_props.center_pos + vec3(0,0,1)):toPoint3F(), 1, ColorF(1,0,0,1))      
           end
         end
       end

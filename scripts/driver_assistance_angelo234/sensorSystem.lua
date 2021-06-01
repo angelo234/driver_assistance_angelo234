@@ -86,50 +86,6 @@ local function getNearbyVehicles(my_veh_props, max_dist, min_distance_from_car, 
   return other_vehs
 end
 
-local function decrementVehicleTimers(dt, last_vehs_table, other_vehs_in_my_lane)
-  local new_last_vehs_table = {}
-  
-  if last_vehs_table then
-    for _, last_veh_data in pairs(last_vehs_table) do
-      last_veh_data.timer = last_veh_data.timer - dt
-      
-      --debugDrawer:drawTextAdvanced(vec3(last_veh_data.other_veh:getPosition()):toPoint3F(), String("Timer: " .. tostring(last_veh_data.timer)),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
-      
-      if last_veh_data.timer > 0 then
-        table.insert(new_last_vehs_table, last_veh_data)
-      end
-    end
-  end
-
-  local vehs_to_add = {}
-
-  --Add previously detected vehicles to this list
-  for _, new_last_veh_data in pairs(new_last_vehs_table) do
-    local last_curr_id = new_last_veh_data.other_veh:getID()
-  
-    local match = false
-  
-    for _, new_veh_data in pairs(other_vehs_in_my_lane) do
-      local curr_id = new_veh_data.other_veh:getID()
-      
-      if curr_id == last_curr_id then
-        match = true
-        goto continue
-      end     
-    end
-    ::continue::
-    
-    if not match then
-      table.insert(vehs_to_add, new_last_veh_data)
-    end
-  end
-  
-  --Add previous vehicles to current list
-  for _, veh_data in pairs(vehs_to_add) do
-    table.insert(other_vehs_in_my_lane, veh_data)
-  end
-end
-
 --Returns a table of vehicles and distance to them within a max_dist radius and on same road
 local function getNearbyVehiclesOnSameRoad(dt, my_veh_props, max_dist, other_vehs_data, only_pos_rel_vel, last_vehs_table)
   
@@ -165,20 +121,16 @@ local function getNearbyVehiclesOnSameRoad(dt, my_veh_props, max_dist, other_veh
       if on_same_road then
         if only_pos_rel_vel then
           if speed_rel >= 0 then
-            other_veh_data.timer = 0.1
+            --other_veh_data.timer = 0.1
             table.insert(other_vehs_in_my_lane, other_veh_data)
           end
         else
-          other_veh_data.timer = 0.1
+          --other_veh_data.timer = 0.1
           table.insert(other_vehs_in_my_lane, other_veh_data)
         end
       end
     end
   end
-  
-  --Decrement all vehicle's timers and insert vehicles into vehicles in road list whose timer hasn't run out
-  
-  decrementVehicleTimers(dt, last_vehs_table, other_vehs_in_my_lane)
 
   return other_vehs_in_my_lane
 end
