@@ -311,8 +311,8 @@ local function onUpdate(dt)
     hsa_system_update_timer = 0
   end
   
-  --Update at 2 Hz
-  if auto_headlight_system_update_timer >= 0.5 then
+  --Update at 4 Hz
+  if auto_headlight_system_update_timer >= 0.25 then
     if extra_utils.checkIfPartExists("auto_headlight_angelo234") and auto_headlight_system_on then
       if front_sensor_data ~= nil then
       auto_headlight_system.update(auto_headlight_system_update_timer, my_veh, front_sensor_data[2])

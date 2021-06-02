@@ -6,12 +6,12 @@ local control_systems = require("controlSystems") -- for newPIDStandard
 local extra_utils = require('scripts/driver_assistance_angelo234/extraUtils')
 
 --PID for getting vehicle up to desired speed when no car in front
---Input = desired velocity, Output = acceleration
-local speed_pid = newPIDStandard(0.3, 2, 0.0, 0, 1, 1, 1, 0, 2)
+--Input = desired velocity, Output = pedal position
+local speed_pid = newPIDStandard(0.2, 2, 0.0, 0, 1, 1, 1, 0, 2)
 local speed_smooth = newTemporalSmoothing(200, 200)
 
 --PID for setting car to following distance
---Input = desired distance, Output = acceleration
+--Input = desired distance, Output = pedal position
 local dist_pid = newPIDStandard(0.06, 2, 1, -0.3, 0.3)
 local dist_smooth = newTemporalSmoothing(200, 200)
 
@@ -21,6 +21,8 @@ local target_speed = 13.8
 local ramped_target_speed = 0
 
 local following_time = 1
+
+local following_mode = false
 
 local function onToggled(acc_on)
   if acc_on then
@@ -146,7 +148,7 @@ end
 
 local function getVehicleAheadInLane(dt, my_veh_props, data_table)
   local distance = 9999
-  local rel_vel = 0
+  local other_veh_vel = 0
   local curr_veh_in_path = nil
 
   --Analyze the trajectory of other vehicles with my trajectory
@@ -178,7 +180,7 @@ local function getVehicleAheadInLane(dt, my_veh_props, data_table)
         --then this is new min distance
         if data.distance <= distance then
           distance = data.distance
-          rel_vel = this_rel_vel
+          other_veh_vel = other_veh_props.velocity
   
           curr_veh_in_path = data.other_veh    
         end
@@ -192,7 +194,7 @@ local function getVehicleAheadInLane(dt, my_veh_props, data_table)
     --debugDrawer:drawSphere((vec3(curr_veh_in_path:getPosition())):toPoint3F(), 1, ColorF(1,0,0,1))   
   end
   
-  return distance, rel_vel
+  return distance, other_veh_vel
 end
 
 local function accelerateVehicle(dt, veh, output)
@@ -208,7 +210,7 @@ local function accelerateVehicle(dt, veh, output)
 end
 
 --Maintaining distance to vehicle using PID controller
-local function maintainDistanceFromVehicleAhead(dt, veh, veh_props, aeb_params, distance, vel_rel, following_distance, only_braking)
+local function maintainDistanceFromVehicleAhead(dt, veh, veh_props, aeb_params, distance, following_distance, only_braking)
   local output = dist_pid:get(-(distance), -following_distance, dt)
 
   output = dist_smooth:getUncapped(output, dt)
@@ -274,46 +276,38 @@ local function update(dt, veh, system_params, aeb_params, front_sensor_data)
   if input_throttle_angelo234 > 0 or input_brake_angelo234 > 0 or input_clutch_angelo234 > 0 then return end
 
   local distance = 9999
-  local vel_rel = 0
+  local other_veh_vel = 0
 
   --If table is empty then return
   if next(front_sensor_data[3]) ~= nil then
     --Determine if a collision will actually occur and return the distance and relative velocity 
     --to the vehicle that I'm planning to collide with
-    distance, vel_rel = getVehicleAheadInLane(dt, veh_props, front_sensor_data[3])
+    distance, other_veh_vel = getVehicleAheadInLane(dt, veh_props, front_sensor_data[3])
   end
   
   --5 meter of leeway
   local following_distance = math.max(veh_props.speed * following_time, 5)
   
-  local output = maintainDistanceFromVehicleAhead(dt, veh, veh_props, aeb_params, distance, vel_rel, following_distance, true)
+  local output = maintainDistanceFromVehicleAhead(dt, veh, veh_props, aeb_params, distance, following_distance, true)
   
-  --print(output)
-  
-  --Don't do other things if braking already
-  if output < 0 then 
+  if output < 0 then
     ramped_target_speed = veh_props.speed
     speed_pid:reset()
     speed_smooth:reset()
-    
-    return 
-  end
-  
-  --If distance less than following distance to maintain and still hasn't reached target speed
-  --use distance PID controller
-  if distance < following_distance * 1.5 then
-    if veh_props.speed < target_speed then
-      --Use distance, relative velocity, and max acceleration to determine when to apply emergency braking
-      maintainDistanceFromVehicleAhead(dt, veh, veh_props, aeb_params, distance, vel_rel, following_distance, false)
-  
-      ramped_target_speed = veh_props.speed
-      speed_pid:reset()
-      speed_smooth:reset()   
-    end
   else
-    --Else use speed PID controller
-  
-    maintainSetSpeed(dt, veh, veh_props, aeb_params) 
+    if veh_props.speed > target_speed then
+      maintainSetSpeed(dt, veh, veh_props, aeb_params) 
+    else
+      if distance < following_distance * 1.5 then
+        maintainDistanceFromVehicleAhead(dt, veh, veh_props, aeb_params, distance, following_distance, false)
+      
+        ramped_target_speed = veh_props.speed
+        speed_pid:reset()
+        speed_smooth:reset()
+      else
+        maintainSetSpeed(dt, veh, veh_props, aeb_params)
+      end
+    end
   end
 end
 
