@@ -208,9 +208,8 @@ end
 local release_brake_confidence_level = 0
 
 local function performEmergencyBraking(dt, veh, aeb_params, time_before_braking, speed)
-  --If throttle pedal is about half pressed then perform braking
-  --But if throttle is highly requested then override braking
-  if input_throttle_angelo234 > 0.5 then
+  --If throttle or brake is highly requested then override braking
+  if input_throttle_angelo234 > 0.5 or input_brake_angelo234 > 0.3 then
     if system_state == "braking" then
       veh:queueLuaCommand("electrics.values.brakeOverride = nil")
       veh:queueLuaCommand("electrics.values.throttleOverride = nil")

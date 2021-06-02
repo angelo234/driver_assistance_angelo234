@@ -23,6 +23,16 @@ local function onHeadlightsOn()
   end
 end
 
+--If system just switched on, then check if highbeams are already on
+--if they are on, then make note of it
+local function systemSwitchedOn()
+  local light_state = electrics_values_angelo234["lights_state"]
+  
+  if light_state == 2 then
+    headlights_turned_off = false
+  end
+end
+
 local function getClosestVehicle(other_vehs_data)
   local distance = 9999
   local other_veh = nil
@@ -70,7 +80,7 @@ local function update(dt, veh, vehs_in_front_table)
       headlights_turned_off = false
     end
   end
-  
+
   if not armed then
     if light_state == 2 then
       armed = true
@@ -82,6 +92,7 @@ end
 
 M.onHeadlightsOff = onHeadlightsOff
 M.onHeadlightsOn = onHeadlightsOn
+M.systemSwitchedOn = systemSwitchedOn
 M.update = update
 
 return M

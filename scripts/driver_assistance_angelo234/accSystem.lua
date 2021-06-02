@@ -1,5 +1,3 @@
-require("lua/common/luaProfiler")
-
 local M = {}
 
 local control_systems = require("controlSystems") -- for newPIDStandard

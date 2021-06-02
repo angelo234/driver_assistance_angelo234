@@ -30,6 +30,7 @@ local beeper_params = nil
 local fcm_system_on = true
 local rcm_system_on = true
 local auto_headlight_system_on = false
+local prev_auto_headlight_system_on = false
 local acc_system_on = false
 
 local front_sensor_data = nil
@@ -315,11 +316,17 @@ local function onUpdate(dt)
   if auto_headlight_system_update_timer >= 0.25 then
     if extra_utils.checkIfPartExists("auto_headlight_angelo234") and auto_headlight_system_on then
       if front_sensor_data ~= nil then
-      auto_headlight_system.update(auto_headlight_system_update_timer, my_veh, front_sensor_data[2])
+        if prev_auto_headlight_system_on ~= auto_headlight_system_on then
+          auto_headlight_system.systemSwitchedOn()
+        end
+        
+        auto_headlight_system.update(auto_headlight_system_update_timer, my_veh, front_sensor_data[2])
       end
       
       auto_headlight_system_update_timer = 0  
     end
+    
+    prev_auto_headlight_system_on = auto_headlight_system_on
   end
   
   --Update timers for updating systems
