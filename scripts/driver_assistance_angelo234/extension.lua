@@ -255,7 +255,11 @@ local function doLuaReload()
   end
 end
 
+--local p = LuaProfiler("my profiler")
+
 local function onUpdate(dt)
+  --p:start()
+
   --Do Lua reload after first Lua initialization to load in the reverse camera
   if first_update then
     doLuaReload()   
@@ -283,7 +287,7 @@ local function onUpdate(dt)
     --Get sensor data
     front_sensor_data = sensor_system.pollFrontSensors(other_systems_timer, veh_props, system_params, aeb_params)
     rear_sensor_data = sensor_system.pollRearSensors(other_systems_timer, veh_props, system_params, rev_aeb_params)
-  
+
     --Update Adaptive Cruise Control
     if extra_utils.checkIfPartExists("acc_angelo234") and acc_system_on then
       acc_system.update(other_systems_timer, my_veh, system_params, aeb_params, front_sensor_data) 
@@ -293,12 +297,12 @@ local function onUpdate(dt)
     if extra_utils.checkIfPartExists("forward_collision_mitigation_angelo234") and fcm_system_on then
       fcm_system.update(other_systems_timer, my_veh, system_params, aeb_params, beeper_params, front_sensor_data) 
     end
-    
+
     --Update Reverse Collision Mitigation System
     if extra_utils.checkIfPartExists("reverse_collision_mitigation_angelo234") and rcm_system_on then 
       rcm_system.update(other_systems_timer, my_veh, system_params, parking_lines_params, rev_aeb_params, beeper_params, rear_sensor_data)
     end
-    
+
     other_systems_timer = 0
   end
   
@@ -310,6 +314,8 @@ local function onUpdate(dt)
     end
     
     hsa_system_update_timer = 0
+    
+    --p:add("hsa update")
   end
   
   --Update at 4 Hz
@@ -327,12 +333,16 @@ local function onUpdate(dt)
     end
     
     prev_auto_headlight_system_on = auto_headlight_system_on
+    
+    --p:add("auto headlight update")
   end
   
   --Update timers for updating systems
   other_systems_timer = other_systems_timer + dt
   hsa_system_update_timer = hsa_system_update_timer + dt
   auto_headlight_system_update_timer = auto_headlight_system_update_timer + dt
+  
+  --p:finish(true)
 end
 
 M.onExtensionLoaded = onExtensionLoaded

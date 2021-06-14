@@ -1,5 +1,7 @@
 local M = {}
 
+--local p = LuaProfiler("my profiler")
+
 local extra_utils = require('scripts/driver_assistance_angelo234/extraUtils')
 
 --For efficiency
@@ -136,39 +138,39 @@ local function getNearbyVehiclesOnSameRoad(dt, my_veh_props, max_dist, other_veh
 end
 
 local function yawSensor(veh_props, init_dir, system_params)
-  --Sagitta
-  local s = 0.1
+  if electrics_values_angelo234["steering_input"] ~= 0 then 
+    --Sagitta
+    local s = 0.1
+  
+    --Using steering angle to point sensors
+    local avg_radius = (system_params.max_steer_radius + system_params.min_steer_radius) / 2
+  
+    local r = avg_radius / electrics_values_angelo234["steering_input"]
+    
+    local turning_right = true
+  
+    if r < 0 then
+      turning_right = false
+    end
+    
+    r = abs(r)
+    
+    --Raycast distance
+    local d = 2 * sqrt(s * (-s + 2 * r))
+  
+    local angle = 2 * asin(d / (2 * r))
 
-  --Using steering angle to point sensors
-  local avg_radius = (system_params.max_steer_radius + system_params.min_steer_radius) / 2
-
-  local r = 9999999
-
-  if electrics_values_angelo234["steering_input"] then 
-    r = avg_radius / electrics_values_angelo234["steering_input"]
+    --Set angle negative if turning left
+    if not turning_right then
+      angle = -angle
+    end
+  
+    local dir = init_dir * cos(angle) + veh_props.dir_right * sin(angle)
+    
+    return dir
+  else
+    return init_dir
   end
-  
-  local turning_right = true
-  
-  if r < 0 then
-    turning_right = false
-  end
-  
-  r = abs(r)
-  
-  --Raycast distance
-  local d = 2 * sqrt(s * (-s + 2 * r))
-
-  local angle = 2 * asin(d / (2 * r))
-  
-  --Set angle negative if turning left
-  if not turning_right then
-    angle = -angle
-  end
-
-  local dir = init_dir * cos(angle) + veh_props.dir_right * sin(angle)
-  
-  return dir, d
 end
 
 --Used to point sensors to horizontal regardless of pitch of car (e.g. accelearting and braking)
@@ -235,6 +237,8 @@ local function setFrontSensorID(aeb_params)
 end
 
 local function pollFrontStaticSensors(dt, veh_props, system_params, aeb_params)
+  --p:start()
+  
   local parking_sensor_height = aeb_params.parking_sensor_rel_height
   local car_half_width = veh_props.bb:getHalfExtents().x - 0.3
 
@@ -245,13 +249,24 @@ local function pollFrontStaticSensors(dt, veh_props, system_params, aeb_params)
   
   --Set sensor in proper direction
   local sensor_dir = pitchSensor(veh_props)
+  
+  --p:add("pitchSensor")
+  
   sensor_dir = yawSensor(veh_props, sensor_dir, system_params)
+  --p:add("yawSensor")
   
   --Do static object raycasting
   local static_hit = staticCastRay(veh_props, sensor_pos, sensor_dir)
+  
+  --p:add("staticCastRay")
+  
   local min_dist = processRayCasts(veh_props, static_hit)
 
+  --p:add("processRayCasts")
+
   min_dist = min_dist - aeb_params.sensor_offset_forward - 0.2
+
+  --p:finish(true)
 
   return min_dist
 end
@@ -279,9 +294,13 @@ local function pollRearStaticSensors(dt, veh_props, rev_aeb_params)
   return min_dist
 end
 
+
+
 local last_vehs_in_same_road_in_front_table = nil
 
 local function pollFrontSensors(dt, veh_props, system_params, aeb_params)
+  --p:start()
+  
   --Cast rays for static objects
   for i = 1, aeb_params.sensors_polled_per_iteration do
     if front_static_sensor_id == aeb_params.num_of_sensors - 1 then
@@ -295,12 +314,21 @@ local function pollFrontSensors(dt, veh_props, system_params, aeb_params)
     front_static_min_dist = min(front_static_dist, front_static_min_dist)
   end
 
+  --p:add("cast rays")
+
   --Get nearby vehicles
   local other_vehs_data = getNearbyVehicles(veh_props, aeb_params.vehicle_search_radius, 0, true)
+  --p:add("getNearbyVehicles")
+  
+  
   local other_vehs_same_road_data = getNearbyVehiclesOnSameRoad(dt, veh_props, aeb_params.vehicle_search_radius, 
   other_vehs_data, false, last_vehs_in_same_road_in_front_table)
+  --p:add("getNearbyVehiclesOnSameRoad")
+  
   
   last_vehs_in_same_road_in_front_table = other_vehs_same_road_data
+
+  --p:finish(true)
 
   return {front_static_min_dist, other_vehs_data, other_vehs_same_road_data}
 end
