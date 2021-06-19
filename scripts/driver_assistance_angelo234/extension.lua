@@ -176,11 +176,9 @@ local function onCameraModeChanged(new_camera_mode)
   end
 end
 
-local function getAllVehiclesPropertiesFromVELua()
-  local vehicles = getAllVehicles()
-  local my_veh = be:getPlayerVehicle(0)
-
-  for _, this_veh in pairs(vehicles) do
+local function getAllVehiclesPropertiesFromVELua(my_veh)
+  for i = 0, be:getObjectCount() - 1 do
+    local this_veh = be:getObject(i)
     local id = this_veh:getID()
 
     this_veh:queueLuaCommand('obj:queueGameEngineLua("veh_accs_angelo234[' .. id .. '] = {" .. sensors.gx2 .. "," .. sensors.gy2 .. "," .. sensors.gz2 .. "}")')
@@ -269,7 +267,7 @@ local function onUpdate(dt)
   local my_veh = be:getPlayerVehicle(0)
   if my_veh == nil then return end
   
-  local ready = getAllVehiclesPropertiesFromVELua()
+  local ready = getAllVehiclesPropertiesFromVELua(my_veh)
   --If Vehicle Lua data is nil then return
   if not ready then return end
 

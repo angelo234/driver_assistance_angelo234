@@ -27,32 +27,51 @@ local function checkIfPartExists(part)
   return parts[part] == part
 end
 
+local vehs_props_reusing = {}
+
 local function getVehicleProperties(veh)
-  local props = {}
+  if not vehs_props_reusing[veh:getID()] then
+    vehs_props_reusing[veh:getID()] = {
+      name = nil,
+      id = nil,
+      dir = vec3(),
+      dir_up = vec3(),
+      dir_right = nil,
+      bb = nil,
+      center_pos = vec3(),
+      front_pos = nil,
+      rear_pos = vec3(),
+      velocity = vec3(),
+      speed = nil,
+      acceleration = vec3()
+    }
+  end
+
+  local props = vehs_props_reusing[veh:getID()]
 
   props.name = veh:getJBeamFilename()
   props.id = veh:getID()
   
   --Direction vectors of vehicle
-  props.dir = vec3(veh.obj:getDirectionVector()):normalized()
-  props.dir_up = vec3(veh.obj:getDirectionVectorUp()):normalized()
-  props.dir_right = props.dir:cross(props.dir_up):normalized()
+  props.dir:set(veh.obj:getDirectionVector())
+  props.dir_up:set(veh.obj:getDirectionVectorUp())
+  props.dir_right = props.dir:cross(props.dir_up)
 
   --Bounding box of vehicle
   props.bb = veh:getSpawnWorldOOBB()
-  props.center_pos = vec3(props.bb:getCenter())
+  props.center_pos:set(props.bb:getCenter())
   props.front_pos = props.center_pos + props.dir * veh:getSpawnAABBRadius()
-  props.rear_pos = vec3(veh:getSpawnWorldOOBBRearPoint())
+  props.rear_pos:set(veh:getSpawnWorldOOBBRearPoint())
 
-  props.velocity = vec3(veh:getVelocity())
+  props.velocity:set(veh:getVelocity())
   props.speed = props.velocity:length()
 
   local acceleration = veh_accs_angelo234[veh:getID()]
 
   if acceleration == nil then
-    props.acceleration = vec3(0,0,0)
+    props.acceleration:set(0,0,0)
   else
-    props.acceleration = vec3(acceleration[1], acceleration[2], 9.81 - acceleration[3])
+    props.acceleration:set(acceleration[1], acceleration[2], 9.81 - acceleration[3])
   end
 
   return props
@@ -305,16 +324,20 @@ local function getWaypointStartEnd(my_veh_props, veh_props, position)
   return wps_props
 end
 
+local wps_reusing = {}
+
 --Uses past wps to find most suitable waypoints to use
 local function getWaypointStartEndAdvanced(my_veh_props, veh_props, position, past_wps_props)
-  local wps = {}
+  for k in pairs(wps_reusing) do
+    wps_reusing[k] = nil
+  end
 
   local wps_props = getWaypointStartEnd(my_veh_props, veh_props, position)
   
-  table.insert(wps, wps_props)
+  table.insert(wps_reusing, wps_props)
   
   if past_wps_props then
-    table.insert(wps, past_wps_props)
+    table.insert(wps_reusing, past_wps_props)
   end
   
   local angle_between_vehs = acos(my_veh_props.dir:dot(veh_props.dir))
@@ -327,7 +350,7 @@ local function getWaypointStartEndAdvanced(my_veh_props, veh_props, position, pa
 
   local min_wp_props_angle = {pi, nil}
 
-  for _, curr_wps_props in pairs(wps) do
+  for _, curr_wps_props in pairs(wps_reusing) do
     --Get direction between our waypoints and one of its linked waypoints
     local wp_dir = (curr_wps_props.end_wp_pos - curr_wps_props.start_wp_pos):normalized()
 

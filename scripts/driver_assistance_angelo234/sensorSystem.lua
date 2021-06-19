@@ -1,6 +1,6 @@
 local M = {}
 
---local p = LuaProfiler("my profiler")
+local p = LuaProfiler("my profiler")
 
 local extra_utils = require('scripts/driver_assistance_angelo234/extraUtils')
 
@@ -30,11 +30,12 @@ local past_wps_props_table = {}
 
 --Returns a table of vehicles and distance to them within a max_dist radius
 local function getNearbyVehicles(my_veh_props, max_dist, min_distance_from_car, in_front)
+  
   local other_vehs = {}
 
-  local vehicles = getAllVehicles()
-
-  for _, other_veh in pairs(vehicles) do
+  for i = 0, be:getObjectCount() - 1 do
+    local other_veh = be:getObject(i)
+  
     if other_veh:getJBeamFilename() ~= "unicycle" then
       local other_veh_props = extra_utils.getVehicleProperties(other_veh)
   
@@ -56,6 +57,7 @@ local function getNearbyVehicles(my_veh_props, max_dist, min_distance_from_car, 
             local other_veh_data = 
             {
               other_veh = other_veh, 
+              other_veh_props = other_veh_props, 
               distance = cir_dist,
               shortest_dist = front_dist
             }
@@ -73,7 +75,8 @@ local function getNearbyVehicles(my_veh_props, max_dist, min_distance_from_car, 
           
             local other_veh_data = 
             {
-              other_veh = other_veh, 
+              other_veh = other_veh,
+              other_veh_props = other_veh_props, 
               distance = dist,
               shortest_dist = rear_dist
             }
@@ -84,12 +87,14 @@ local function getNearbyVehicles(my_veh_props, max_dist, min_distance_from_car, 
       end
     end
   end
-
   return other_vehs
 end
 
+
+
 --Returns a table of vehicles and distance to them within a max_dist radius and on same road
 local function getNearbyVehiclesOnSameRoad(dt, my_veh_props, max_dist, other_vehs_data, only_pos_rel_vel, last_vehs_table)
+  local other_vehs_in_my_lane = {}
   
   local my_veh_wps_props = extra_utils.getWaypointStartEndAdvanced(my_veh_props, my_veh_props, my_veh_props.front_pos, past_wps_props_table[my_veh_props.id])
   
@@ -98,11 +103,9 @@ local function getNearbyVehiclesOnSameRoad(dt, my_veh_props, max_dist, other_veh
   if my_veh_wps_props == nil then
     return {}, nil
   end
-  
-  local other_vehs_in_my_lane = {}
 
   for _, other_veh_data in pairs(other_vehs_data) do
-    local other_veh_props = extra_utils.getVehicleProperties(other_veh_data.other_veh)
+    local other_veh_props = other_veh_data.other_veh_props
     local speed_rel = my_veh_props.speed - other_veh_props.speed
     
     local other_veh_wps_props = extra_utils.getWaypointStartEndAdvanced(my_veh_props, other_veh_props, other_veh_props.front_pos, past_wps_props_table[other_veh_props.id])
@@ -238,13 +241,12 @@ end
 
 local function pollFrontStaticSensors(dt, veh_props, system_params, aeb_params)
   --p:start()
-  
-  local parking_sensor_height = aeb_params.parking_sensor_rel_height
+
   local car_half_width = veh_props.bb:getHalfExtents().x - 0.3
 
   setFrontSensorID(aeb_params)
 
-  local sensor_pos = veh_props.front_pos + veh_props.dir_up * parking_sensor_height + veh_props.dir * aeb_params.sensor_offset_forward
+  local sensor_pos = veh_props.front_pos + veh_props.dir_up * aeb_params.parking_sensor_rel_height + veh_props.dir * aeb_params.sensor_offset_forward
   + veh_props.dir_right * (car_half_width - car_half_width / ((aeb_params.num_of_sensors - 1) / 2.0) * front_static_sensor_id)
   
   --Set sensor in proper direction
@@ -299,7 +301,7 @@ end
 local last_vehs_in_same_road_in_front_table = nil
 
 local function pollFrontSensors(dt, veh_props, system_params, aeb_params)
-  --p:start()
+  p:start()
   
   --Cast rays for static objects
   for i = 1, aeb_params.sensors_polled_per_iteration do
@@ -314,21 +316,21 @@ local function pollFrontSensors(dt, veh_props, system_params, aeb_params)
     front_static_min_dist = min(front_static_dist, front_static_min_dist)
   end
 
-  --p:add("cast rays")
+  p:add("cast rays")
 
   --Get nearby vehicles
   local other_vehs_data = getNearbyVehicles(veh_props, aeb_params.vehicle_search_radius, 0, true)
-  --p:add("getNearbyVehicles")
+  p:add("getNearbyVehicles")
   
   
   local other_vehs_same_road_data = getNearbyVehiclesOnSameRoad(dt, veh_props, aeb_params.vehicle_search_radius, 
   other_vehs_data, false, last_vehs_in_same_road_in_front_table)
-  --p:add("getNearbyVehiclesOnSameRoad")
+  p:add("getNearbyVehiclesOnSameRoad")
   
   
   last_vehs_in_same_road_in_front_table = other_vehs_same_road_data
 
-  --p:finish(true)
+  p:finish(true)
 
   return {front_static_min_dist, other_vehs_data, other_vehs_same_road_data}
 end
