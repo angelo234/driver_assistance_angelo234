@@ -7,39 +7,6 @@ local extra_utils = require('scripts/driver_assistance_angelo234/extraUtils')
 --holding = car is stopped and system is holding the brakes 
 local system_state = "ready"
 
---Uses predicted future pos and places it relative to the future waypoint
---based on relative position to the current waypoint
-local function getFutureVehPosCorrectedWithWP(my_veh_props, veh_props, veh_pos_future, lat_dist_from_wp, my_veh_side)
-  local veh_wps_props = extra_utils.getWaypointStartEndAdvanced(my_veh_props, veh_props, veh_pos_future)
-
-  if veh_wps_props == nil then
-    return veh_pos_future, nil
-  end
-
-  local wp_start_end = veh_wps_props.end_wp_pos - veh_wps_props.start_wp_pos
-  local wp_dir = wp_start_end:normalized()
-
-  local xnorm = veh_pos_future:xnormOnLine(veh_wps_props.start_wp_pos, veh_wps_props.end_wp_pos)
-
-  local new_pos = xnorm * wp_start_end + veh_wps_props.start_wp_pos
-
-  local perp_vec = nil
-
-  if my_veh_side == "right" then
-    --On right side of waypoints
-    perp_vec = vec3(wp_dir.y, -wp_dir.x)
-  elseif my_veh_side == "left" then
-    --On left side
-    perp_vec = vec3(-wp_dir.y, wp_dir.x)
-  end
-
-  perp_vec = perp_vec * lat_dist_from_wp
-
-  new_pos = new_pos + perp_vec
-
-  return new_pos, wp_dir
-end
-
 local function getMyVehBoundingBox(my_veh_props)
   local my_bb = my_veh_props.bb
 
@@ -133,9 +100,6 @@ local function getVehicleCollidingWithInLane(dt, my_veh_props, data_table, later
   --Analyze the trajectory of other vehicles with my trajectory
   --to see if collision imminent
   for _, data in pairs(data_table) do
-    local my_veh_side = data.my_veh_wps_props.side_of_wp
-    local other_veh_side = data.other_veh_wps_props.side_of_wp
-    
     --Other vehicle properties
     local other_veh_props = extra_utils.getVehicleProperties(data.other_veh)
 
@@ -149,38 +113,41 @@ local function getVehicleCollidingWithInLane(dt, my_veh_props, data_table, later
     if this_rel_vel > 0 then
       --Capping to 5 seconds to prevent too much error in predicting position
       local ttc = math.min(data.distance / this_rel_vel, 5)
-
-      local my_lat_dist_from_wp = data.my_veh_wps_props.lat_dist_from_wp
-      local other_lat_dist_from_wp = data.other_veh_wps_props.lat_dist_from_wp
-
-      --debugDrawer:drawTextAdvanced((other_veh_props.front_pos):toPoint3F(), String(other_lat_dist_from_wp),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
-
-      if my_lat_dist_from_wp - my_veh_props.bb:getHalfExtents().x * 0.6 < other_lat_dist_from_wp + other_veh_props.bb:getHalfExtents().x
-      and my_lat_dist_from_wp + my_veh_props.bb:getHalfExtents().x * 0.6 > other_lat_dist_from_wp - other_veh_props.bb:getHalfExtents().x
-      then
-        --debugDrawer:drawSphere((other_veh_props.center_pos):toPoint3F(), 1, ColorF(0,1,0,1))  
       
-        local wp_start_end = data.my_veh_wps_props.end_wp_pos - data.my_veh_wps_props.start_wp_pos
-        local wp_dir = wp_start_end:normalized()
-
-        local perp_vec = vec3(wp_dir.y, -wp_dir.x)
+      if data.my_veh_wps_props ~= nil and data.other_veh_wps_props ~= nil then
       
-        local vel_comp = my_veh_props.velocity:dot(perp_vec)
-
-        --Collision may be possible
-        if (my_lat_dist_from_wp - my_veh_props.bb:getHalfExtents().x) + vel_comp * ttc < other_lat_dist_from_wp + other_veh_props.bb:getHalfExtents().x
-        and (my_lat_dist_from_wp + my_veh_props.bb:getHalfExtents().x) + vel_comp * ttc > other_lat_dist_from_wp - other_veh_props.bb:getHalfExtents().x
+        local my_lat_dist_from_wp = data.my_veh_wps_props.lat_dist_from_wp
+        local other_lat_dist_from_wp = data.other_veh_wps_props.lat_dist_from_wp
+  
+        --debugDrawer:drawTextAdvanced((other_veh_props.front_pos):toPoint3F(), String(other_lat_dist_from_wp),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
+  
+        if my_lat_dist_from_wp - my_veh_props.bb:getHalfExtents().x * 0.5 < other_lat_dist_from_wp + other_veh_props.bb:getHalfExtents().x
+        and my_lat_dist_from_wp + my_veh_props.bb:getHalfExtents().x * 0.5 > other_lat_dist_from_wp - other_veh_props.bb:getHalfExtents().x
         then
+          --debugDrawer:drawSphere((other_veh_props.center_pos):toPoint3F(), 1, ColorF(0,1,0,1))  
         
-          --If this distance is less than current min distance
-          --then this is new min distance
-          if data.distance <= distance then
-            distance = data.distance
-            rel_vel = this_rel_vel
-    
-            curr_veh_in_path = data.other_veh
-            
-            --debugDrawer:drawSphere((other_veh_props.center_pos + vec3(0,0,1)):toPoint3F(), 1, ColorF(1,0,0,1))      
+          local wp_start_end = data.my_veh_wps_props.end_wp_pos - data.my_veh_wps_props.start_wp_pos
+          local wp_dir = wp_start_end:normalized()
+  
+          local perp_vec = vec3(wp_dir.y, -wp_dir.x)
+        
+          local vel_comp = my_veh_props.velocity:dot(perp_vec)
+  
+          --Collision may be possible
+          if (my_lat_dist_from_wp - my_veh_props.bb:getHalfExtents().x) + vel_comp * ttc < other_lat_dist_from_wp + other_veh_props.bb:getHalfExtents().x
+          and (my_lat_dist_from_wp + my_veh_props.bb:getHalfExtents().x) + vel_comp * ttc > other_lat_dist_from_wp - other_veh_props.bb:getHalfExtents().x
+          then
+          
+            --If this distance is less than current min distance
+            --then this is new min distance
+            if data.distance <= distance then
+              distance = data.distance
+              rel_vel = this_rel_vel
+      
+              curr_veh_in_path = data.other_veh
+              
+              --debugDrawer:drawSphere((other_veh_props.center_pos + vec3(0,0,1)):toPoint3F(), 1, ColorF(1,0,0,1))      
+            end
           end
         end
       end
@@ -196,7 +163,7 @@ local function soundBeepers(dt, time_before_braking, vel_rel, beeper_params)
   beeper_timer = beeper_timer + dt
 
   --Sound warning tone before braking
-  if time_before_braking <= 0.75 then --* (math.min(0.5 + vel_rel / 30.0, 1.0)) then
+  if time_before_braking <= 0.65 then --* (math.min(0.5 + vel_rel / 30.0, 1.0)) then
     --
     if beeper_timer >= 1.0 / beeper_params.fwd_warning_tone_hertz then
       Engine.Audio.playOnce('AudioGui','art/sound/proximity_tone_50ms_loud.wav')

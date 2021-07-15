@@ -141,7 +141,7 @@ local function getNearbyVehiclesOnSameRoad(dt, my_veh_props, max_dist, other_veh
 end
 
 local function yawSensor(veh_props, init_dir, system_params)
-  if electrics_values_angelo234["steering_input"] ~= 0 then 
+  if electrics_values_angelo234["steering_input"] ~= nil and electrics_values_angelo234["steering_input"] ~= 0 then 
     --Sagitta
     local s = 0.1
   
@@ -301,7 +301,7 @@ end
 local last_vehs_in_same_road_in_front_table = nil
 
 local function pollFrontSensors(dt, veh_props, system_params, aeb_params)
-  p:start()
+  --p:start()
   
   --Cast rays for static objects
   for i = 1, aeb_params.sensors_polled_per_iteration do
@@ -316,21 +316,21 @@ local function pollFrontSensors(dt, veh_props, system_params, aeb_params)
     front_static_min_dist = min(front_static_dist, front_static_min_dist)
   end
 
-  p:add("cast rays")
+  --p:add("cast rays")
 
   --Get nearby vehicles
   local other_vehs_data = getNearbyVehicles(veh_props, aeb_params.vehicle_search_radius, 0, true)
-  p:add("getNearbyVehicles")
+  --p:add("getNearbyVehicles")
   
   
   local other_vehs_same_road_data = getNearbyVehiclesOnSameRoad(dt, veh_props, aeb_params.vehicle_search_radius, 
   other_vehs_data, false, last_vehs_in_same_road_in_front_table)
-  p:add("getNearbyVehiclesOnSameRoad")
+  --p:add("getNearbyVehiclesOnSameRoad")
   
   
   last_vehs_in_same_road_in_front_table = other_vehs_same_road_data
 
-  p:finish(true)
+  --p:finish(true)
 
   return {front_static_min_dist, other_vehs_data, other_vehs_same_road_data}
 end

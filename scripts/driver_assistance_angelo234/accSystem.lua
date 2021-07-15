@@ -152,9 +152,6 @@ local function getVehicleAheadInLane(dt, my_veh_props, data_table)
   --Analyze the trajectory of other vehicles with my trajectory
   --to see if collision imminent
   for _, data in pairs(data_table) do
-    local my_veh_side = data.my_veh_wps_props.side_of_wp
-    local other_veh_side = data.other_veh_wps_props.side_of_wp
-    
     --Other vehicle properties
     local other_veh_props = extra_utils.getVehicleProperties(data.other_veh)
     
@@ -166,24 +163,27 @@ local function getVehicleAheadInLane(dt, my_veh_props, data_table)
       --Capping to 5 seconds to prevent too much error in predicting position
       local ttc = math.min(data.distance / this_rel_vel, 5)
   
-      local my_lat_dist_from_wp = data.my_veh_wps_props.lat_dist_from_wp
-      local other_lat_dist_from_wp = data.other_veh_wps_props.lat_dist_from_wp
+      if data.my_veh_wps_props ~= nil and data.other_veh_wps_props ~= nil then
   
-      if my_lat_dist_from_wp - my_veh_props.bb:getHalfExtents().x < other_lat_dist_from_wp + other_veh_props.bb:getHalfExtents().x
-      and my_lat_dist_from_wp + my_veh_props.bb:getHalfExtents().x > other_lat_dist_from_wp - other_veh_props.bb:getHalfExtents().x
-      then
-        --This may be the car to adapt to
-      
-        --If this distance is less than current min distance
-        --then this is new min distance
-        if data.distance <= distance then
-          distance = data.distance
-          other_veh_vel = other_veh_props.velocity
-  
-          curr_veh_in_path = data.other_veh    
+        local my_lat_dist_from_wp = data.my_veh_wps_props.lat_dist_from_wp
+        local other_lat_dist_from_wp = data.other_veh_wps_props.lat_dist_from_wp
+    
+        if my_lat_dist_from_wp - my_veh_props.bb:getHalfExtents().x < other_lat_dist_from_wp + other_veh_props.bb:getHalfExtents().x
+        and my_lat_dist_from_wp + my_veh_props.bb:getHalfExtents().x > other_lat_dist_from_wp - other_veh_props.bb:getHalfExtents().x
+        then
+          --This may be the car to adapt to
+        
+          --If this distance is less than current min distance
+          --then this is new min distance
+          if data.distance <= distance then
+            distance = data.distance
+            other_veh_vel = other_veh_props.velocity
+    
+            curr_veh_in_path = data.other_veh    
+          end
+        else
+          --debugDrawer:drawTextAdvanced((other_veh_props.front_pos):toPoint3F(), String("Delta distance: " .. math.abs(my_lat_dist_from_wp - other_lat_dist_from_wp)),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
         end
-      else
-        --debugDrawer:drawTextAdvanced((other_veh_props.front_pos):toPoint3F(), String("Delta distance: " .. math.abs(my_lat_dist_from_wp - other_lat_dist_from_wp)),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
       end
     end
   end
