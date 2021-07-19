@@ -1,10 +1,16 @@
 local M = {}
 
+local extra_utils = nil
+
 local hold_angle = 4
 local brake_pedal_threshold = 0.1
 
 local activated = false
 local off_brake_timer = 0
+
+local function init()
+  extra_utils = scripts_driver__assistance__angelo234_extension.extra_utils
+end
 
 local function checkToActivateSystem(veh, gear_selected, yaw)
   if input_brake_angelo234 >= brake_pedal_threshold 
@@ -62,6 +68,7 @@ local function update(dt, veh)
   end
 end
 
+M.init = init
 M.update = update
 
 return M

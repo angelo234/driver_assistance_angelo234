@@ -2,7 +2,7 @@ local M = {}
 
 local p = LuaProfiler("my profiler")
 
-local extra_utils = require('scripts/driver_assistance_angelo234/extraUtils')
+local extra_utils = nil
 
 --For efficiency
 local max = math.max
@@ -26,10 +26,14 @@ local rear_static_sensor_id = -1
 local rear_static_prev_min_dist = 9999
 local rear_static_min_dist = 9999
 
+local function init()
+  extra_utils = scripts_driver__assistance__angelo234_extension.extra_utils
+end
+
 local past_wps_props_table = {}
 
 --Returns a table of vehicles and distance to them within a max_dist radius
-local function getNearbyVehicles(my_veh_props, max_dist, min_distance_from_car, in_front)
+local function getNearbyVehicles(dt, my_veh_props, max_dist, in_front)
   
   local other_vehs = {}
 
@@ -52,7 +56,7 @@ local function getNearbyVehicles(my_veh_props, max_dist, min_distance_from_car, 
       
           --Freepath to vehicle?
           if ray_cast_dist > front_dist then
-            local cir_dist = extra_utils.getCircularDistance(my_veh_props, other_veh_props, min_distance_from_car)
+            local cir_dist = extra_utils.getCircularDistance(my_veh_props, other_veh_props) - (my_veh_props.velocity * dt):length()
    
             local other_veh_data = 
             {
@@ -71,7 +75,7 @@ local function getNearbyVehicles(my_veh_props, max_dist, min_distance_from_car, 
       
           --Freepath to vehicle?
           if ray_cast_dist > rear_dist then
-            local dist = extra_utils.getStraightDistance(my_veh_props, other_veh_props, min_distance_from_car, false, true)
+            local dist = extra_utils.getStraightDistance(my_veh_props, other_veh_props, false, true) - (my_veh_props.velocity * dt):length()
           
             local other_veh_data = 
             {
@@ -143,7 +147,7 @@ end
 local function yawSensor(veh_props, init_dir, system_params)
   if electrics_values_angelo234["steering_input"] ~= nil and electrics_values_angelo234["steering_input"] ~= 0 then 
     --Sagitta
-    local s = 0.1
+    local s = 0.05
   
     --Using steering angle to point sensors
     local avg_radius = (system_params.max_steer_radius + system_params.min_steer_radius) / 2
@@ -242,12 +246,13 @@ end
 local function pollFrontStaticSensors(dt, veh_props, system_params, aeb_params)
   --p:start()
 
-  local car_half_width = veh_props.bb:getHalfExtents().x - 0.3
+  local car_half_width = veh_props.bb:getHalfExtents().x * 0.75
 
   setFrontSensorID(aeb_params)
 
   local sensor_pos = veh_props.front_pos + veh_props.dir_up * aeb_params.parking_sensor_rel_height + veh_props.dir * aeb_params.sensor_offset_forward
   + veh_props.dir_right * (car_half_width - car_half_width / ((aeb_params.num_of_sensors - 1) / 2.0) * front_static_sensor_id)
+  + (aeb_params.num_of_sensors / aeb_params.sensors_polled_per_iteration) * veh_props.velocity * dt
   
   --Set sensor in proper direction
   local sensor_dir = pitchSensor(veh_props)
@@ -266,7 +271,7 @@ local function pollFrontStaticSensors(dt, veh_props, system_params, aeb_params)
 
   --p:add("processRayCasts")
 
-  min_dist = min_dist - aeb_params.sensor_offset_forward - 0.2
+  --min_dist = min_dist - aeb_params.sensor_offset_forward - 0.2
 
   --p:finish(true)
 
@@ -281,17 +286,19 @@ end
 
 local function pollRearStaticSensors(dt, veh_props, rev_aeb_params)
   local parking_sensor_height = rev_aeb_params.parking_sensor_rel_height
-  local car_half_width = veh_props.bb:getHalfExtents().x - 0.3
+  local car_half_width = veh_props.bb:getHalfExtents().x * 0.75
 
   setRearSensorID(rev_aeb_params)
 
   local sensorPos = veh_props.rear_pos + veh_props.dir_up * parking_sensor_height + veh_props.dir * rev_aeb_params.sensor_offset_forward
   + veh_props.dir_right * (car_half_width - car_half_width / ((rev_aeb_params.num_of_sensors - 1) / 2.0) * rear_static_sensor_id)
+  + veh_props.dir * -rev_aeb_params.sensor_offset_forward 
+  + (rev_aeb_params.num_of_sensors / rev_aeb_params.sensors_polled_per_iteration) * veh_props.velocity * dt
   
   local static_hit = staticCastRay(veh_props, sensorPos, -veh_props.dir)
   local min_dist = processRayCasts(veh_props, static_hit)
 
-  min_dist = min_dist - rev_aeb_params.sensor_offset_forward - 0.15
+  min_dist = min_dist - rev_aeb_params.sensor_offset_forward-- - 0.15
 
   return min_dist
 end
@@ -319,7 +326,7 @@ local function pollFrontSensors(dt, veh_props, system_params, aeb_params)
   --p:add("cast rays")
 
   --Get nearby vehicles
-  local other_vehs_data = getNearbyVehicles(veh_props, aeb_params.vehicle_search_radius, 0, true)
+  local other_vehs_data = getNearbyVehicles(dt, veh_props, aeb_params.vehicle_search_radius, true)
   --p:add("getNearbyVehicles")
   
   
@@ -367,7 +374,7 @@ local function processRearSensorData(rear_static_min_dist, other_vehs_data, rev_
 
   local min_dist = math.min(rear_static_min_dist, vehicle_dist)
 
-  min_dist = min_dist - rev_aeb_params.sensor_offset_forward - 0.15
+  --min_dist = min_dist - rev_aeb_params.sensor_offset_forward - 0.15
 
   return {other_veh, min_dist}
 end
@@ -386,13 +393,14 @@ local function pollRearSensors(dt, veh_props, system_params, rev_aeb_params)
   end
   
   --Get nearby vehicles
-  local other_vehs_data = getNearbyVehicles(veh_props, rev_aeb_params.sensor_max_distance, 0, false)
+  local other_vehs_data = getNearbyVehicles(dt, veh_props, rev_aeb_params.sensor_max_distance, false)
   
   local data = processRearSensorData(rear_static_min_dist, other_vehs_data, rev_aeb_params)
   
   return data
 end
 
+M.init = init
 M.pollFrontSensors = pollFrontSensors
 M.pollRearSensors = pollRearSensors
 

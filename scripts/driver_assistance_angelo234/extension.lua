@@ -10,7 +10,7 @@ veh_accs_angelo234 = {}
 
 local M = {}
 
-local extra_utils = require('scripts/driver_assistance_angelo234/extraUtils')
+M.extra_utils = require('scripts/driver_assistance_angelo234/extraUtils')
 
 local sensor_system = require('scripts/driver_assistance_angelo234/sensorSystem')
 local fcm_system = require('scripts/driver_assistance_angelo234/forwardCollisionMitigationSystem')
@@ -85,7 +85,7 @@ end
 
 --Functions called with key binding
 local function toggleFCMSystem()
-  if not extra_utils.checkIfPartExists("forward_collision_mitigation_angelo234") then return end
+  if not M.extra_utils.checkIfPartExists("forward_collision_mitigation_angelo234") then return end
   
   fcm_system_on = not fcm_system_on
   
@@ -101,7 +101,7 @@ local function toggleFCMSystem()
 end
 
 local function toggleRCMSystem()
-  if not extra_utils.checkIfPartExists("reverse_collision_mitigation_angelo234") then return end
+  if not M.extra_utils.checkIfPartExists("reverse_collision_mitigation_angelo234") then return end
 
   rcm_system_on = not rcm_system_on
   
@@ -119,7 +119,7 @@ end
 local function toggleAutoHeadlightSystem()
   --[[
   
-  if not extra_utils.checkIfPartExists("auto_headlight_angelo234") then return end
+  if not M.extra_utils.checkIfPartExists("auto_headlight_angelo234") then return end
 
   auto_headlight_system_on = not auto_headlight_system_on
   
@@ -137,7 +137,7 @@ local function toggleAutoHeadlightSystem()
 end
 
 local function setACCSystemOn(on)
-  if not extra_utils.checkIfPartExists("acc_angelo234") then return end
+  if not M.extra_utils.checkIfPartExists("acc_angelo234") then return end
 
   if acc_system_on ~= on then
     acc_system_on = on
@@ -147,7 +147,7 @@ local function setACCSystemOn(on)
 end
 
 local function toggleACCSystem()
-  if not extra_utils.checkIfPartExists("acc_angelo234") then return end
+  if not M.extra_utils.checkIfPartExists("acc_angelo234") then return end
   
   acc_system_on = not acc_system_on
   
@@ -155,19 +155,19 @@ local function toggleACCSystem()
 end
 
 local function setACCSpeed()
-  if not extra_utils.checkIfPartExists("acc_angelo234") then return end
+  if not M.extra_utils.checkIfPartExists("acc_angelo234") then return end
 
   acc_system.setACCSpeed()
 end
 
 local function changeACCSpeed(amt)
-  if not extra_utils.checkIfPartExists("acc_angelo234") then return end
+  if not M.extra_utils.checkIfPartExists("acc_angelo234") then return end
 
   acc_system.changeACCSpeed(amt)
 end
 
 local function changeACCFollowingDistance(amt)
-  if not extra_utils.checkIfPartExists("acc_angelo234") then return end
+  if not M.extra_utils.checkIfPartExists("acc_angelo234") then return end
 
   acc_system.changeACCFollowingDistance(amt)
 end
@@ -226,45 +226,18 @@ local function processVELuaData()
   angular_speed_angelo234 = yawSmooth:get(angular_speed_angelo234)
 end
 
---Complicated way to load in camera (but it works quite seamlessly)
-local function doLuaReload()
-  --Determine if Lua loaded for first time or was loaded another time
-  --if loaded for first time, then reload Lua to load in the reverse camera properly
-  --if not, then don't need to do anything
-  --And if log header changes from "Log started" to "Log rotated" then don't bother reloading
-  --since by that time, the reverse camera probably was already loaded in
-  
-  local log_file_header_file = "prev_log_file_header_angelo234.txt"
-  local curr_log_file_header = readFile("beamng.log"):match("^.-\r")
-  local curr_log_status = curr_log_file_header:match("Log.-ed")
-  
-  --If log header doesn't state "Log started" then don't do anything
-  if curr_log_status ~= "Log started" then
-    return
-  end
-  
-  if not FS:fileExists(log_file_header_file) then
-    writeFile(log_file_header_file, curr_log_file_header)
-    Lua:requestReload()
-  else
-    local prev_log_file_header = readFile(log_file_header_file)
-    
-    --Means different game instance so reload lua again
-    if prev_log_file_header ~= curr_log_file_header then
-      writeFile(log_file_header_file, curr_log_file_header)
-      Lua:requestReload()    
-    end 
-  end
-end
-
 --local p = LuaProfiler("my profiler")
 
 local function onUpdate(dt)
   --p:start()
 
-  --Do Lua reload after first Lua initialization to load in the reverse camera
   if first_update then
-    --doLuaReload()   
+    sensor_system.init()
+    fcm_system.init()
+    rcm_system.init()
+    acc_system.init()
+    hsa_system.init()
+    --auto_headlight_system.init() 
     first_update = false
   end
   
@@ -282,7 +255,7 @@ local function onUpdate(dt)
   
   local parts = extensions.core_vehicle_manager.getPlayerVehicleData().chosenParts
   
-  local veh_props = extra_utils.getVehicleProperties(my_veh) 
+  local veh_props = M.extra_utils.getVehicleProperties(my_veh) 
 
   --Update at 60 Hz
   if other_systems_timer >= 0.0167 then
@@ -291,17 +264,17 @@ local function onUpdate(dt)
     rear_sensor_data = sensor_system.pollRearSensors(other_systems_timer, veh_props, system_params, rev_aeb_params)
 
     --Update Adaptive Cruise Control
-    if extra_utils.checkIfPartExists("acc_angelo234") and acc_system_on then
+    if M.extra_utils.checkIfPartExists("acc_angelo234") and acc_system_on then
       acc_system.update(other_systems_timer, my_veh, system_params, aeb_params, front_sensor_data) 
     end
   
     --Update Forward Collision Mitigation System
-    if extra_utils.checkIfPartExists("forward_collision_mitigation_angelo234") and fcm_system_on then
+    if M.extra_utils.checkIfPartExists("forward_collision_mitigation_angelo234") and fcm_system_on then
       fcm_system.update(other_systems_timer, my_veh, system_params, aeb_params, beeper_params, front_sensor_data) 
     end
 
     --Update Reverse Collision Mitigation System
-    if extra_utils.checkIfPartExists("reverse_collision_mitigation_angelo234") and rcm_system_on then 
+    if M.extra_utils.checkIfPartExists("reverse_collision_mitigation_angelo234") and rcm_system_on then 
       rcm_system.update(other_systems_timer, my_veh, system_params, parking_lines_params, rev_aeb_params, beeper_params, rear_sensor_data)
     end
 
@@ -311,7 +284,7 @@ local function onUpdate(dt)
   --Update at 10 Hz
   if hsa_system_update_timer >= 0.1 then 
     --Update Hill Start Assist System
-    if extra_utils.checkIfPartExists("hill_start_assist_angelo234") then
+    if M.extra_utils.checkIfPartExists("hill_start_assist_angelo234") then
       hsa_system.update(hsa_system_update_timer, my_veh)
     end
     
@@ -325,7 +298,7 @@ local function onUpdate(dt)
   --[[
   --Update at 4 Hz
   if auto_headlight_system_update_timer >= 0.25 then
-    if extra_utils.checkIfPartExists("auto_headlight_angelo234") and auto_headlight_system_on then
+    if M.extra_utils.checkIfPartExists("auto_headlight_angelo234") and auto_headlight_system_on then
       if front_sensor_data ~= nil then
         if prev_auto_headlight_system_on ~= auto_headlight_system_on then
           auto_headlight_system.systemSwitchedOn()

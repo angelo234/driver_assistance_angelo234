@@ -396,7 +396,7 @@ local function checkIfOtherCarOnSameRoad(my_veh_props, other_veh_props, wps_prop
   return path_len <= (wps_props.start_wp_pos - other_wps_props_in_other_dir.start_wp_pos):length() * 1.05
 end
 
-local function getCircularDistance(my_veh_props, other_veh_props, min_distance_from_car)
+local function getCircularDistance(my_veh_props, other_veh_props)
   local other_bb = other_veh_props.bb
 
   local other_x = other_bb:getHalfExtents().x * vec3(other_bb:getAxis(0))
@@ -405,11 +405,7 @@ local function getCircularDistance(my_veh_props, other_veh_props, min_distance_f
 
   local shoot_ray_dir = (other_veh_props.center_pos - my_veh_props.front_pos):normalized()
 
-  --Now get exact distance
   local min_distance, max_distance = intersectsRay_OBB(my_veh_props.front_pos, shoot_ray_dir, other_veh_props.center_pos, other_x, other_y, other_z)
-
-  --For some reason, distance is negative
-  min_distance = min_distance - min_distance_from_car
 
   if min_distance < 0 then
     min_distance = 0
@@ -426,7 +422,9 @@ local function getCircularDistance(my_veh_props, other_veh_props, min_distance_f
   return cir_dist
 end
 
-local function getStraightDistance(my_veh_props, other_veh_props, min_distance_from_car, front, in_my_vehs_straight_path)
+local function getStraightDistance(my_veh_props, other_veh_props, front, in_my_vehs_straight_path)
+  local my_bb = my_veh_props.bb
+  
   local other_bb = other_veh_props.bb
 
   local other_x = other_bb:getHalfExtents().x * vec3(other_bb:getAxis(0))
@@ -450,11 +448,9 @@ local function getStraightDistance(my_veh_props, other_veh_props, min_distance_f
     else
       shoot_ray_dir = -my_veh_props.dir
     end  
-    
-    local min_distance1, max_distance1 = intersectsRay_OBB(ray_pos + my_veh_props.dir_right * other_bb:getHalfExtents().x, shoot_ray_dir, other_veh_props.center_pos, other_x, other_y, other_z)
-    
-    local min_distance2, max_distance2 = intersectsRay_OBB(ray_pos - my_veh_props.dir_right * other_bb:getHalfExtents().x, shoot_ray_dir, other_veh_props.center_pos, other_x, other_y, other_z)
 
+    local min_distance1, max_distance1 = intersectsRay_OBB(ray_pos + my_veh_props.dir_right * my_bb:getHalfExtents().x * 0.75, shoot_ray_dir, other_veh_props.center_pos, other_x, other_y, other_z)   
+    local min_distance2, max_distance2 = intersectsRay_OBB(ray_pos - my_veh_props.dir_right * my_bb:getHalfExtents().x * 0.75, shoot_ray_dir, other_veh_props.center_pos, other_x, other_y, other_z)
     local min_distance3, max_distance3 = intersectsRay_OBB(ray_pos, shoot_ray_dir, other_veh_props.center_pos, other_x, other_y, other_z)
 
     min_distance = math.min(min_distance1, min_distance2, min_distance3)
@@ -466,10 +462,8 @@ local function getStraightDistance(my_veh_props, other_veh_props, min_distance_f
     min_distance = min_distance1
   end
 
-  min_distance = min_distance - min_distance_from_car
-
-  if min_distance < 0 then
-    min_distance = 0
+  if min_distance < -0.1 then
+    min_distance = 9999
   end
 
   return min_distance

@@ -1,11 +1,15 @@
 local M = {}
 
-local extra_utils = require('scripts/driver_assistance_angelo234/extraUtils')
+local extra_utils = nil
 
 --ready = system not doing anything 
 --braking = AEB active
 --holding = car is stopped and system is holding the brakes 
 local system_state = "ready"
+
+local function init()
+  extra_utils = scripts_driver__assistance__angelo234_extension.extra_utils
+end
 
 local function getMyVehBoundingBox(my_veh_props)
   local my_bb = my_veh_props.bb
@@ -121,8 +125,8 @@ local function getVehicleCollidingWithInLane(dt, my_veh_props, data_table, later
   
         --debugDrawer:drawTextAdvanced((other_veh_props.front_pos):toPoint3F(), String(other_lat_dist_from_wp),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
   
-        if my_lat_dist_from_wp - my_veh_props.bb:getHalfExtents().x * 0.5 < other_lat_dist_from_wp + other_veh_props.bb:getHalfExtents().x
-        and my_lat_dist_from_wp + my_veh_props.bb:getHalfExtents().x * 0.5 > other_lat_dist_from_wp - other_veh_props.bb:getHalfExtents().x
+        if my_lat_dist_from_wp - my_veh_props.bb:getHalfExtents().x * 0.6 < other_lat_dist_from_wp + other_veh_props.bb:getHalfExtents().x
+        and my_lat_dist_from_wp + my_veh_props.bb:getHalfExtents().x * 0.6 > other_lat_dist_from_wp - other_veh_props.bb:getHalfExtents().x
         then
           --debugDrawer:drawSphere((other_veh_props.center_pos):toPoint3F(), 1, ColorF(0,1,0,1))  
         
@@ -245,7 +249,8 @@ local function holdBrakes(veh, veh_props, aeb_params)
         veh:queueLuaCommand("electrics.values.brakeOverride = 1")
       else
         --Release brake and apply parking brake
-        veh:queueLuaCommand("electrics.values.brakeOverride = 0") 
+        veh:queueLuaCommand("electrics.values.brakeOverride = nil") 
+        veh:queueLuaCommand("input.event('parkingbrake', 1, 2)")   
       end
       veh:queueLuaCommand("electrics.values.throttleOverride = nil")
       
@@ -255,8 +260,12 @@ local function holdBrakes(veh, veh_props, aeb_params)
   
   --If vehicle held by brake after AEB and user modulates throttle or brake pedal then release brakes
   if system_state == "holding" and (input_throttle_angelo234 > 0 or input_brake_angelo234 > 0) then
-    veh:queueLuaCommand("electrics.values.brakeOverride = nil")
-    
+    if gearbox_mode_angelo234.previousGearboxBehavior == "realistic" then
+      veh:queueLuaCommand("electrics.values.brakeOverride = nil")
+    else 
+      veh:queueLuaCommand("input.event('parkingbrake', 0, 2)") 
+    end 
+
     system_state = "ready"
   end
 
@@ -334,6 +343,7 @@ local function update(dt, veh, system_params, aeb_params, beeper_params, front_s
   end
 end
 
+M.init = init
 M.update = update
 
 return M

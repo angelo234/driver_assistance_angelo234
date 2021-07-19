@@ -1,7 +1,7 @@
 local M = {}
 
 local control_systems = require("controlSystems") -- for newPIDStandard
-local extra_utils = require('scripts/driver_assistance_angelo234/extraUtils')
+local extra_utils = nil
 
 --PID for getting vehicle up to desired speed when no car in front
 --Input = desired velocity, Output = pedal position
@@ -21,6 +21,10 @@ local ramped_target_speed = 0
 local following_time = 1
 
 local following_mode = false
+
+local function init()
+  extra_utils = scripts_driver__assistance__angelo234_extension.extra_utils
+end
 
 local function onToggled(acc_on)
   if acc_on then
@@ -309,6 +313,7 @@ local function update(dt, veh, system_params, aeb_params, front_sensor_data)
   end
 end
 
+M.init = init
 M.onToggled = onToggled
 M.setACCSpeed = setACCSpeed
 M.changeACCSpeed = changeACCSpeed

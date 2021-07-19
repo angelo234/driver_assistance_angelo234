@@ -1,10 +1,16 @@
 local M = {}
 
+local extra_utils = nil
+
 --Based on US Law (about 500 feet)
 local dim_distance = 150
 
 local headlights_turned_off = false
 local armed = false
+
+local function init()
+  extra_utils = scripts_driver__assistance__angelo234_extension.extra_utils
+end
 
 --Called when headlights get turned off by user
 local function onHeadlightsOff()
@@ -90,6 +96,7 @@ local function update(dt, veh, vehs_in_front_table)
   end
 end
 
+M.init = init
 M.onHeadlightsOff = onHeadlightsOff
 M.onHeadlightsOn = onHeadlightsOn
 M.systemSwitchedOn = systemSwitchedOn
