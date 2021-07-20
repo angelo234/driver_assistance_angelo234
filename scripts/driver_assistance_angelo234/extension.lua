@@ -228,6 +228,8 @@ end
 
 --local p = LuaProfiler("my profiler")
 
+local i = 0
+
 local function onUpdate(dt)
   --p:start()
 
@@ -257,28 +259,40 @@ local function onUpdate(dt)
   
   local veh_props = M.extra_utils.getVehicleProperties(my_veh) 
 
-  --Update at 60 Hz
-  if other_systems_timer >= 0.0167 then
-    --Get sensor data
-    front_sensor_data = sensor_system.pollFrontSensors(other_systems_timer, veh_props, system_params, aeb_params)
-    rear_sensor_data = sensor_system.pollRearSensors(other_systems_timer, veh_props, system_params, rev_aeb_params)
-
-    --Update Adaptive Cruise Control
-    if M.extra_utils.checkIfPartExists("acc_angelo234") and acc_system_on then
-      acc_system.update(other_systems_timer, my_veh, system_params, aeb_params, front_sensor_data) 
-    end
+  if M.extra_utils.checkIfPartExists("acc_angelo234") 
+  or M.extra_utils.checkIfPartExists("forward_collision_mitigation_angelo234") 
+  or M.extra_utils.checkIfPartExists("reverse_collision_mitigation_angelo234")
+  then
+    --Update at 120 Hz
+    if other_systems_timer >= 1.0 / 120.0 then
+      if i == 0 then  
+        --Get sensor data
+        front_sensor_data = sensor_system.pollFrontSensors(other_systems_timer * 2, veh_props, system_params, aeb_params)
+        rear_sensor_data = sensor_system.pollRearSensors(other_systems_timer * 2, veh_props, system_params, rev_aeb_params)
+        
+        i = 1
+      
+      elseif i == 1 then   
+        --Update Adaptive Cruise Control
+        if M.extra_utils.checkIfPartExists("acc_angelo234") and acc_system_on then
+          acc_system.update(other_systems_timer * 2, my_veh, system_params, aeb_params, front_sensor_data) 
+        end
+      
+        --Update Forward Collision Mitigation System
+        if M.extra_utils.checkIfPartExists("forward_collision_mitigation_angelo234") and fcm_system_on then
+          fcm_system.update(other_systems_timer * 2, my_veh, system_params, aeb_params, beeper_params, front_sensor_data) 
+        end
   
-    --Update Forward Collision Mitigation System
-    if M.extra_utils.checkIfPartExists("forward_collision_mitigation_angelo234") and fcm_system_on then
-      fcm_system.update(other_systems_timer, my_veh, system_params, aeb_params, beeper_params, front_sensor_data) 
+        --Update Reverse Collision Mitigation System
+        if M.extra_utils.checkIfPartExists("reverse_collision_mitigation_angelo234") and rcm_system_on then 
+          rcm_system.update(other_systems_timer * 2, my_veh, system_params, parking_lines_params, rev_aeb_params, beeper_params, rear_sensor_data)
+        end
+        
+        i = 0
+      end
+      
+      other_systems_timer = 0
     end
-
-    --Update Reverse Collision Mitigation System
-    if M.extra_utils.checkIfPartExists("reverse_collision_mitigation_angelo234") and rcm_system_on then 
-      rcm_system.update(other_systems_timer, my_veh, system_params, parking_lines_params, rev_aeb_params, beeper_params, rear_sensor_data)
-    end
-
-    other_systems_timer = 0
   end
   
   --Update at 10 Hz
