@@ -231,7 +231,6 @@ end
 local i = 0
 
 local function onUpdate(dt)
-  print('onUpdate')
   --p:start()
 
   if first_update then
