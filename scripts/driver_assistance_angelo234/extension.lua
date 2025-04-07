@@ -234,11 +234,11 @@ local function onUpdate(dt)
   --p:start()
 
   if first_update then
-    sensor_system.init()
-    fcm_system.init()
-    rcm_system.init()
-    acc_system.init()
-    hsa_system.init()
+    -- sensor_system.init()
+    -- fcm_system.init()
+    -- rcm_system.init()
+    -- acc_system.init()
+    -- hsa_system.init()
     --auto_headlight_system.init()
     first_update = false
   end
@@ -336,6 +336,10 @@ local function onUpdate(dt)
   --p:finish(true)
 end
 
+local function onInit()
+  setExtensionUnloadMode(M, "manual")
+end
+
 M.onExtensionLoaded = onExtensionLoaded
 M.onVehicleSwitched = onVehicleSwitched
 M.onHeadlightsOff = onHeadlightsOff
@@ -350,5 +354,6 @@ M.changeACCSpeed = changeACCSpeed
 M.changeACCFollowingDistance = changeACCFollowingDistance
 M.onCameraModeChanged = onCameraModeChanged
 M.onUpdate = onUpdate
+M.onInit = onInit
 
 return M
