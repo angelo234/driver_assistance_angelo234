@@ -336,6 +336,10 @@ local function onUpdate(dt)
   --p:finish(true)
 end
 
+local function onInit()
+  setExtensionUnloadMode(M, "manual")
+end
+
 M.onExtensionLoaded = onExtensionLoaded
 M.onVehicleSwitched = onVehicleSwitched
 M.onHeadlightsOff = onHeadlightsOff
@@ -350,5 +354,6 @@ M.changeACCSpeed = changeACCSpeed
 M.changeACCFollowingDistance = changeACCFollowingDistance
 M.onCameraModeChanged = onCameraModeChanged
 M.onUpdate = onUpdate
+M.onInit = onInit
 
 return M

@@ -2,4 +2,4 @@
 -- If a copy of the bCDDL was not distributed with this
 -- file, You can obtain one at http://beamng.com/bCDDL-1.1.txt
 
-registerCoreModule('scripts/driver_assistance_angelo234/extension')
+extensions.load('scripts/driver_assistance_angelo234/extension')
