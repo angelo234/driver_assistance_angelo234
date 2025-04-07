@@ -68,7 +68,12 @@ local function init(player)
 end
 
 local function onExtensionLoaded()
+  print('onExtensionLoaded')
   init(0)
+end
+
+local function onExtensionUnloaded()
+  print('onExtensionUnloaded')
 end
 
 local function onVehicleSwitched(oid, nid, player)
@@ -231,6 +236,7 @@ end
 local i = 0
 
 local function onUpdate(dt)
+  print('onUpdate')
   --p:start()
 
   if first_update then
@@ -337,6 +343,7 @@ local function onUpdate(dt)
 end
 
 M.onExtensionLoaded = onExtensionLoaded
+M.onExtensionUnloaded = onExtensionUnloaded
 M.onVehicleSwitched = onVehicleSwitched
 M.onHeadlightsOff = onHeadlightsOff
 M.onHeadlightsOn = onHeadlightsOn
