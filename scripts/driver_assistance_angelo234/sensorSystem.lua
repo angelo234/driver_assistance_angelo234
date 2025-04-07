@@ -48,7 +48,7 @@ local function getNearbyVehicles(dt, my_veh_props, max_dist, in_front)
 
         --If rear distance is larger than front distance, then vehicle is in front
         if front_dist < max_dist and front_dist < rear_dist and in_front then
-          local ray_cast_dist = castRayStatic(my_veh_props.front_pos:toPoint3F(), (other_veh_props.center_pos - my_veh_props.front_pos):normalized():toPoint3F(), max_dist)
+          local ray_cast_dist = castRayStatic(my_veh_props.front_pos, (other_veh_props.center_pos - my_veh_props.front_pos):normalized(), max_dist)
 
           --Freepath to vehicle?
           if ray_cast_dist > front_dist then
@@ -67,7 +67,7 @@ local function getNearbyVehicles(dt, my_veh_props, max_dist, in_front)
 
           --If front distance is larger than rear distance, then vehicle is in rear
         elseif rear_dist < max_dist and front_dist > rear_dist and not in_front then
-          local ray_cast_dist = castRayStatic(my_veh_props.rear_pos:toPoint3F(), (other_veh_props.center_pos - my_veh_props.rear_pos):normalized():toPoint3F(), max_dist)
+          local ray_cast_dist = castRayStatic(my_veh_props.rear_pos, (other_veh_props.center_pos - my_veh_props.rear_pos):normalized(), max_dist)
 
           --Freepath to vehicle?
           if ray_cast_dist > rear_dist then
@@ -115,12 +115,12 @@ local function getNearbyVehiclesOnSameRoad(dt, my_veh_props, max_dist, other_veh
     other_veh_data.my_veh_wps_props = my_veh_wps_props
     other_veh_data.other_veh_wps_props = other_veh_wps_props
 
-    --debugDrawer:drawTextAdvanced((other_veh_props.front_pos):toPoint3F(), String("Free path? " .. tostring(free_path_to_veh)),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
+    --debugDrawer:drawTextAdvanced((other_veh_props.front_pos), String("Free path? " .. tostring(free_path_to_veh)),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
 
     local on_same_road = extra_utils.checkIfOtherCarOnSameRoad(my_veh_props, other_veh_props, my_veh_wps_props)
 
     if on_same_road then
-      --debugDrawer:drawTextAdvanced((other_veh_props.front_pos):toPoint3F(), String("On same road"),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
+      --debugDrawer:drawTextAdvanced((other_veh_props.front_pos), String("On same road"),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
 
       --In same road and my vehicle speed is >= to other
       if on_same_road then
@@ -178,8 +178,8 @@ end
 
 --Used to point sensors to horizontal regardless of pitch of car (e.g. accelearting and braking)
 local function pitchSensor(veh_props)
-  local height_front = castRayStatic(veh_props.front_pos:toPoint3F(), -veh_props.dir_up:toPoint3F(), 2)
-  local height_rear = castRayStatic(veh_props.rear_pos:toPoint3F(), -veh_props.dir_up:toPoint3F(), 2)
+  local height_front = castRayStatic(veh_props.front_pos, -veh_props.dir_up, 2)
+  local height_rear = castRayStatic(veh_props.rear_pos, -veh_props.dir_up, 2)
 
   -- +x = need to lower, -x = need to raise
   local diff = height_front - height_rear

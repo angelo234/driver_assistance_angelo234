@@ -182,14 +182,14 @@ local function getVehicleAheadInLane(dt, my_veh_props, data_table)
             curr_veh_in_path = data.other_veh
           end
         else
-          --debugDrawer:drawTextAdvanced((other_veh_props.front_pos):toPoint3F(), String("Delta distance: " .. math.abs(my_lat_dist_from_wp - other_lat_dist_from_wp)),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
+          --debugDrawer:drawTextAdvanced((other_veh_props.front_pos), String("Delta distance: " .. math.abs(my_lat_dist_from_wp - other_lat_dist_from_wp)),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
         end
       end
     end
   end
 
   if curr_veh_in_path then
-    --debugDrawer:drawSphere((vec3(curr_veh_in_path:getPosition())):toPoint3F(), 1, ColorF(1,0,0,1))
+    --debugDrawer:drawSphere((vec3(curr_veh_in_path:getPosition())), 1, ColorF(1,0,0,1))
   end
 
   return distance, other_veh_vel

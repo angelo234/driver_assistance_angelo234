@@ -119,12 +119,12 @@ local function getVehicleCollidingWithInLane(dt, my_veh_props, data_table, later
         local my_lat_dist_from_wp = data.my_veh_wps_props.lat_dist_from_wp
         local other_lat_dist_from_wp = data.other_veh_wps_props.lat_dist_from_wp
 
-        --debugDrawer:drawTextAdvanced((other_veh_props.front_pos):toPoint3F(), String(other_lat_dist_from_wp),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
+        --debugDrawer:drawTextAdvanced((other_veh_props.front_pos), String(other_lat_dist_from_wp),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
 
         if my_lat_dist_from_wp - my_veh_props.bb:getHalfExtents().x * 0.6 < other_lat_dist_from_wp + other_veh_props.bb:getHalfExtents().x
         and my_lat_dist_from_wp + my_veh_props.bb:getHalfExtents().x * 0.6 > other_lat_dist_from_wp - other_veh_props.bb:getHalfExtents().x
         then
-          --debugDrawer:drawSphere((other_veh_props.center_pos):toPoint3F(), 1, ColorF(0,1,0,1))
+          --debugDrawer:drawSphere((other_veh_props.center_pos), 1, ColorF(0,1,0,1))
 
           local wp_start_end = data.my_veh_wps_props.end_wp_pos - data.my_veh_wps_props.start_wp_pos
           local wp_dir = wp_start_end:normalized()
@@ -146,7 +146,7 @@ local function getVehicleCollidingWithInLane(dt, my_veh_props, data_table, later
 
               curr_veh_in_path = data.other_veh
 
-              --debugDrawer:drawSphere((other_veh_props.center_pos + vec3(0,0,1)):toPoint3F(), 1, ColorF(1,0,0,1))
+              --debugDrawer:drawSphere((other_veh_props.center_pos + vec3(0,0,1)), 1, ColorF(1,0,0,1))
             end
           end
         end
@@ -191,7 +191,7 @@ local function performEmergencyBraking(dt, veh, aeb_params, time_before_braking,
     return
   end
 
-  --debugDrawer:drawTextAdvanced((my_veh_props.front_pos + my_veh_props.dir * 2):toPoint3F(), String("Time till braking: " .. tostring(time_before_braking)),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
+  --debugDrawer:drawTextAdvanced((my_veh_props.front_pos + my_veh_props.dir * 2), String("Time till braking: " .. tostring(time_before_braking)),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
 
   --Maximum Braking
   if time_before_braking <= 0 then

@@ -94,7 +94,7 @@ local function checkIfWaypointsWithinMyCar(veh_props, wps_props)
 
   local lat_dist = (veh_props.center_pos - veh_pos_on_wp_line):length()
 
-  --debugDrawer:drawTextAdvanced((wps_props.end_wp_pos):toPoint3F(), String("Lateral Distance: " .. tostring(lat_dist)),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
+  --debugDrawer:drawTextAdvanced((wps_props.end_wp_pos), String("Lateral Distance: " .. tostring(lat_dist)),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
 
   return lat_dist < wps_props.wp_radius
 end
@@ -367,11 +367,11 @@ local function getWaypointStartEndAdvanced(my_veh_props, veh_props, position, pa
       min_wp_props_angle[2] = curr_wps_props
     end
 
-    --debugDrawer:drawSphere((curr_wps_props.start_wp_pos + vec3(0,0,2)):toPoint3F(), 0.5, ColorF(1,1,0,1))
-    --debugDrawer:drawTextAdvanced((wp1_pos + vec3(0,0,3)):toPoint3F(), String("ID: " .. tostring(i)),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
+    --debugDrawer:drawSphere((curr_wps_props.start_wp_pos + vec3(0,0,2)), 0.5, ColorF(1,1,0,1))
+    --debugDrawer:drawTextAdvanced((wp1_pos + vec3(0,0,3)), String("ID: " .. tostring(i)),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
 
-    --debugDrawer:drawSphere((curr_wps_props.end_wp_pos + vec3(0,0,2)):toPoint3F(), 0.5, ColorF(1,1,0,1))
-    --debugDrawer:drawTextAdvanced((wp2_pos + vec3(0,0,3)):toPoint3F(), String("ID: " .. tostring(i + 1)),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
+    --debugDrawer:drawSphere((curr_wps_props.end_wp_pos + vec3(0,0,2)), 0.5, ColorF(1,1,0,1))
+    --debugDrawer:drawTextAdvanced((wp2_pos + vec3(0,0,3)), String("ID: " .. tostring(i + 1)),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
   end
 
   return min_wp_props_angle[2]
@@ -388,7 +388,7 @@ local function checkIfOtherCarOnSameRoad(my_veh_props, other_veh_props, wps_prop
   local path = map.getPath(wps_props.start_wp, other_wps_props_in_other_dir.start_wp, 0, 100)
   local path_len = getPathLen(path)
 
-  --debugDrawer:drawTextAdvanced((other_veh_props.front_pos):toPoint3F(), String(path_len),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
+  --debugDrawer:drawTextAdvanced((other_veh_props.front_pos), String(path_len),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
 
   return path_len <= (wps_props.start_wp_pos - other_wps_props_in_other_dir.start_wp_pos):length() * 1.05
 end
