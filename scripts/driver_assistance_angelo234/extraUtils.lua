@@ -18,13 +18,10 @@ local ceil = math.ceil
 local map_nodes = map.getMap().nodes
 local findClosestRoad = map.findClosestRoad
 
-local function checkIfPartExists(part)
-  if not extensions.core_vehicle_manager.getPlayerVehicleData() then return false end
-
-  --Only change status if part actually installed
-  local parts = extensions.core_vehicle_manager.getPlayerVehicleData().chosenParts
-  
-  return parts[part] == part
+local function getPart(partName)
+  local vehData = core_vehicle_manager.getPlayerVehicleData()
+  if not vehData then return false end
+  return vehData.activePartsData[partName]
 end
 
 local vehs_props_reusing = {}
@@ -51,7 +48,7 @@ local function getVehicleProperties(veh)
 
   props.name = veh:getJBeamFilename()
   props.id = veh:getID()
-  
+
   --Direction vectors of vehicle
   props.dir:set(veh.obj:getDirectionVector())
   props.dir_up:set(veh.obj:getDirectionVectorUp())
@@ -94,7 +91,7 @@ local function checkIfWaypointsWithinMyCar(veh_props, wps_props)
   local xnorm = veh_props.center_pos:xnormOnLine(wps_props.start_wp_pos, wps_props.end_wp_pos)
   local wp_dir = wps_props.end_wp_pos - wps_props.start_wp_pos
   local veh_pos_on_wp_line = xnorm * wp_dir + wps_props.start_wp_pos
-  
+
   local lat_dist = (veh_props.center_pos - veh_pos_on_wp_line):length()
 
   --debugDrawer:drawTextAdvanced((wps_props.end_wp_pos):toPoint3F(), String("Lateral Distance: " .. tostring(lat_dist)),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
@@ -138,7 +135,7 @@ local function getFuturePositionXY(veh_props, time, rel_car_pos)
   local front_pos_xy = veh_props.front_pos:z0()
   local center_pos_xy = veh_props.center_pos:z0()
   local rear_pos_xy = veh_props.rear_pos:z0()
-    
+
   local velocity_xy = veh_props.velocity:z0()
 
   local veh_pos_future = vec3(0,0,0)
@@ -165,7 +162,7 @@ local function getFuturePositionXYWithAcc(veh_props, time, acc_vec, rel_car_pos)
   local front_pos_xy = veh_props.front_pos:z0()
   local center_pos_xy = veh_props.center_pos:z0()
   local rear_pos_xy = veh_props.rear_pos:z0()
-    
+
   local velocity_xy = veh_props.velocity:z0()
 
   local veh_pos_future = vec3(0,0,0)
@@ -199,28 +196,28 @@ local function getLaneWidth(wps_info)
       --For one lane road
       lane_width = wps_info.wp_radius * 2.0
       lanes = 1
-      
+
     elseif wps_info.wp_radius * 2 < max_lane_width * 2 then
       --For two lane road
       lane_width = wps_info.wp_radius
       lanes = 2
-         
+
     elseif wps_info.wp_radius * 2 < max_lane_width * 3 then
       --For three lane road
-      lane_width = wps_info.wp_radius * 2.0 / 3.0 
+      lane_width = wps_info.wp_radius * 2.0 / 3.0
       lanes = 3
-      
+
     elseif wps_info.wp_radius * 2 < max_lane_width * 4 then
       --For four lane road
       lane_width = wps_info.wp_radius * 2.0 / 4.0
       lanes = 4
-      
+
     end
   else
     lane_width = wps_info.wp_radius
     lanes = 2
   end
-  
+
   return lane_width, lanes
 end
 
@@ -248,11 +245,11 @@ end
 
 local function getWaypointsProperties(veh_props, start_wp, end_wp, start_wp_pos, end_wp_pos, lat_dist_from_wp)
   local wps_props = {}
-  
+
   --Get lane width
   local wp_radius = map_nodes[start_wp].radius
   local my_start_links = map_nodes[start_wp].links
-  
+
   local one_way = false
 
   for wp, data in pairs(my_start_links) do
@@ -272,13 +269,13 @@ local function getWaypointsProperties(veh_props, start_wp, end_wp, start_wp_pos,
 
   wps_props.lane_width = lane_width
   wps_props.num_of_lanes = num_of_lanes
-  
+
   local my_veh_side_of_wp = getWhichSideOfWaypointsCarIsOn(veh_props, start_wp_pos, end_wp_pos)
-  
+
   if my_veh_side_of_wp == "left" then
     wps_props.lat_dist_from_wp = -wps_props.lat_dist_from_wp
   end
-  
+
   wps_props.veh_side_of_wp = my_veh_side_of_wp
 
   return wps_props
@@ -288,7 +285,7 @@ end
 local function getWaypointStartEnd(my_veh_props, veh_props, position)
   local start_wp = nil
   local end_wp = nil
-  
+
   local start_wp_pos = nil
   local end_wp_pos = nil
 
@@ -308,17 +305,17 @@ local function getWaypointStartEnd(my_veh_props, veh_props, position)
   if abs((origin - wp1_pos):length()) < abs((origin - wp2_pos):length()) then
     start_wp = wp1
     end_wp = wp2
-    
+
     start_wp_pos = wp1_pos
     end_wp_pos = wp2_pos
   else
     start_wp = wp2
     end_wp = wp1
-    
+
     start_wp_pos = wp2_pos
     end_wp_pos = wp1_pos
   end
-  
+
   local wps_props = getWaypointsProperties(veh_props, start_wp, end_wp, start_wp_pos, end_wp_pos, lat_dist_from_wp)
 
   return wps_props
@@ -333,13 +330,13 @@ local function getWaypointStartEndAdvanced(my_veh_props, veh_props, position, pa
   end
 
   local wps_props = getWaypointStartEnd(my_veh_props, veh_props, position)
-  
+
   table.insert(wps_reusing, wps_props)
-  
+
   if past_wps_props then
     table.insert(wps_reusing, past_wps_props)
   end
-  
+
   local angle_between_vehs = acos(my_veh_props.dir:dot(veh_props.dir))
 
   if angle_between_vehs > pi / 2.0 then
@@ -356,23 +353,23 @@ local function getWaypointStartEndAdvanced(my_veh_props, veh_props, position, pa
 
     --Angle between waypoint dir and car dir
     local angle = acos(wp_dir:dot(veh_props.dir))
-    
+
     --print(angle * 180.0 / pi)
-    
+
     angle = abs(angle_between_vehs - angle)
 
     if angle > pi / 2.0 then
       angle = pi - angle
     end
-    
+
     if angle < min_wp_props_angle[1] then
       min_wp_props_angle[1] = angle
       min_wp_props_angle[2] = curr_wps_props
     end
-    
+
     --debugDrawer:drawSphere((curr_wps_props.start_wp_pos + vec3(0,0,2)):toPoint3F(), 0.5, ColorF(1,1,0,1))
     --debugDrawer:drawTextAdvanced((wp1_pos + vec3(0,0,3)):toPoint3F(), String("ID: " .. tostring(i)),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
-    
+
     --debugDrawer:drawSphere((curr_wps_props.end_wp_pos + vec3(0,0,2)):toPoint3F(), 0.5, ColorF(1,1,0,1))
     --debugDrawer:drawTextAdvanced((wp2_pos + vec3(0,0,3)):toPoint3F(), String("ID: " .. tostring(i + 1)),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
   end
@@ -385,14 +382,14 @@ local function checkIfOtherCarOnSameRoad(my_veh_props, other_veh_props, wps_prop
   --Calculate distance to get from my waypoint to other vehicle's waypoint using graphpath
   --and if that distance is equal or less than shortest distance * 1.05 between two then
   --vehicle is in path
-  
+
   local other_wps_props_in_other_dir = getWaypointStartEnd(other_veh_props, other_veh_props, other_veh_props.center_pos)
-  
+
   local path = map.getPath(wps_props.start_wp, other_wps_props_in_other_dir.start_wp, 0, 100)
   local path_len = getPathLen(path)
-  
+
   --debugDrawer:drawTextAdvanced((other_veh_props.front_pos):toPoint3F(), String(path_len),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
-  
+
   return path_len <= (wps_props.start_wp_pos - other_wps_props_in_other_dir.start_wp_pos):length() * 1.05
 end
 
@@ -424,7 +421,7 @@ end
 
 local function getStraightDistance(my_veh_props, other_veh_props, front, in_my_vehs_straight_path)
   local my_bb = my_veh_props.bb
-  
+
   local other_bb = other_veh_props.bb
 
   local other_x = other_bb:getHalfExtents().x * vec3(other_bb:getAxis(0))
@@ -441,15 +438,15 @@ local function getStraightDistance(my_veh_props, other_veh_props, front, in_my_v
 
   local min_distance = 9999
   local shoot_ray_dir = nil
-  
+
   if in_my_vehs_straight_path then
     if front then
       shoot_ray_dir = my_veh_props.dir
     else
       shoot_ray_dir = -my_veh_props.dir
-    end  
+    end
 
-    local min_distance1, max_distance1 = intersectsRay_OBB(ray_pos + my_veh_props.dir_right * my_bb:getHalfExtents().x * 0.75, shoot_ray_dir, other_veh_props.center_pos, other_x, other_y, other_z)   
+    local min_distance1, max_distance1 = intersectsRay_OBB(ray_pos + my_veh_props.dir_right * my_bb:getHalfExtents().x * 0.75, shoot_ray_dir, other_veh_props.center_pos, other_x, other_y, other_z)
     local min_distance2, max_distance2 = intersectsRay_OBB(ray_pos - my_veh_props.dir_right * my_bb:getHalfExtents().x * 0.75, shoot_ray_dir, other_veh_props.center_pos, other_x, other_y, other_z)
     local min_distance3, max_distance3 = intersectsRay_OBB(ray_pos, shoot_ray_dir, other_veh_props.center_pos, other_x, other_y, other_z)
 
@@ -458,7 +455,7 @@ local function getStraightDistance(my_veh_props, other_veh_props, front, in_my_v
     shoot_ray_dir = (other_veh_props.center_pos - ray_pos):normalized()
 
     local min_distance1, max_distance1 = intersectsRay_OBB(ray_pos, shoot_ray_dir, other_veh_props.center_pos, other_x, other_y, other_z)
-  
+
     min_distance = min_distance1
   end
 
@@ -474,7 +471,7 @@ local function onClientPostStartMission(levelpath)
   findClosestRoad = map.findClosestRoad
 end
 
-M.checkIfPartExists = checkIfPartExists
+M.getPart = getPart
 M.getVehicleProperties = getVehicleProperties
 M.toNormXYVec = toNormXYVec
 M.getFuturePosition = getFuturePosition

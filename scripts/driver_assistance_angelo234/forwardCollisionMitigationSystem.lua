@@ -1,15 +1,11 @@
 local M = {}
 
-local extra_utils = nil
+local extra_utils = require('scripts/driver_assistance_angelo234/extraUtils')
 
---ready = system not doing anything 
+--ready = system not doing anything
 --braking = AEB active
---holding = car is stopped and system is holding the brakes 
+--holding = car is stopped and system is holding the brakes
 local system_state = "ready"
-
-local function init()
-  extra_utils = scripts_driver__assistance__angelo234_extension.extra_utils
-end
 
 local function getMyVehBoundingBox(my_veh_props)
   local my_bb = my_veh_props.bb
@@ -68,22 +64,22 @@ end
 local function getVehicleCollidingWith(dt, my_veh_props, data_table)
   local distance = 9999
   local rel_vel = 0
-  
+
   --If table is empty then return
   if next(data_table) == nil then
     return distance, rel_vel
   end
-  
+
   --Analyze the trajectory of other vehicles with my trajectory
   --to see if collision imminent
   for _, data in pairs(data_table) do
     --Other vehicle properties
     local other_veh_props = extra_utils.getVehicleProperties(data.other_veh)
-  
+
     local this_rel_vel = (my_veh_props.velocity - other_veh_props.velocity):length()
-  
+
     local overlap = checkIfCarsIntersectAtTTC(my_veh_props, other_veh_props, data, 0.1)
-    
+
     if overlap then
       if data.distance <= distance then
         distance = data.distance
@@ -91,7 +87,7 @@ local function getVehicleCollidingWith(dt, my_veh_props, data_table)
       end
     end
   end
-  
+
   return distance, rel_vel
 end
 
@@ -117,40 +113,40 @@ local function getVehicleCollidingWithInLane(dt, my_veh_props, data_table, later
     if this_rel_vel > 0 then
       --Capping to 5 seconds to prevent too much error in predicting position
       local ttc = math.min(data.distance / this_rel_vel, 5)
-      
+
       if data.my_veh_wps_props ~= nil and data.other_veh_wps_props ~= nil then
-      
+
         local my_lat_dist_from_wp = data.my_veh_wps_props.lat_dist_from_wp
         local other_lat_dist_from_wp = data.other_veh_wps_props.lat_dist_from_wp
-  
+
         --debugDrawer:drawTextAdvanced((other_veh_props.front_pos):toPoint3F(), String(other_lat_dist_from_wp),  ColorF(1,1,1,1), true, false, ColorI(0,0,0,192))
-  
+
         if my_lat_dist_from_wp - my_veh_props.bb:getHalfExtents().x * 0.6 < other_lat_dist_from_wp + other_veh_props.bb:getHalfExtents().x
         and my_lat_dist_from_wp + my_veh_props.bb:getHalfExtents().x * 0.6 > other_lat_dist_from_wp - other_veh_props.bb:getHalfExtents().x
         then
-          --debugDrawer:drawSphere((other_veh_props.center_pos):toPoint3F(), 1, ColorF(0,1,0,1))  
-        
+          --debugDrawer:drawSphere((other_veh_props.center_pos):toPoint3F(), 1, ColorF(0,1,0,1))
+
           local wp_start_end = data.my_veh_wps_props.end_wp_pos - data.my_veh_wps_props.start_wp_pos
           local wp_dir = wp_start_end:normalized()
-  
+
           local perp_vec = vec3(wp_dir.y, -wp_dir.x)
-        
+
           local vel_comp = my_veh_props.velocity:dot(perp_vec)
-  
+
           --Collision may be possible
           if (my_lat_dist_from_wp - my_veh_props.bb:getHalfExtents().x) + vel_comp * ttc < other_lat_dist_from_wp + other_veh_props.bb:getHalfExtents().x
           and (my_lat_dist_from_wp + my_veh_props.bb:getHalfExtents().x) + vel_comp * ttc > other_lat_dist_from_wp - other_veh_props.bb:getHalfExtents().x
           then
-          
+
             --If this distance is less than current min distance
             --then this is new min distance
             if data.distance <= distance then
               distance = data.distance
               rel_vel = this_rel_vel
-      
+
               curr_veh_in_path = data.other_veh
-              
-              --debugDrawer:drawSphere((other_veh_props.center_pos + vec3(0,0,1)):toPoint3F(), 1, ColorF(1,0,0,1))      
+
+              --debugDrawer:drawSphere((other_veh_props.center_pos + vec3(0,0,1)):toPoint3F(), 1, ColorF(1,0,0,1))
             end
           end
         end
@@ -184,11 +180,11 @@ local function performEmergencyBraking(dt, veh, aeb_params, time_before_braking,
     if system_state == "braking" then
       veh:queueLuaCommand("electrics.values.brakeOverride = nil")
       veh:queueLuaCommand("electrics.values.throttleOverride = nil")
-      system_state = "ready" 
+      system_state = "ready"
     end
     return
   end
-  
+
   --Stop car completely if below certain speed regardless of sensor information
   if system_state == "braking" and speed < aeb_params.brake_till_stop_speed then
     veh:queueLuaCommand("electrics.values.brakeOverride = 1")
@@ -201,9 +197,9 @@ local function performEmergencyBraking(dt, veh, aeb_params, time_before_braking,
   if time_before_braking <= 0 then
     if input_throttle_angelo234 > 0.1 then
       veh:queueLuaCommand("electrics.values.throttleOverride = 0")
-    end   
+    end
     veh:queueLuaCommand("electrics.values.brakeOverride = 1")
-    
+
     --Turn off Adaptive Cruise Control
     scripts_driver__assistance__angelo234_extension.setACCSystemOn(false)
 
@@ -218,7 +214,7 @@ local function performEmergencyBraking(dt, veh, aeb_params, time_before_braking,
       if system_state == "braking" then
         veh:queueLuaCommand("electrics.values.brakeOverride = nil")
         veh:queueLuaCommand("electrics.values.throttleOverride = nil")
-        
+
         system_state = "ready"
       end
     end
@@ -237,34 +233,34 @@ local function calculateTimeBeforeBraking(distance, vel_rel, system_params, aeb_
 
   --leeway time depending on speed
   local time_before_braking = ttc - time_to_brake - aeb_params.braking_time_leeway
-  
+
   return time_before_braking
 end
 
 local function holdBrakes(veh, veh_props, aeb_params)
-  if veh_props.speed <= aeb_params.min_speed then    
+  if veh_props.speed <= aeb_params.min_speed then
     if system_state == "braking" then
       --When coming to a stop with system activated, release brakes but apply parking brake in arcade mode :P
       if gearbox_mode_angelo234.previousGearboxBehavior == "realistic" then
         veh:queueLuaCommand("electrics.values.brakeOverride = 1")
       else
         --Release brake and apply parking brake
-        veh:queueLuaCommand("electrics.values.brakeOverride = nil") 
-        veh:queueLuaCommand("input.event('parkingbrake', 1, 2)")   
+        veh:queueLuaCommand("electrics.values.brakeOverride = nil")
+        veh:queueLuaCommand("input.event('parkingbrake', 1, 2)")
       end
       veh:queueLuaCommand("electrics.values.throttleOverride = nil")
-      
-      system_state = "holding"    
+
+      system_state = "holding"
     end
   end
-  
+
   --If vehicle held by brake after AEB and user modulates throttle or brake pedal then release brakes
   if system_state == "holding" and (input_throttle_angelo234 > 0 or input_brake_angelo234 > 0) then
     if gearbox_mode_angelo234.previousGearboxBehavior == "realistic" then
       veh:queueLuaCommand("electrics.values.brakeOverride = nil")
-    else 
-      veh:queueLuaCommand("input.event('parkingbrake', 0, 2)") 
-    end 
+    else
+      veh:queueLuaCommand("input.event('parkingbrake', 0, 2)")
+    end
 
     system_state = "ready"
   end
@@ -282,20 +278,20 @@ local function update(dt, veh, system_params, aeb_params, beeper_params, front_s
   --if (veh_name == "sunburst" and esc_color == "98FB00")
    --or (veh_name ~= "sunburst" and esc_color == "238BE6")
   --then
-  
+
   --Deactivate system based on any of these variables
   if in_reverse == nil or in_reverse == 1 or gear_selected == nil
-    or gear_selected == 'P' then   
+    or gear_selected == 'P' then
     if system_state ~= "ready" then
-      veh:queueLuaCommand("electrics.values.brakeOverride = nil")     
-      veh:queueLuaCommand("electrics.values.throttleOverride = nil")  
-      system_state = "ready" 
+      veh:queueLuaCommand("electrics.values.brakeOverride = nil")
+      veh:queueLuaCommand("electrics.values.throttleOverride = nil")
+      system_state = "ready"
     end
     return
   end
-  
+
   local veh_props = extra_utils.getVehicleProperties(veh)
-  
+
   if holdBrakes(veh, veh_props, aeb_params) then return end
 
   local static_distance = 9999
@@ -313,13 +309,13 @@ local function update(dt, veh, system_params, aeb_params, beeper_params, front_s
     --Get nearby vehicles
     distance, vel_rel = getVehicleCollidingWith(dt, veh_props, front_sensor_data[2])
   else
-    --Else at higher speeds, use lane lines 
+    --Else at higher speeds, use lane lines
     --If table is empty then return
     if next(front_sensor_data[3]) ~= nil then
-      --Determine if a collision will actually occur and return the distance and relative velocity 
+      --Determine if a collision will actually occur and return the distance and relative velocity
       --to the vehicle that I'm planning to collide with
       distance, vel_rel = getVehicleCollidingWithInLane(dt, veh_props, front_sensor_data[3], aeb_params.lateral_acc_to_avoid_collision)
-    end 
+    end
   end
 
   --If static object is closer than nearest vehicle, then use static object raycast data
@@ -330,12 +326,12 @@ local function update(dt, veh, system_params, aeb_params, beeper_params, front_s
 
   local time_before_braking = calculateTimeBeforeBraking(distance, vel_rel, system_params, aeb_params)
 
-  if extra_utils.checkIfPartExists("forward_aeb_angelo234") then
+  if extra_utils.getPart("forward_aeb_angelo234") then
     --Use distance, relative velocity, and max acceleration to determine when to apply emergency braking
     performEmergencyBraking(dt, veh, aeb_params, time_before_braking, veh_props.speed)
   end
-   
-  if extra_utils.checkIfPartExists("forward_collision_warning_angelo234") then
+
+  if extra_utils.getPart("forward_collision_warning_angelo234") then
     --At low speeds don't sound beepers
     if veh_props.speed > 11.11 then
       soundBeepers(dt, time_before_braking, vel_rel, beeper_params)
@@ -343,7 +339,6 @@ local function update(dt, veh, system_params, aeb_params, beeper_params, front_s
   end
 end
 
-M.init = init
 M.update = update
 
 return M

@@ -2,6 +2,8 @@
 -- If a copy of the bCDDL was not distributed with this
 -- file, You can obtain one at http://beamng.com/bCDDL-1.1.txt
 
+local extra_utils = require('scripts/driver_assistance_angelo234/extraUtils')
+
 --File with all parameters for system
 local system_params = nil
 local parking_lines_params = nil
@@ -366,15 +368,12 @@ local function calculateTurningRadii(veh)
 end
 
 local function checkVehicleSupported(id)
-  local backup_cam_part = extensions.core_vehicle_manager.getVehicleData(id).chosenParts.backup_cam_angelo234
+  local backup_cam_part = extra_utils.getPart("backup_cam_angelo234")
 
   --Does backup cam part exists?
-  if backup_cam_part == "backup_cam_angelo234" then
-    local trajectory_lines_part = extensions.core_vehicle_manager.getVehicleData(id).chosenParts.trajectory_lines_angelo234
-    local parking_lines_part = extensions.core_vehicle_manager.getVehicleData(id).chosenParts.parking_lines_angelo234
-
-    local cam_traj_lines_on = trajectory_lines_part == "trajectory_lines_angelo234"
-    local cam_park_lines_on = parking_lines_part == "parking_lines_angelo234"
+  if backup_cam_part then
+    local cam_traj_lines_on = extra_utils.getPart("trajectory_lines_angelo234") ~= nil
+    local cam_park_lines_on = extra_utils.getPart("parking_lines_angelo234") ~= nil
 
     return true, cam_traj_lines_on, cam_park_lines_on
   end
@@ -412,9 +411,9 @@ function C:update(data)
 
   local qdir = quatFromDir(cam_dir)
   local rotated_up = qdir * vec3(0, 0, 1)
-  
+
   qdir = rotateEuler(0, math.rad(rev_cam_params.cam_down_angle), math.atan2(rotated_up:dot(cam_dir_right), rotated_up:dot(cam_dir_up)), qdir)
-  
+
   cam_pos = vec3(data.veh:getSpawnWorldOOBBRearPoint()) + cam_dir_up * rev_cam_params.rel_cam_height
 
   local bb = data.veh:getSpawnWorldOOBB()

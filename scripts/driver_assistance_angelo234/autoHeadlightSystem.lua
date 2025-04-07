@@ -1,16 +1,12 @@
 local M = {}
 
-local extra_utils = nil
+local extra_utils = require('scripts/driver_assistance_angelo234/extraUtils')
 
 --Based on US Law (about 500 feet)
 local dim_distance = 150
 
 local headlights_turned_off = false
 local armed = false
-
-local function init()
-  extra_utils = scripts_driver__assistance__angelo234_extension.extra_utils
-end
 
 --Called when headlights get turned off by user
 local function onHeadlightsOff()
@@ -23,7 +19,7 @@ local function onHeadlightsOn()
   --If in dimmed headlight mode then switch to off
   if armed then
     be:getPlayerVehicle(0):queueLuaCommand("electrics.setLightsState(0)")
-    
+
     armed = false
     headlights_turned_off = true
   end
@@ -33,7 +29,7 @@ end
 --if they are on, then make note of it
 local function systemSwitchedOn()
   local light_state = electrics_values_angelo234["lights_state"]
-  
+
   if light_state == 2 then
     headlights_turned_off = false
   end
@@ -57,7 +53,7 @@ local function getClosestVehicle(other_vehs_data)
 end
 
 local function autoHeadlightFunction(veh, vehs_in_front_table, light_state)
-  local closest_veh_data = getClosestVehicle(vehs_in_front_table) 
+  local closest_veh_data = getClosestVehicle(vehs_in_front_table)
   local distance = closest_veh_data[2]
 
   --If vehicle in front exists and distance , then dim headlights
@@ -72,16 +68,16 @@ local function autoHeadlightFunction(veh, vehs_in_front_table, light_state)
   end
 end
 
-local function update(dt, veh, vehs_in_front_table) 
+local function update(dt, veh, vehs_in_front_table)
   local light_state = nil
-  
-  --This is to prevent headlight from turning back on due to delay 
+
+  --This is to prevent headlight from turning back on due to delay
   --with sending data between Vehicle and GameEngine Lua
   if not headlights_turned_off then
     light_state = electrics_values_angelo234["lights_state"]
   else
     light_state = 0
-    
+
     if electrics_values_angelo234["lights_state"] == 0 then
       headlights_turned_off = false
     end
@@ -96,7 +92,6 @@ local function update(dt, veh, vehs_in_front_table)
   end
 end
 
-M.init = init
 M.onHeadlightsOff = onHeadlightsOff
 M.onHeadlightsOn = onHeadlightsOn
 M.systemSwitchedOn = systemSwitchedOn
