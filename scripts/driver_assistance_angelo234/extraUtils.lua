@@ -20,8 +20,8 @@ local findClosestRoad = map.findClosestRoad
 
 local function getPart(partName)
   local vehData = core_vehicle_manager.getPlayerVehicleData()
-  if not vehData then return false end
-  return vehData.activePartsData[partName]
+  if not vehData then return nil end
+  return vehData.vdata.activePartsData[partName]
 end
 
 local vehs_props_reusing = {}

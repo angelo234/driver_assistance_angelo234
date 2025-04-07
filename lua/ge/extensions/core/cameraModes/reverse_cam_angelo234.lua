@@ -346,7 +346,7 @@ local function calculateTurningRadii(veh)
   local rear_left_turning_radius = 0
   local rear_right_turning_radius = 0
 
-  veh:queueLuaCommand("obj:queueGameEngineLua('steering_input = ' .. electrics.values.steering_input )")
+  local steering_input = electrics_values_angelo234["steering_input"]
 
   if steering_input == nil then return 0,0 end
 
